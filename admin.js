@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Image, Vibration } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Image, Vibration, Platform } from 'react-native';
 import { Audio } from 'expo-av';
 import { styles } from './estilos';
 import { NavegacionSuperior, LOGO } from './pantallas';
@@ -15,10 +15,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [editProd, setEditProd] = useState(null);
   const [editRec, setEditRec] = useState(null);
   const [sonando, setSonando] = useState(false);
+  const [audioListo, setAudioListo] = useState(false);
   const conocidosRef = useRef(null);
+  const ctxAudioRef = useRef(null);
 
   useEffect(() => { cargarTodoAdmin(); }, []);
-  useEffect(() => { const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 6000); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 5000); return () => clearInterval(t); }, []);
 
   useEffect(() => {
     const pendientes = (pedidos || []).filter(p => p.estado === 'Pendiente de confirmación');
@@ -27,13 +29,41 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     conocidosRef.current = pendientes.map(p => p.id);
   }, [pedidos]);
 
+  function tocarPitidoWeb() {
+    try {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!ctxAudioRef.current) ctxAudioRef.current = new Ctx();
+        if (ctxAudioRef.current.state === 'suspended') ctxAudioRef.current.resume();
+        const osc = ctxAudioRef.current.createOscillator();
+        const gain = ctxAudioRef.current.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(880, ctxAudioRef.current.currentTime);
+        osc.frequency.setValueAtTime(1100, ctxAudioRef.current.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.4, ctxAudioRef.current.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctxAudioRef.current.currentTime + 0.45);
+        osc.connect(gain); gain.connect(ctxAudioRef.current.destination);
+        osc.start(); osc.stop(ctxAudioRef.current.currentTime + 0.45);
+      }
+    } catch (e) {}
+  }
+
   async function activarAlarma10Seg() {
     if (sonando) return;
-    setSonando(true); Vibration.vibrate();
+    setSonando(true);
+    try { Vibration.vibrate(); } catch (e) {}
+    tocarPitidoWeb();
+    const intervalo = setInterval(() => tocarPitidoWeb(), 900);
+    let soundObj = null;
     try {
       const { sound } = await Audio.Sound.createAsync({ uri: 'https://mixkit.co' }, { shouldPlay: true, isLooping: true });
-      setTimeout(async () => { try { await sound.stopAsync(); await sound.unloadAsync(); } catch (e) {} setSonando(false); }, 10000);
-    } catch (e) { setTimeout(() => setSonando(false), 10000); }
+      soundObj = sound;
+    } catch (e) {}
+    setTimeout(async () => {
+      clearInterval(intervalo);
+      if (soundObj) { try { await soundObj.stopAsync(); await soundObj.unloadAsync(); } catch (e) {} }
+      setSonando(false);
+    }, 10000);
   }
 
   async function cargarTodoAdmin() {
@@ -69,7 +99,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       {sonando && <View style={{ backgroundColor: '#B81D24', padding: 14, borderRadius: 12, marginBottom: 14, alignItems: 'center' }}><Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>🔔 ¡NUEVO PEDIDO ENTRANTE!</Text></View>}
       <View style={styles.filaSaludo}>
         <View><Text style={styles.saludo}>Panel Administrador,</Text><Text style={styles.nombreCliente}>{usuario?.nombre_completo}</Text></View>
-        <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => { recargar(); cargarTodoAdmin(); }}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>ACTUALIZAR</Text></TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: audioListo ? '#2E7D32' : '#C8860A' }]} onPress={() => { tocarPitidoWeb(); setAudioListo(true); }}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{audioListo ? '🔔 TIMBRE OK' : '🔕 ACTIVAR SONIDO'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => { recargar(); cargarTodoAdmin(); }}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>ACTUALIZAR</Text></TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
@@ -96,7 +129,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {tab === 'canjes' && (
+             {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES E HISTORIAL DE CANJES</Text>
           {solicitudesCanje.length === 0 ? <View style={[styles.tarjetaVacia, { marginBottom: 14 }]}><Text style={styles.textoVacio}>Aún no hay canjes solicitados por clientes.</Text></View> : solicitudesCanje.map(sc => (
@@ -172,4 +205,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 20 }]} onPress={cerrarSesion}><Text style={styles.textoBoton}>CERRAR SESIÓN</Text></TouchableOpacity>
     </ScrollView>
   );
-}
+            }
+            
