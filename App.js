@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, View, Text, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
-import { VistaBienvenida, VistaRegistro, VistaIngreso } from './pantallas';
+import { VistaBienvenida, VistaRegistro } from './pantallas';
 import { VistaInicio } from './vistas';
 import { VistaCarrito, VistaPanel } from './avisos';
 import { VistaAdmin } from './admin';
@@ -15,7 +15,7 @@ import {
 
 export default function App() {
   const [pantalla, setPantalla] = useState('bienvenida');
-  const [vistaCliente, setVistaCliente] = useState('inicio');
+  const [navInfo, setNavInfo] = useState({ tab: 'inicio', seq: 0 });
   const [usuario, setUsuario] = useState(null);
   const [tipoUsuario, setTipoUsuario] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -61,6 +61,11 @@ export default function App() {
     } catch (e) {}
   }
 
+  function irATabCliente(tab) {
+    setNavInfo(prev => ({ tab, seq: prev.seq + 1 }));
+    setPantalla('inicio');
+  }
+
   async function manejarRegistro(form) {
     setCargando(true);
     try {
@@ -68,9 +73,9 @@ export default function App() {
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify({ tipo: 'cliente', perfil: r.perfil }));
       setUsuario(r.perfil); setTipoUsuario('cliente');
       setDatos(await obtenerDatosCliente(r.perfil.id));
-      setPantalla('inicio');
+      irATabCliente('inicio');
       Alert.alert('¡Bienvenido!', r.mensaje);
-    } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+    } catch (e) { throw e; } finally { setCargando(false); }
   }
 
   async function manejarIngreso(form) {
@@ -80,8 +85,8 @@ export default function App() {
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(r));
       setUsuario(r.perfil); setTipoUsuario(r.tipo);
       if (r.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
-      else { setDatos(await obtenerDatosCliente(r.perfil.id)); setPantalla('inicio'); }
-    } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+      else { setDatos(await obtenerDatosCliente(r.perfil.id)); irATabCliente('inicio'); }
+    } catch (e) { throw e; } finally { setCargando(false); }
   }
 
   async function manejarCanje(rec) {
@@ -89,7 +94,7 @@ export default function App() {
     try {
       await canjearRecompensaCliente(usuario.id, rec);
       await recargarTodo();
-      Alert.alert('¡Canje solicitado!', 'Tu premio quedó registrado. Muéstralo en el local para recibirlo.');
+      Alert.alert('¡Canje solicitado!', 'Tu premio quedó registrado.');
     } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
   }
 
@@ -99,7 +104,7 @@ export default function App() {
       await crearNuevoPedido({ ...pedidoData, cliente_id: usuario.id }, carrito);
       setCarrito([]);
       await recargarTodo();
-      setPantalla('inicio');
+      irATabCliente('pedidos');
       Alert.alert('¡Pedido enviado!', 'Tu pedido fue enviado al local.');
     } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
   }
@@ -114,7 +119,7 @@ export default function App() {
     try {
       const pts = await confirmarRecepcionYDarPuntos(ped);
       await recargarTodo();
-      Alert.alert('¡Completado!', pts > 0 ? 'Se acreditaron +' + pts + ' puntos al cliente.' : 'Pedido completado.');
+      Alert.alert('¡Completado!', pts > 0 ? 'Se acreditaron +' + pts + ' puntos.' : 'Pedido completado.');
     } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
   }
 
@@ -123,7 +128,7 @@ export default function App() {
     try {
       const restados = await cancelarPedidoYDescontar(ped);
       await recargarTodo();
-      Alert.alert('Pedido cancelado', restados > 0 ? 'Se descontaron ' + restados + ' puntos al cliente.' : 'Pedido cancelado correctamente.');
+      Alert.alert('Pedido cancelado', restados > 0 ? 'Se descontaron ' + restados + ' puntos.' : 'Pedido cancelado.');
     } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
   }
 
@@ -138,36 +143,35 @@ export default function App() {
   return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <View style={{ flex: 1 }}>
-        {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} irAIngreso={() => setPantalla('ingreso')} />}
+        {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={cargando} />}
         {pantalla === 'registro' && <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-        {pantalla === 'ingreso' && <VistaIngreso onIngresar={manejarIngreso} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} subVistaExterna={vistaCliente} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} cargando={cargando} />}
-        {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => setPantalla('inicio')} />}
-        {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => setPantalla('inicio')} cargando={cargando} />}
+        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} navInfo={navInfo} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} cargando={cargando} />}
+        {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => irATabCliente('inicio')} />}
+        {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => irATabCliente('inicio')} cargando={cargando} />}
         {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={pedidosAdmin} recargar={recargarTodo} onConfirmarAdmin={manejarConfirmarAdmin} onCompletar={manejarCompletar} onCancelar={manejarCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />}
       </View>
 
       {mostrarBarraCliente && (
-        <View style={{ flexDirection: 'row', backgroundColor: '#141414', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingVertical: 8, paddingHorizontal: 4 }}>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => { setVistaCliente('inicio'); setPantalla('inicio'); }}>
+        <View style={{ flexDirection: 'row', backgroundColor: '#141414', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingVertical: 8, paddingHorizontal: 4, zIndex: 50 }}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('inicio')}>
             <Text style={{ fontSize: 16 }}>🏠</Text>
-            <Text style={{ color: pantalla === 'inicio' && vistaCliente === 'inicio' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>INICIO</Text>
+            <Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'inicio' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>INICIO</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => { setVistaCliente('inicio'); setPantalla('inicio'); }}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('inicio')}>
             <Text style={{ fontSize: 16 }}>🍔</Text>
             <Text style={{ color: '#AAA', fontSize: 10, fontWeight: '700' }}>MENÚ</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => setPantalla('carrito')}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => setPantalla('carrito')}>
             <Text style={{ fontSize: 16 }}>🛒</Text>
             <Text style={{ color: pantalla === 'carrito' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>CARRITO{totalItems > 0 ? ` (${totalItems})` : ''}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => setPantalla('panel')}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => setPantalla('panel')}>
             <Text style={{ fontSize: 16 }}>⭐</Text>
             <Text style={{ color: pantalla === 'panel' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>PUNTOS</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => { setVistaCliente('canjear'); setPantalla('inicio'); }}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('canjear')}>
             <Text style={{ fontSize: 16 }}>🎁</Text>
-            <Text style={{ color: pantalla === 'inicio' && vistaCliente === 'canjear' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>CANJES</Text>
+            <Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'canjear' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>CANJES</Text>
           </TouchableOpacity>
         </View>
       )}
