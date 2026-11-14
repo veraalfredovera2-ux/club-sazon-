@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Club Sazón",
+    "slug": "club-sazon",
+    "version": "1.0.0",
+    "icon": "./20261104_204552_0000.png",
+    "web": {
+      "favicon": "./20261104_204552_0000.png",
+      "name": "Club Sazón",
+      "shortName": "Club Sazón",
+      "themeColor": "#0A0A0A",
+      "backgroundColor": "#0A0A0A"
+    }
+  }
+}
