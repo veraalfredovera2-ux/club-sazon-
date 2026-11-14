@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, Alert } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import { VistaBienvenida, VistaRegistro, VistaIngreso } from './pantallas';
@@ -15,6 +15,7 @@ import {
 
 export default function App() {
   const [pantalla, setPantalla] = useState('bienvenida');
+  const [vistaCliente, setVistaCliente] = useState('inicio');
   const [usuario, setUsuario] = useState(null);
   const [tipoUsuario, setTipoUsuario] = useState(null);
   const [productos, setProductos] = useState([]);
@@ -131,15 +132,45 @@ export default function App() {
     setUsuario(null); setTipoUsuario(null); setCarrito([]); setPantalla('bienvenida');
   }
 
+  const totalItems = carrito.reduce((a, i) => a + i.cantidad, 0);
+  const mostrarBarraCliente = tipoUsuario === 'cliente' && ['inicio', 'carrito', 'panel'].includes(pantalla);
+
   return (
     <SafeAreaView style={styles.pantallaCompleta}>
-      {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} irAIngreso={() => setPantalla('ingreso')} />}
-      {pantalla === 'registro' && <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-      {pantalla === 'ingreso' && <VistaIngreso onIngresar={manejarIngreso} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-      {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} cargando={cargando} />}
-      {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => setPantalla('inicio')} />}
-      {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => setPantalla('inicio')} cargando={cargando} />}
-      {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={pedidosAdmin} recargar={recargarTodo} onConfirmarAdmin={manejarConfirmarAdmin} onCompletar={manejarCompletar} onCancelar={manejarCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />}
+      <View style={{ flex: 1 }}>
+        {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} irAIngreso={() => setPantalla('ingreso')} />}
+        {pantalla === 'registro' && <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
+        {pantalla === 'ingreso' && <VistaIngreso onIngresar={manejarIngreso} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
+        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} subVistaExterna={vistaCliente} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} cargando={cargando} />}
+        {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => setPantalla('inicio')} />}
+        {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => setPantalla('inicio')} cargando={cargando} />}
+        {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={pedidosAdmin} recargar={recargarTodo} onConfirmarAdmin={manejarConfirmarAdmin} onCompletar={manejarCompletar} onCancelar={manejarCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />}
+      </View>
+
+      {mostrarBarraCliente && (
+        <View style={{ flexDirection: 'row', backgroundColor: '#141414', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingVertical: 8, paddingHorizontal: 4 }}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => { setVistaCliente('inicio'); setPantalla('inicio'); }}>
+            <Text style={{ fontSize: 16 }}>🏠</Text>
+            <Text style={{ color: pantalla === 'inicio' && vistaCliente === 'inicio' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>INICIO</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => { setVistaCliente('inicio'); setPantalla('inicio'); }}>
+            <Text style={{ fontSize: 16 }}>🍔</Text>
+            <Text style={{ color: '#AAA', fontSize: 10, fontWeight: '700' }}>MENÚ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => setPantalla('carrito')}>
+            <Text style={{ fontSize: 16 }}>🛒</Text>
+            <Text style={{ color: pantalla === 'carrito' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>CARRITO{totalItems > 0 ? ` (${totalItems})` : ''}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => setPantalla('panel')}>
+            <Text style={{ fontSize: 16 }}>⭐</Text>
+            <Text style={{ color: pantalla === 'panel' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>PUNTOS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center' }} onPress={() => { setVistaCliente('canjear'); setPantalla('inicio'); }}>
+            <Text style={{ fontSize: 16 }}>🎁</Text>
+            <Text style={{ color: pantalla === 'inicio' && vistaCliente === 'canjear' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>CANJES</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
