@@ -43,8 +43,13 @@ export default function App() {
         if (s?.perfil && s?.tipo) {
           setUsuario(s.perfil);
           setTipoUsuario(s.tipo);
-          if (s.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
-          else { setDatos(await obtenerDatosCliente(s.perfil.id)); setPantalla('inicio'); }
+          if (s.tipo === 'administrador') {
+            setPedidosAdmin(await obtenerPedidosAdmin());
+            setPantalla('admin');
+          } else {
+            setDatos(await obtenerDatosCliente(s.perfil.id));
+            irATabCliente('inicio');
+          }
         }
       }
     } catch (e) {}
@@ -84,8 +89,13 @@ export default function App() {
       const r = await ingresarUsuario(form);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(r));
       setUsuario(r.perfil); setTipoUsuario(r.tipo);
-      if (r.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
-      else { setDatos(await obtenerDatosCliente(r.perfil.id)); irATabCliente('inicio'); }
+      if (r.tipo === 'administrador') {
+        setPedidosAdmin(await obtenerPedidosAdmin());
+        setPantalla('admin');
+      } else {
+        setDatos(await obtenerDatosCliente(r.perfil.id));
+        irATabCliente('inicio');
+      }
     } catch (e) { throw e; } finally { setCargando(false); }
   }
 
@@ -145,21 +155,17 @@ export default function App() {
       <View style={{ flex: 1 }}>
         {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={cargando} />}
         {pantalla === 'registro' && <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} navInfo={navInfo} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} cargando={cargando} />}
-        {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => irATabCliente('inicio')} />}
-        {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => irATabCliente('inicio')} cargando={cargando} />}
+        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} navInfo={navInfo} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} irATab={irATabCliente} cargando={cargando} />}
+        {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => irATabCliente('menu')} irAInicio={() => irATabCliente('inicio')} irACanjes={() => irATabCliente('canjear')} irAPedidos={() => irATabCliente('pedidos')} />}
+        {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => irATabCliente('menu')} irAInicio={() => irATabCliente('inicio')} cargando={cargando} />}
         {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={pedidosAdmin} recargar={recargarTodo} onConfirmarAdmin={manejarConfirmarAdmin} onCompletar={manejarCompletar} onCancelar={manejarCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />}
       </View>
 
       {mostrarBarraCliente && (
         <View style={{ flexDirection: 'row', backgroundColor: '#141414', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingVertical: 8, paddingHorizontal: 4, zIndex: 50 }}>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('inicio')}>
-            <Text style={{ fontSize: 16 }}>🏠</Text>
-            <Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'inicio' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>INICIO</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('inicio')}>
+          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('menu')}>
             <Text style={{ fontSize: 16 }}>🍔</Text>
-            <Text style={{ color: '#AAA', fontSize: 10, fontWeight: '700' }}>MENÚ</Text>
+            <Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'menu' ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '700' }}>MENÚ</Text>
           </TouchableOpacity>
           <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => setPantalla('carrito')}>
             <Text style={{ fontSize: 16 }}>🛒</Text>
