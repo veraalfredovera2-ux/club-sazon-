@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
-import { PantallaBienvenida, PantallaRegistro, PantallaIngreso, PantallaPanel, PantallaCarrito } from './pantallas';
+import { VistaBienvenida, VistaRegistro, VistaIngreso } from './pantallas';
 import { VistaInicio } from './vistas';
+import { VistaCarrito, VistaPanel } from './avisos';
 import { VistaAdmin } from './admin';
-import { obtenerCatalogo, obtenerRecompensas, obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario, crearNuevoPedido, confirmarAdminPedido, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar } from './servicios';
+import {
+  obtenerCatalogo, obtenerRecompensas, obtenerDatosCliente,
+  obtenerPedidosAdmin, registrarUsuario, ingresarUsuario,
+  crearNuevoPedido, confirmarAdminPedido, confirmarRecepcionYDarPuntos,
+  cancelarPedidoYDescontar, canjearRecompensaCliente, obtenerConfigPagos
+} from './servicios';
 
 export default function App() {
   const [pantalla, setPantalla] = useState('bienvenida');
@@ -13,6 +19,7 @@ export default function App() {
   const [tipoUsuario, setTipoUsuario] = useState(null);
   const [productos, setProductos] = useState([]);
   const [recompensas, setRecompensas] = useState([]);
+  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: 'Club Sazón' });
   const [datos, setDatos] = useState({ puntos: 0, historial: [], pedidos: [], canjes: [] });
   const [pedidosAdmin, setPedidosAdmin] = useState([]);
   const [carrito, setCarrito] = useState([]);
@@ -23,24 +30,31 @@ export default function App() {
 
   async function iniciar() {
     try {
-      const [cat, rec, ses] = await Promise.all([obtenerCatalogo(true), obtenerRecompensas(true), AsyncStorage.getItem('sesion_club_sazon')]);
+      const [cat, rec, cfg, ses] = await Promise.all([
+        obtenerCatalogo(true), obtenerRecompensas(true), obtenerConfigPagos(),
+        AsyncStorage.getItem('sesion_club_sazon')
+      ]);
       setProductos(cat || []);
       setRecompensas(rec || []);
+      if (cfg) setCfgPagos(cfg);
       if (ses) {
         const s = JSON.parse(ses);
-        setUsuario(s.perfil);
-        setTipoUsuario(s.tipo);
-        if (s.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
-        else { setDatos(await obtenerDatosCliente(s.perfil.id)); setPantalla('inicio'); }
+        if (s?.perfil && s?.tipo) {
+          setUsuario(s.perfil);
+          setTipoUsuario(s.tipo);
+          if (s.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
+          else { setDatos(await obtenerDatosCliente(s.perfil.id)); setPantalla('inicio'); }
+        }
       }
     } catch (e) {}
   }
 
   async function recargarTodo() {
     try {
-      const [cat, rec] = await Promise.all([obtenerCatalogo(true), obtenerRecompensas(true)]);
+      const [cat, rec, cfg] = await Promise.all([obtenerCatalogo(true), obtenerRecompensas(true), obtenerConfigPagos()]);
       setProductos(cat || []);
       setRecompensas(rec || []);
+      if (cfg) setCfgPagos(cfg);
       if (tipoUsuario === 'administrador') setPedidosAdmin(await obtenerPedidosAdmin());
       else if (usuario?.id) setDatos(await obtenerDatosCliente(usuario.id));
     } catch (e) {}
@@ -72,10 +86,9 @@ export default function App() {
   async function manejarCanje(rec) {
     setCargando(true);
     try {
-      const { canjearRecompensaCliente } = require('./servicios');
       await canjearRecompensaCliente(usuario.id, rec);
       await recargarTodo();
-      Alert.alert('¡Canje solicitado!', 'Muestra este canje en el local para recibir tu premio.');
+      Alert.alert('¡Canje solicitado!', 'Tu premio quedó registrado. Muéstralo en el local para recibirlo.');
     } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
   }
 
@@ -114,18 +127,18 @@ export default function App() {
   }
 
   async function cerrarSesion() {
-    await AsyncStorage.removeItem('sesion_club_sazon');
+    try { await AsyncStorage.removeItem('sesion_club_sazon'); } catch (e) {}
     setUsuario(null); setTipoUsuario(null); setCarrito([]); setPantalla('bienvenida');
   }
 
   return (
     <SafeAreaView style={styles.pantallaCompleta}>
-      {pantalla === 'bienvenida' && <PantallaBienvenida irARegistro={() => setPantalla('registro')} irAIngreso={() => setPantalla('ingreso')} />}
-      {pantalla === 'registro' && <PantallaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-      {pantalla === 'ingreso' && <PantallaIngreso onIngresar={manejarIngreso} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
+      {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} irAIngreso={() => setPantalla('ingreso')} />}
+      {pantalla === 'registro' && <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
+      {pantalla === 'ingreso' && <VistaIngreso onIngresar={manejarIngreso} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
       {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irAPanel={() => setPantalla('panel')} irACarrito={() => setPantalla('carrito')} cargando={cargando} />}
-      {pantalla === 'panel' && <PantallaPanel usuario={usuario} datos={datos} regresar={() => setPantalla('inicio')} />}
-      {pantalla === 'carrito' && <PantallaCarrito carrito={carrito} setCarrito={setCarrito} onConfirmarPedido={manejarPedido} regresar={() => setPantalla('inicio')} cargando={cargando} />}
+      {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => setPantalla('inicio')} />}
+      {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => setPantalla('inicio')} cargando={cargando} />}
       {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={pedidosAdmin} recargar={recargarTodo} onConfirmarAdmin={manejarConfirmarAdmin} onCompletar={manejarCompletar} onCancelar={manejarCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />}
     </SafeAreaView>
   );
