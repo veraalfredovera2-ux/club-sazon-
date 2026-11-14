@@ -1,3 +1,95 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { styles } from './estilos';
+import { categorias } from './servicios';
+import { NavegacionSuperior, LOGO } from './pantallas';
+
+export function VistaInicio({ usuario, datos, productos, recompensas, carrito, setCarrito, categoriaActiva, setCategoriaActiva, navInfo, onCanjear, onRecibido, cerrarSesion, irAPanel, irACarrito, cargando }) {
+  const [subVista, setSubVista] = useState(navInfo?.tab || 'inicio');
+  const [prodDetalle, setProdDetalle] = useState(null);
+  const [canjeConfirmar, setCanjeConfirmar] = useState(null);
+
+  useEffect(() => {
+    if (navInfo?.tab) {
+      setProdDetalle(null);
+      setCanjeConfirmar(null);
+      setSubVista(navInfo.tab);
+    }
+  }, [navInfo]);
+
+  const filtrados = categoriaActiva === 'Todas' ? productos : productos.filter(p => p.categoria === categoriaActiva);
+  const totalItems = carrito.reduce((a, i) => a + i.cantidad, 0);
+
+  function agregar(p) {
+    const ex = carrito.find(i => i.id === p.id);
+    setCarrito(ex ? carrito.map(i => i.id === p.id ? { ...i, cantidad: i.cantidad + 1 } : i) : [...carrito, { ...p, cantidad: 1 }]);
+  }
+
+  return (
+    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
+      <NavegacionSuperior regresar={() => { setProdDetalle(null); setCanjeConfirmar(null); setSubVista('inicio'); }} irAInicio={() => { setProdDetalle(null); setCanjeConfirmar(null); setSubVista('inicio'); }} />
+      <View style={styles.filaSaludo}>
+        <View><Text style={styles.saludo}>Hola,</Text><Text style={styles.nombreCliente}>{usuario?.nombre_completo}</Text></View>
+        {totalItems > 0 && <TouchableOpacity style={styles.botonCarrito} onPress={irACarrito}><Text style={styles.textoBotonCarrito}>CARRITO ({totalItems})</Text></TouchableOpacity>}
+      </View>
+
+      <View style={styles.tarjetaSaldo}>
+        <Text style={styles.etiquetaSaldo}>TUS PUNTOS DISPONIBLES</Text>
+        <Text style={styles.numeroSaldo}>{datos.puntos}</Text>
+        <View style={styles.filaBotones}>
+          <TouchableOpacity style={[styles.boton, styles.botonPequeno, { flex: 1 }]} onPress={() => { setCanjeConfirmar(null); setSubVista(subVista === 'canjear' ? 'inicio' : 'canjear'); }}>
+            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{subVista === 'canjear' ? 'VER MENÚ' : 'CANJEAR PUNTOS'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.boton, styles.botonSecundario, styles.botonPequeno, { flex: 1 }]} onPress={() => { setCanjeConfirmar(null); setSubVista(subVista === 'pedidos' ? 'inicio' : 'pedidos'); }}>
+            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{subVista === 'pedidos' ? 'VER MENÚ' : 'MIS PEDIDOS'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {subVista === 'canjear' && (
+        <View>
+          <Text style={styles.titulo}>RECOMPENSAS Y CANJES</Text>
+
+          {canjeConfirmar && (
+            <View style={[styles.tarjetaPedido, { borderColor: '#F5B041', borderWidth: 2, backgroundColor: '#1E1A12' }]}>
+              <Text style={[styles.titulo, { color: '#F5B041', marginBottom: 4 }]}>⚠️ CONFIRMAR CANJE DE PREMIO</Text>
+              <Text style={styles.nombreProducto}>¿Deseas canjear "{canjeConfirmar.titulo}"?</Text>
+              <Text style={[styles.descripcionPedido, { marginTop: 4 }]}>Se descontarán <Text style={{ color: '#F5B041', fontWeight: '800' }}>{canjeConfirmar.puntos_requeridos} puntos</Text> de tu saldo actual ({datos.puntos} pts).</Text>
+              <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => { const r = canjeConfirmar; setCanjeConfirmar(null); onCanjear(r); }} disabled={cargando}>
+                <Text style={styles.textoBoton}>✅ SÍ, CONFIRMAR CANJE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setCanjeConfirmar(null)}>
+                <Text style={styles.textoBoton}>CANCELAR</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {recompensas.map(r => (
+            <View key={r.id} style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>{r.titulo}</Text>
+              <Text style={styles.descripcionPedido}>{r.descripcion}</Text>
+              <Text style={styles.precioProducto}>{r.puntos_requeridos} PUNTOS</Text>
+              <TouchableOpacity style={[styles.boton, datos.puntos < r.puntos_requeridos && styles.botonDeshabilitado]} onPress={() => setCanjeConfirmar(r)} disabled={datos.puntos < r.puntos_requeridos || cargando}>
+                <Text style={styles.textoBoton}>{datos.puntos >= r.puntos_requeridos ? 'CANJEAR AHORA' : 'PUNTOS INSUFICIENTES'}</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+
+          {(datos.canjes || []).length > 0 && (
+            <View style={{ marginTop: 14 }}>
+              <Text style={styles.titulo}>MIS CANJES REALIZADOS</Text>
+              {datos.canjes.map(c => (
+                <View key={c.id} style={styles.tarjetaPedido}>
+                  <Text style={styles.nombreProducto}>🎁 {c.recompensa_titulo} (-{c.puntos_usados} pts)</Text>
+                  <View style={[styles.estadoPedido, c.estado === 'Entregado' && { borderColor: '#4CAF50', backgroundColor: '#132615' }]}>
+                    <Text style={[styles.textoEstado, c.estado === 'Entregado' && { color: '#4CAF50' }]}>{c.estado}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
       {subVista === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>MIS PEDIDOS</Text>
@@ -50,4 +142,5 @@
       </View>
     </ScrollView>
   );
-}
+                }
+                
