@@ -18,19 +18,61 @@ export function NavegacionSuperior({ regresar, irAInicio }) {
   );
 }
 
-export function VistaBienvenida({ irARegistro, irAIngreso }) {
+export function VistaBienvenida({ irARegistro, onIngresar, cargando }) {
+  const [telefono, setTelefono] = useState('');
+  const [password, setPassword] = useState('');
+  const [aviso, setAviso] = useState('');
+  const [verRecuperar, setVerRecuperar] = useState(false);
+
+  async function entrar() {
+    setAviso('');
+    if (!telefono.trim() || !password.trim()) {
+      setAviso('Ingresa tu número de teléfono y contraseña.');
+      return;
+    }
+    try {
+      await onIngresar({ telefono: telefono.trim(), password: password.trim() });
+    } catch (e) {
+      setAviso(e.message || 'Teléfono o contraseña incorrectos.');
+    }
+  }
+
   return (
     <ScrollView style={styles.pantallaCompleta} contentContainerStyle={[styles.contenido, { justifyContent: 'center', flexGrow: 1, alignItems: 'center' }]}>
-      <Image source={LOGO} style={{ width: 170, height: 170, borderRadius: 85, marginBottom: 18, borderWidth: 2, borderColor: '#B81D24' }} resizeMode="cover" />
-      <Text style={[styles.titulo, { fontSize: 26, textAlign: 'center', marginBottom: 6 }]}>EL SAZÓN ORIENTAL</Text>
-      <Text style={[styles.descripcionPedido, { textAlign: 'center', marginBottom: 24, fontSize: 14 }]}>Club de Puntos y Pedidos en Línea</Text>
-      <TouchableOpacity style={[styles.boton, { width: '100%' }]} onPress={irARegistro}><Text style={styles.textoBoton}>CREAR CUENTA (+100 PUNTOS)</Text></TouchableOpacity>
-      <TouchableOpacity style={[styles.boton, styles.botonSecundario, { width: '100%' }]} onPress={irAIngreso}><Text style={styles.textoBoton}>INICIAR SESIÓN</Text></TouchableOpacity>
+      <Image source={LOGO} style={{ width: 150, height: 150, borderRadius: 75, marginBottom: 14, borderWidth: 2, borderColor: '#B81D24' }} resizeMode="cover" />
+      <Text style={[styles.titulo, { fontSize: 25, textAlign: 'center', marginBottom: 2 }]}>EL SAZÓN ORIENTAL</Text>
+      <Text style={{ color: '#F5B041', fontSize: 13, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>Comida venezolana</Text>
+      <Text style={{ color: '#DDD', fontSize: 13, textAlign: 'center', marginBottom: 18 }}>Regístrate y gana 100 puntos de bienvenida</Text>
+
+      {aviso !== '' && <Text style={{ color: '#FF5252', fontWeight: '800', marginBottom: 10, textAlign: 'center' }}>{aviso}</Text>}
+
+      <TextInput style={[styles.campo, { width: '100%', marginBottom: 10 }]} placeholder="Teléfono" placeholderTextColor="#777" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
+      <TextInput style={[styles.campo, { width: '100%', marginBottom: 14 }]} placeholder="Contraseña" placeholderTextColor="#777" secureTextEntry value={password} onChangeText={setPassword} />
+
+      <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+        <TouchableOpacity style={[styles.boton, styles.botonSecundario, { flex: 1, marginTop: 0 }]} onPress={irARegistro} disabled={cargando}>
+          <Text style={styles.textoBoton}>CREAR CUENTA</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.boton, { flex: 1, marginTop: 0 }]} onPress={entrar} disabled={cargando}>
+          <Text style={styles.textoBoton}>{cargando ? 'ENTRANDO...' : 'INICIAR SESIÓN'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity style={{ marginTop: 18, padding: 8 }} onPress={() => setVerRecuperar(!verRecuperar)}>
+        <Text style={{ color: '#AAA', fontSize: 13, textDecorationLine: 'underline' }}>Recuperar contraseña</Text>
+      </TouchableOpacity>
+
+      {verRecuperar && (
+        <View style={[styles.tarjetaPedido, { width: '100%', marginTop: 8, borderColor: '#F5B041' }]}>
+          <Text style={{ color: '#F5B041', fontWeight: '800', marginBottom: 4 }}>🔑 Recuperación de contraseña</Text>
+          <Text style={{ color: '#DDD', fontSize: 13 }}>Para restablecer tu clave de acceso de forma segura, comunícate por WhatsApp o en caja con la administración de El Sazón Oriental indicando tu número de teléfono registrado.</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
 
-export function VistaRegistro({ onRegistrar, registrar, regresar, cargando }) {
+export function VistaRegistro({ onRegistrar, regresar, cargando }) {
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [telefono, setTelefono] = useState('');
   const [password, setPassword] = useState('');
@@ -42,51 +84,24 @@ export function VistaRegistro({ onRegistrar, registrar, regresar, cargando }) {
       setAviso('Completa tu nombre, teléfono y contraseña.');
       return;
     }
-    const fn = onRegistrar || registrar;
-    if (fn) await fn({ nombreCompleto: nombreCompleto.trim(), telefono: telefono.trim(), password: password.trim() });
+    try {
+      await onRegistrar({ nombreCompleto: nombreCompleto.trim(), telefono: telefono.trim(), password: password.trim() });
+    } catch (e) {
+      setAviso(e.message || 'No se pudo registrar.');
+    }
   }
 
   return (
     <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
       <NavegacionSuperior regresar={regresar} irAInicio={regresar} />
       <Text style={styles.titulo}>CREAR CUENTA</Text>
-      <Text style={styles.descripcionPedido}>Regístrate y recibe 100 puntos de bienvenida al instante.</Text>
+      <Text style={styles.descripcionPedido}>Regístrate y gana 100 puntos de bienvenida al instante.</Text>
       {aviso !== '' && <Text style={{ color: '#FF5252', fontWeight: '800', marginTop: 10 }}>{aviso}</Text>}
       <TextInput style={[styles.campo, { marginTop: 14 }]} placeholder="Nombre completo" placeholderTextColor="#777" value={nombreCompleto} onChangeText={setNombreCompleto} />
-      <TextInput style={[styles.campo, { marginTop: 10 }]} placeholder="Número de teléfono (ej. 987654321)" placeholderTextColor="#777" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
-      <TextInput style={[styles.campo, { marginTop: 10 }]} placeholder="Crea una contraseña" placeholderTextColor="#777" secureTextEntry value={password} onChangeText={setPassword} />
-      <TouchableOpacity style={[styles.boton, { marginTop: 18 }]} onPress={enviar} disabled={cargando}>
-        <Text style={styles.textoBoton}>{cargando ? 'CREANDO CUENTA...' : 'REGISTRARME Y GANAR 100 PTS'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
-  );
-}
-
-export function VistaIngreso({ onIngresar, ingresar, regresar, cargando }) {
-  const [telefono, setTelefono] = useState('');
-  const [password, setPassword] = useState('');
-  const [aviso, setAviso] = useState('');
-
-  async function enviar() {
-    setAviso('');
-    if (!telefono.trim() || !password.trim()) {
-      setAviso('Ingresa tu teléfono y contraseña.');
-      return;
-    }
-    const fn = onIngresar || ingresar;
-    if (fn) await fn({ telefono: telefono.trim(), password: password.trim() });
-  }
-
-  return (
-    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
-      <NavegacionSuperior regresar={regresar} irAInicio={regresar} />
-      <Text style={styles.titulo}>INICIAR SESIÓN</Text>
-      <Text style={styles.descripcionPedido}>Ingresa con tu número de teléfono y contraseña.</Text>
-      {aviso !== '' && <Text style={{ color: '#FF5252', fontWeight: '800', marginTop: 10 }}>{aviso}</Text>}
-      <TextInput style={[styles.campo, { marginTop: 14 }]} placeholder="Número de teléfono" placeholderTextColor="#777" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
+      <TextInput style={[styles.campo, { marginTop: 10 }]} placeholder="Teléfono" placeholderTextColor="#777" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
       <TextInput style={[styles.campo, { marginTop: 10 }]} placeholder="Contraseña" placeholderTextColor="#777" secureTextEntry value={password} onChangeText={setPassword} />
       <TouchableOpacity style={[styles.boton, { marginTop: 18 }]} onPress={enviar} disabled={cargando}>
-        <Text style={styles.textoBoton}>{cargando ? 'INGRESANDO...' : 'ENTRAR A CLUB SAZÓN'}</Text>
+        <Text style={styles.textoBoton}>{cargando ? 'CREANDO CUENTA...' : 'REGISTRARME Y GANAR 100 PTS'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
