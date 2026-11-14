@@ -36,6 +36,7 @@ export const obtenerRecompensas = (act = true) => apiRest('recompensas?' + (act 
 export const guardarRecompensaAdmin = (r) => r.id
   ? apiRest('recompensas?id=eq.' + r.id, 'PATCH', { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: r.activa })
   : apiRest('recompensas', 'POST', { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: true });
+
 export async function canjearRecompensaCliente(clienteId, rec) {
   const pts = Math.abs(Number(rec.puntos_requeridos));
   await apiRest('movimientos_puntos', 'POST', { cliente_id: clienteId, tipo: 'canje', cantidad: -pts, descripcion: 'Canje: ' + rec.titulo });
@@ -44,7 +45,6 @@ export async function canjearRecompensaCliente(clienteId, rec) {
 
 export const obtenerSolicitudesCanje = () => apiRest('solicitudes_canje?order=creado_en.desc&select=*,clientes(nombre_completo,telefono)');
 export const confirmarEntregaCanje = (id) => apiRest('solicitudes_canje?id=eq.' + id, 'PATCH', { estado: 'Entregado' });
-
 export async function obtenerDatosCliente(id) {
   const [movs, peds, canjes] = await Promise.all([
     apiRest('movimientos_puntos?cliente_id=eq.' + id + '&order=creado_en.desc&select=*'),
@@ -90,19 +90,26 @@ export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
 }
 
 export async function confirmarRecepcionYDarPuntos(pedido) {
+  const actual = await apiRest('pedidos?id=eq.' + pedido.id + '&select=estado');
+  if (actual?.at(0)?.estado === 'Cancelado') throw new Error('Este pedido fue cancelado.');
   await apiRest('pedidos?id=eq.' + pedido.id, 'PATCH', { confirmado_admin: true, recibido_cliente: true, estado: 'Completado' });
+  const yaDados = await apiRest('movimientos_puntos?pedido_id=eq.' + pedido.id + '&tipo=eq.compra&select=cantidad');
+  if (yaDados?.length) return 0;
   const puntosGanados = Math.floor(Number(pedido.subtotal || pedido.total) * 10);
   if (puntosGanados > 0) await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'compra', cantidad: puntosGanados, descripcion: 'Compra pedido ' + pedido.numero_pedido + ' (10 pts x sol)' });
   return puntosGanados;
 }
 
 export async function cancelarPedidoYDescontar(pedido) {
-  const estabaCompletado = pedido.estado === 'Completado';
   await apiRest('pedidos?id=eq.' + pedido.id, 'PATCH', { estado: 'Cancelado' });
-  if (estabaCompletado) {
-    const puntosDescontar = Math.floor(Number(pedido.subtotal || pedido.total) * 10);
-    if (puntosDescontar > 0) await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'cancelacion', cantidad: -puntosDescontar, descripcion: 'Descuento por cancelación pedido ' + pedido.numero_pedido });
-    return puntosDescontar;
+  const movsCompra = await apiRest('movimientos_puntos?pedido_id=eq.' + pedido.id + '&tipo=eq.compra&select=cantidad');
+  const movsCancel = await apiRest('movimientos_puntos?pedido_id=eq.' + pedido.id + '&tipo=eq.cancelacion&select=cantidad');
+  const totalDado = (movsCompra || []).reduce((acc, m) => acc + Number(m.cantidad || 0), 0);
+  const totalYaRestado = Math.abs((movsCancel || []).reduce((acc, m) => acc + Number(m.cantidad || 0), 0));
+  const pendienteRestar = totalDado - totalYaRestado;
+  if (pendienteRestar > 0) {
+    await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'cancelacion', cantidad: -pendienteRestar, descripcion: 'Descuento por cancelación pedido ' + pedido.numero_pedido });
+    return pendienteRestar;
   }
   return 0;
 }
