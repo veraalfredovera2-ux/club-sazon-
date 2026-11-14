@@ -75,7 +75,9 @@ export async function ingresarUsuario({ telefono, password }) {
 }
 
 export async function crearNuevoPedido(pedidoData, carrito) {
-  const creados = await apiRest('pedidos', 'POST', pedidoData);
+  const num = pedidoData.numero_pedido || ('PED-' + Math.floor(100000 + Math.random() * 900000));
+  const payload = { ...pedidoData, numero_pedido: num, estado: pedidoData.estado || 'Pendiente' };
+  const creados = await apiRest('pedidos', 'POST', payload);
   const ped = creados.at(0);
   await apiRest('pedido_detalles', 'POST', carrito.map(p => ({ pedido_id: ped.id, producto_id: String(p.id).includes('-') ? p.id : null, nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre, precio_unitario: Number(p.precio), cantidad: p.cantidad, total_linea: Number(p.precio) * p.cantidad })));
   return ped;
