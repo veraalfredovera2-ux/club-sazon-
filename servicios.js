@@ -24,15 +24,12 @@ export async function obtenerConfigPagos() {
 }
 
 export const guardarConfigPagos = (cfg) => apiRest('configuracion_pagos?id=eq.principal', 'PATCH', { qr_yape: cfg.qr_yape, qr_plin: cfg.qr_plin, titular: cfg.titular });
-
 export const obtenerCatalogo = (disp = true) => apiRest('productos?' + (disp ? 'disponible=eq.true&' : '') + 'order=categoria.asc,nombre.asc&select=*');
-
 export const guardarProductoAdmin = (p) => p.id
   ? apiRest('productos?id=eq.' + p.id, 'PATCH', { nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: p.disponible })
   : apiRest('productos', 'POST', { id: generarUUID(), nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: true });
 
 export const obtenerRecompensas = (act = true) => apiRest('recompensas?' + (act ? 'activa=eq.true&' : '') + 'order=puntos_requeridos.asc&select=*');
-
 export const guardarRecompensaAdmin = (r) => r.id
   ? apiRest('recompensas?id=eq.' + r.id, 'PATCH', { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: r.activa })
   : apiRest('recompensas', 'POST', { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: true });
@@ -45,6 +42,7 @@ export async function canjearRecompensaCliente(clienteId, rec) {
 
 export const obtenerSolicitudesCanje = () => apiRest('solicitudes_canje?order=creado_en.desc&select=*,clientes(nombre_completo,telefono)');
 export const confirmarEntregaCanje = (id) => apiRest('solicitudes_canje?id=eq.' + id, 'PATCH', { estado: 'Entregado' });
+
 export async function obtenerDatosCliente(id) {
   const [movs, peds, canjes] = await Promise.all([
     apiRest('movimientos_puntos?cliente_id=eq.' + id + '&order=creado_en.desc&select=*'),
@@ -79,7 +77,7 @@ export async function ingresarUsuario({ telefono, password }) {
 export async function crearNuevoPedido(pedidoData, carrito) {
   const creados = await apiRest('pedidos', 'POST', pedidoData);
   const ped = creados.at(0);
-  await apiRest('pedido_detalles', 'POST', carrito.map(p => ({ pedido_id: ped.id, producto_id: String(p.id).includes('-') ? p.id : null, nombre_producto: p.nombre, precio_unitario: Number(p.precio), cantidad: p.cantidad, total_linea: Number(p.precio) * p.cantidad })));
+  await apiRest('pedido_detalles', 'POST', carrito.map(p => ({ pedido_id: ped.id, producto_id: String(p.id).includes('-') ? p.id : null, nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre, precio_unitario: Number(p.precio), cantidad: p.cantidad, total_linea: Number(p.precio) * p.cantidad })));
   return ped;
 }
 
