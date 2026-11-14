@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import { VistaBienvenida, VistaRegistro } from './pantallas';
 import { VistaInicio } from './vistas';
-import { VistaCarrito, VistaPanel } from './avisos';
+import { VistaCarrito, VistaPanel, mostrarAviso } from './avisos';
 import { VistaAdmin } from './admin';
 import {
   obtenerCatalogo, obtenerRecompensas, obtenerDatosCliente,
@@ -43,13 +43,8 @@ export default function App() {
         if (s?.perfil && s?.tipo) {
           setUsuario(s.perfil);
           setTipoUsuario(s.tipo);
-          if (s.tipo === 'administrador') {
-            setPedidosAdmin(await obtenerPedidosAdmin());
-            setPantalla('admin');
-          } else {
-            setDatos(await obtenerDatosCliente(s.perfil.id));
-            irATabCliente('inicio');
-          }
+          if (s.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
+          else { setDatos(await obtenerDatosCliente(s.perfil.id)); irATabCliente('inicio'); }
         }
       }
     } catch (e) {}
@@ -79,7 +74,7 @@ export default function App() {
       setUsuario(r.perfil); setTipoUsuario('cliente');
       setDatos(await obtenerDatosCliente(r.perfil.id));
       irATabCliente('inicio');
-      Alert.alert('¡Bienvenido!', r.mensaje);
+      mostrarAviso('¡Bienvenido!', r.mensaje);
     } catch (e) { throw e; } finally { setCargando(false); }
   }
 
@@ -89,13 +84,8 @@ export default function App() {
       const r = await ingresarUsuario(form);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(r));
       setUsuario(r.perfil); setTipoUsuario(r.tipo);
-      if (r.tipo === 'administrador') {
-        setPedidosAdmin(await obtenerPedidosAdmin());
-        setPantalla('admin');
-      } else {
-        setDatos(await obtenerDatosCliente(r.perfil.id));
-        irATabCliente('inicio');
-      }
+      if (r.tipo === 'administrador') { setPedidosAdmin(await obtenerPedidosAdmin()); setPantalla('admin'); }
+      else { setDatos(await obtenerDatosCliente(r.perfil.id)); irATabCliente('inicio'); }
     } catch (e) { throw e; } finally { setCargando(false); }
   }
 
@@ -104,8 +94,8 @@ export default function App() {
     try {
       await canjearRecompensaCliente(usuario.id, rec);
       await recargarTodo();
-      Alert.alert('¡Canje solicitado!', 'Tu premio quedó registrado.');
-    } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+      mostrarAviso('¡Canje solicitado!', 'Tu premio quedó registrado.');
+    } catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
   }
 
   async function manejarPedido(pedidoData) {
@@ -115,13 +105,15 @@ export default function App() {
       setCarrito([]);
       await recargarTodo();
       irATabCliente('pedidos');
-      Alert.alert('¡Pedido enviado!', 'Tu pedido fue enviado al local.');
-    } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+      mostrarAviso('¡Pedido enviado!', 'Tu pedido fue enviado al local correctamente.');
+    } catch (e) {
+      mostrarAviso('Error al enviar pedido', e?.message || 'Verifica los datos e intenta nuevamente.');
+    } finally { setCargando(false); }
   }
 
   async function manejarConfirmarAdmin(ped, del) {
     setCargando(true);
-    try { await confirmarAdminPedido(ped, del); await recargarTodo(); } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+    try { await confirmarAdminPedido(ped, del); await recargarTodo(); } catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
   }
 
   async function manejarCompletar(ped) {
@@ -129,8 +121,8 @@ export default function App() {
     try {
       const pts = await confirmarRecepcionYDarPuntos(ped);
       await recargarTodo();
-      Alert.alert('¡Completado!', pts > 0 ? 'Se acreditaron +' + pts + ' puntos.' : 'Pedido completado.');
-    } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+      mostrarAviso('¡Completado!', pts > 0 ? 'Se acreditaron +' + pts + ' puntos.' : 'Pedido completado.');
+    } catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
   }
 
   async function manejarCancelar(ped) {
@@ -138,8 +130,8 @@ export default function App() {
     try {
       const restados = await cancelarPedidoYDescontar(ped);
       await recargarTodo();
-      Alert.alert('Pedido cancelado', restados > 0 ? 'Se descontaron ' + restados + ' puntos.' : 'Pedido cancelado.');
-    } catch (e) { Alert.alert('Error', e.message); } finally { setCargando(false); }
+      mostrarAviso('Pedido cancelado', restados > 0 ? 'Se descontaron ' + restados + ' puntos.' : 'Pedido cancelado.');
+    } catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
   }
 
   async function cerrarSesion() {
