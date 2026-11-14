@@ -6,9 +6,14 @@ export const LOGO = require('./20261104_204552_0000.png');
 
 export function NavegacionSuperior({ regresar, irAInicio }) {
   return (
-    <View style={styles.barraNav}>
-      <TouchableOpacity style={styles.botonNav} onPress={regresar}><Text style={styles.textoBotonNav}>← ATRÁS</Text></TouchableOpacity>
-      <TouchableOpacity style={styles.botonNav} onPress={irAInicio}><Text style={styles.textoBotonNav}>INICIO</Text></TouchableOpacity>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#222' }}>
+      <TouchableOpacity style={{ backgroundColor: '#1E1E1E', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: '#333' }} onPress={regresar}>
+        <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 12 }}>← REGRESAR</Text>
+      </TouchableOpacity>
+      <Image source={LOGO} style={{ width: 34, height: 34, borderRadius: 17 }} />
+      <TouchableOpacity style={{ backgroundColor: '#1E1E1E', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, borderWidth: 1, borderColor: '#333' }} onPress={irAInicio}>
+        <Text style={{ color: '#F5B041', fontWeight: '700', fontSize: 12 }}>INICIO</Text>
+      </TouchableOpacity>
     </View>
   );
 }
