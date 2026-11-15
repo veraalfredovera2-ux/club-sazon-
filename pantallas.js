@@ -8,11 +8,11 @@ export const LOGO = require('./20261104_204552_0000.png');
 export function NavegacionSuperior({ regresar, irAInicio }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingVertical: 6 }}>
-      <TouchableOpacity onPress={regresar} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#1E1E1E', borderRadius: 8, borderWidth: 1, borderColor: '#333' }}>
+      <TouchableOpacity onPress={regresar} style={{ paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#1E1E1E', borderRadius: 8, borderWidth: 1, borderColor: '#333' }}>
         <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>← REGRESAR</Text>
       </TouchableOpacity>
-      <Image source={LOGO} style={{ width: 42, height: 42, borderRadius: 21 }} resizeMode="contain" />
-      <TouchableOpacity onPress={irAInicio} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#1E1E1E', borderRadius: 8, borderWidth: 1, borderColor: '#F5B041' }}>
+      <Image source={LOGO} style={{ width: 68, height: 68, borderRadius: 34 }} resizeMode="contain" />
+      <TouchableOpacity onPress={irAInicio} style={{ paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#1E1E1E', borderRadius: 8, borderWidth: 1, borderColor: '#F5B041' }}>
         <Text style={{ color: '#F5B041', fontSize: 12, fontWeight: '800' }}>INICIO</Text>
       </TouchableOpacity>
     </View>
@@ -49,7 +49,7 @@ export function VistaBienvenida({ irARegistro, onIngresar, cargando }) {
 
   return (
     <ScrollView style={styles.pantallaCompleta} contentContainerStyle={[styles.contenido, { flexGrow: 1, justifyContent: 'center' }]}>
-      <Image source={LOGO} style={{ width: 150, height: 150, alignSelf: 'center', marginBottom: 14 }} resizeMode="contain" />
+      <Image source={LOGO} style={{ width: 190, height: 190, alignSelf: 'center', marginBottom: 14 }} resizeMode="contain" />
       <Text style={[styles.titulo, { textAlign: 'center', fontSize: 22, marginBottom: 4 }]}>CLUB SAZÓN</Text>
       <Text style={{ color: '#CCC', textAlign: 'center', marginBottom: 20 }}>Inicia sesión para pedir y acumular puntos</Text>
       <TextInput style={[styles.campo, { color: '#FFF', marginBottom: 12 }]} placeholder="Teléfono" placeholderTextColor="#888" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
