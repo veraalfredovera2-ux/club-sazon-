@@ -26,8 +26,14 @@ export async function obtenerConfigPagos() {
 export const guardarConfigPagos = (cfg) => apiRest('configuracion_pagos?id=eq.principal', 'PATCH', { qr_yape: cfg.qr_yape, qr_plin: cfg.qr_plin, titular: cfg.titular });
 export const obtenerCatalogo = (disp = true) => apiRest('productos?' + (disp ? 'disponible=eq.true&' : '') + 'order=categoria.asc,nombre.asc&select=*');
 export const guardarProductoAdmin = (p) => {
-  const body = { nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: p.disponible, stock: p.stock != null && p.stock !== '' ? Number(p.stock) : 10 };
+  const body = { nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: p.disponible, turno: p.turno || 'ambos', stock: p.stock != null && p.stock !== '' ? Number(p.stock) : 10 };
   return p.id ? apiRest('productos?id=eq.' + p.id, 'PATCH', body) : apiRest('productos', 'POST', { id: generarUUID(), ...body });
+};
+
+export const obtenerPromociones = (act = true) => apiRest('promociones?' + (act ? 'activa=eq.true&' : '') + 'order=creado_en.desc&select=*');
+export const guardarPromocionAdmin = (pr) => {
+  const body = { tipo: pr.tipo || 'promocion', titulo: pr.titulo, descripcion: pr.descripcion, precio: Number(pr.precio || 0), imagen_url: pr.imagen_url, stock: pr.stock != null && pr.stock !== '' ? Number(pr.stock) : 10, activa: pr.activa !== false };
+  return pr.id ? apiRest('promociones?id=eq.' + pr.id, 'PATCH', body) : apiRest('promociones', 'POST', body);
 };
 
 export const obtenerRecompensas = (act = true) => apiRest('recompensas?' + (act ? 'activa=eq.true&' : '') + 'order=puntos_requeridos.asc&select=*');
@@ -82,9 +88,12 @@ export async function crearNuevoPedido(pedidoData, carrito) {
   const num = pedidoData.numero_pedido || ('PED-' + Math.floor(100000 + Math.random() * 900000));
   const creados = await apiRest('pedidos', 'POST', { ...pedidoData, numero_pedido: num, estado: pedidoData.estado || 'Pendiente' });
   const ped = creados.at(0);
-  await apiRest('pedido_detalles', 'POST', carrito.map(p => ({ pedido_id: ped.id, producto_id: String(p.id).includes('-') ? p.id : null, nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre, precio_unitario: Number(p.precio), cantidad: p.cantidad, total_linea: Number(p.precio) * p.cantidad })));
+  await apiRest('pedido_detalles', 'POST', carrito.map(p => ({ pedido_id: ped.id, producto_id: !p.es_promo && String(p.id).includes('-') ? p.id : null, nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre, precio_unitario: Number(p.precio), cantidad: p.cantidad, total_linea: Number(p.precio) * p.cantidad })));
   for (const p of carrito) {
-    if (p.id && p.stock != null) await apiRest('productos?id=eq.' + p.id, 'PATCH', { stock: Math.max(0, Number(p.stock) - Number(p.cantidad || 1)) });
+    if (p.id && p.stock != null) {
+      const tabla = p.es_promo ? 'promociones' : 'productos';
+      await apiRest(`${tabla}?id=eq.${p.id}`, 'PATCH', { stock: Math.max(0, Number(p.stock) - Number(p.cantidad || 1)) });
+    }
   }
   return ped;
 }
