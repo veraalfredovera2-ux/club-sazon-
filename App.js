@@ -7,7 +7,7 @@ import { VistaInicio } from './vistas';
 import { VistaCarrito, VistaPanel, BannerAviso, registrarAvisoGlobal, mostrarAviso } from './avisos';
 import { VistaAdmin } from './admin';
 import {
-  obtenerCatalogo, obtenerRecompensas, obtenerDatosCliente,
+  obtenerCatalogo, obtenerRecompensas, obtenerPromociones, obtenerDatosCliente,
   obtenerPedidosAdmin, registrarUsuario, ingresarUsuario,
   crearNuevoPedido, confirmarAdminPedido, confirmarRecepcionYDarPuntos,
   cancelarPedidoYDescontar, canjearRecompensaCliente, obtenerConfigPagos
@@ -21,6 +21,7 @@ export default function App() {
   const [tipoUsuario, setTipoUsuario] = useState(null);
   const [productos, setProductos] = useState([]);
   const [recompensas, setRecompensas] = useState([]);
+  const [promociones, setPromociones] = useState([]);
   const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: 'Club Sazón' });
   const [datos, setDatos] = useState({ puntos: 0, historial: [], pedidos: [], canjes: [] });
   const [pedidosAdmin, setPedidosAdmin] = useState([]);
@@ -32,8 +33,8 @@ export default function App() {
 
   async function iniciar() {
     try {
-      const [cat, rec, cfg, ses] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerConfigPagos(), AsyncStorage.getItem('sesion_club_sazon')]);
-      setProductos(cat || []); setRecompensas(rec || []);
+      const [cat, rec, proms, cfg, ses] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(true), obtenerConfigPagos(), AsyncStorage.getItem('sesion_club_sazon')]);
+      setProductos(cat || []); setRecompensas(rec || []); setPromociones(proms || []);
       if (cfg) setCfgPagos(cfg);
       if (ses) {
         const s = JSON.parse(ses);
@@ -48,8 +49,8 @@ export default function App() {
 
   async function recargarTodo() {
     try {
-      const [cat, rec, cfg] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerConfigPagos()]);
-      setProductos(cat || []); setRecompensas(rec || []);
+      const [cat, rec, proms, cfg] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(true), obtenerConfigPagos()]);
+      setProductos(cat || []); setRecompensas(rec || []); setPromociones(proms || []);
       if (cfg) setCfgPagos(cfg);
       if (tipoUsuario === 'administrador') setPedidosAdmin(await obtenerPedidosAdmin());
       else if (usuario?.id) setDatos(await obtenerDatosCliente(usuario.id));
@@ -122,19 +123,28 @@ export default function App() {
       <View style={{ flex: 1 }}>
         {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={cargando} />}
         {pantalla === 'registro' && <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={cargando} />}
-        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} navInfo={navInfo} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irACarrito={() => setPantalla('carrito')} irATab={irATabCliente} cargando={cargando} />}
+        {pantalla === 'inicio' && <VistaInicio usuario={usuario} datos={datos} productos={productos} recompensas={recompensas} promociones={promociones} carrito={carrito} setCarrito={setCarrito} categoriaActiva={categoriaActiva} setCategoriaActiva={setCategoriaActiva} navInfo={navInfo} onCanjear={manejarCanje} onRecibido={manejarCompletar} cerrarSesion={cerrarSesion} irACarrito={() => setPantalla('carrito')} irATab={irATabCliente} cargando={cargando} />}
         {pantalla === 'panel' && <VistaPanel usuario={usuario} datos={datos} regresar={() => irATabCliente('menu')} irAInicio={() => irATabCliente('inicio')} irACanjes={() => irATabCliente('canjear')} irAPedidos={() => irATabCliente('pedidos')} />}
         {pantalla === 'carrito' && <VistaCarrito usuario={usuario} carrito={carrito} setCarrito={setCarrito} cfgPagos={cfgPagos} onConfirmarPedido={manejarPedido} regresar={() => irATabCliente('menu')} irAInicio={() => irATabCliente('inicio')} cargando={cargando} />}
         {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={pedidosAdmin} recargar={recargarTodo} onConfirmarAdmin={manejarConfirmarAdmin} onCompletar={manejarCompletar} onCancelar={manejarCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />}
       </View>
 
       {mostrarBarraCliente && (
-        <View style={{ flexDirection: 'row', backgroundColor: '#141414', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingVertical: 8, paddingHorizontal: 2, zIndex: 50 }}>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('menu')}><Text style={{ fontSize: 15 }}>🍔</Text><Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'menu' ? '#F5B041' : '#AAA', fontSize: 9, fontWeight: '700' }}>MENÚ</Text></TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => setPantalla('carrito')}><Text style={{ fontSize: 15 }}>🛒</Text><Text style={{ color: pantalla === 'carrito' ? '#F5B041' : '#AAA', fontSize: 9, fontWeight: '700' }}>CARRITO{totalItems > 0 ? ` (${totalItems})` : ''}</Text></TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('pedidos')}><Text style={{ fontSize: 15 }}>📋</Text><Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'pedidos' ? '#F5B041' : '#AAA', fontSize: 9, fontWeight: '700' }}>PEDIDOS</Text></TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => setPantalla('panel')}><Text style={{ fontSize: 15 }}>⭐</Text><Text style={{ color: pantalla === 'panel' ? '#F5B041' : '#AAA', fontSize: 9, fontWeight: '700' }}>PUNTOS</Text></TouchableOpacity>
-          <TouchableOpacity style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }} onPress={() => irATabCliente('canjear')}><Text style={{ fontSize: 15 }}>🎁</Text><Text style={{ color: pantalla === 'inicio' && navInfo.tab === 'canjear' ? '#F5B041' : '#AAA', fontSize: 9, fontWeight: '700' }}>CANJES</Text></TouchableOpacity>
+        <View style={{ flexDirection: 'row', backgroundColor: '#141414', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingVertical: 8, paddingHorizontal: 1, zIndex: 50 }}>
+          {[
+            { id: 'menu', ico: '🍔', txt: 'MENÚ', act: pantalla === 'inicio' && navInfo.tab === 'menu', fn: () => irATabCliente('menu') },
+            { id: 'promos', ico: '🔥', txt: 'PROMOS', act: pantalla === 'inicio' && navInfo.tab === 'promos', fn: () => irATabCliente('promos') },
+            { id: 'ofertas', ico: '🏷️', txt: 'OFERTAS', act: pantalla === 'inicio' && navInfo.tab === 'ofertas', fn: () => irATabCliente('ofertas') },
+            { id: 'carrito', ico: '🛒', txt: totalItems > 0 ? `CARRITO(${totalItems})` : 'CARRITO', act: pantalla === 'carrito', fn: () => setPantalla('carrito') },
+            { id: 'pedidos', ico: '📋', txt: 'PEDIDOS', act: pantalla === 'inicio' && navInfo.tab === 'pedidos', fn: () => irATabCliente('pedidos') },
+            { id: 'puntos', ico: '⭐', txt: 'PUNTOS', act: pantalla === 'panel', fn: () => setPantalla('panel') },
+            { id: 'canjes', ico: '🎁', txt: 'CANJES', act: pantalla === 'inicio' && navInfo.tab === 'canjear', fn: () => irATabCliente('canjear') }
+          ].map(b => (
+            <TouchableOpacity key={b.id} style={{ flex: 1, alignItems: 'center', paddingVertical: 3 }} onPress={b.fn}>
+              <Text style={{ fontSize: 13 }}>{b.ico}</Text>
+              <Text style={{ color: b.act ? '#F5B041' : '#AAA', fontSize: 8, fontWeight: '800' }} numberOfLines={1}>{b.txt}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
       <BannerAviso aviso={aviso} onCerrar={() => setAviso(null)} />
