@@ -5,16 +5,18 @@ import { categorias } from './servicios';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
 
-function obtenerTurnoActual() {
+function obtenerTurnoPeru() {
   const ahora = new Date();
-  const min = ahora.getHours() * 60 + ahora.getMinutes();
+  const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
+  const peru = new Date(utc - 5 * 3600000);
+  const min = peru.getHours() * 60 + peru.getMinutes();
   if (min >= (6 * 60 + 50) && min <= (11 * 60)) return 'manana';
   if (min >= (18 * 60 + 30) && min <= (23 * 60 + 50)) return 'noche';
   return 'cerrado';
 }
 
 function evaluarHorarioProducto(p) {
-  const turnoActual = obtenerTurnoActual();
+  const turnoActual = obtenerTurnoPeru();
   if (turnoActual === 'cerrado') return { abierto: false, disponibleTurno: false };
   const tProd = p.turno || 'ambos';
   if (tProd === 'ambos') return { abierto: true, disponibleTurno: true };
@@ -33,7 +35,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const totalItems = carrito.reduce((a, i) => a + i.cantidad, 0);
 
   function agregar(p, esPromo = false) {
-    if (obtenerTurnoActual() === 'cerrado') return mostrarAviso('Local cerrado', 'Local cerrado, intenta más tarde.');
+    if (obtenerTurnoPeru() === 'cerrado') return mostrarAviso('Local cerrado', 'Local cerrado, intenta más tarde.');
     const stockActual = p.stock != null ? Number(p.stock) : 10;
     const ex = carrito.find(i => i.id === p.id);
     if (stockActual <= 0 || (ex ? ex.cantidad : 0) + 1 > stockActual) return mostrarAviso('Sin stock', 'No hay más unidades disponibles.');
@@ -42,7 +44,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   }
 
   function intentarCanjear(r) {
-    if (obtenerTurnoActual() === 'cerrado') return mostrarAviso('Local cerrado', 'Local cerrado, intenta más tarde.');
+    if (obtenerTurnoPeru() === 'cerrado') return mostrarAviso('Local cerrado', 'Local cerrado, intenta más tarde.');
     setCanjeConfirmar(r);
   }
 
@@ -82,9 +84,10 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   {!!pr.imagen_url && <Image source={{ uri: pr.imagen_url }} style={{ width: '100%', height: 150, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" />}
                   <Text style={styles.nombreProducto}>{pr.titulo}</Text>
                   <Text style={[styles.descripcionPedido, { color: '#DDD' }]}>{pr.descripcion}</Text>
-                  <Text style={styles.precioProducto}>S/ {Number(pr.precio).toFixed(2)} • {sinStock ? 'AGOTADO' : `Stock: ${st} uds`}</Text>
-                  <TouchableOpacity style={[styles.boton, { marginTop: 8 }, sinStock && styles.botonDeshabilitado]} onPress={() => agregar(pr, true)} disabled={sinStock}>
-                    <Text style={styles.textoBoton}>{sinStock ? 'TERMINADO / SIN STOCK' : '+ AGREGAR AL CARRITO'}</Text>
+                  <Text style={styles.precioProducto}>S/ {Number(pr.precio).toFixed(2)}</Text>
+                  <Text style={{ color: sinStock ? '#E53935' : '#4CAF50', fontWeight: '800', fontSize: 12, marginTop: 4 }}>{sinStock ? '🔴 SIN STOCK (AGOTADO)' : `🟢 DISPONIBLE (${st} uds)`}</Text>
+                  <TouchableOpacity style={[styles.boton, { marginTop: 8, backgroundColor: sinStock ? '#B71C1C' : '#2E7D32' }]} onPress={() => agregar(pr, true)} disabled={sinStock}>
+                    <Text style={styles.textoBoton}>{sinStock ? 'SIN STOCK / AGOTADO' : '+ AGREGAR AL CARRITO'}</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -107,13 +110,15 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
           )}
           {(recompensas || []).filter(r => r.activa !== false).map(r => {
             const st = r.stock != null ? Number(r.stock) : 5, sinStock = st <= 0, sinPts = (datos?.puntos ?? 0) < r.puntos_requeridos;
+            const puedeCanjear = !sinStock && !sinPts;
             return (
               <View key={r.id} style={styles.tarjetaPedido}>
                 <Text style={styles.nombreProducto}>{r.titulo}</Text>
                 <Text style={styles.descripcionPedido}>{r.descripcion}</Text>
-                <Text style={styles.precioProducto}>{r.puntos_requeridos} PUNTOS • {sinStock ? 'AGOTADO' : `Disponibles: ${st} uds`}</Text>
-                <TouchableOpacity style={[styles.boton, (sinPts || sinStock) && styles.botonDeshabilitado]} onPress={() => intentarCanjear(r)} disabled={sinPts || sinStock || cargando}>
-                  <Text style={styles.textoBoton}>{sinStock ? 'TERMINADO / SIN STOCK' : sinPts ? 'PUNTOS INSUFICIENTES' : 'CANJEAR AHORA'}</Text>
+                <Text style={styles.precioProducto}>{r.puntos_requeridos} PUNTOS</Text>
+                <Text style={{ color: sinStock ? '#E53935' : '#4CAF50', fontWeight: '800', fontSize: 12, marginTop: 4 }}>{sinStock ? '🔴 SIN STOCK' : `🟢 DISPONIBLE (${st} uds)`}</Text>
+                <TouchableOpacity style={[styles.boton, { backgroundColor: puedeCanjear ? '#2E7D32' : '#B71C1C' }]} onPress={() => intentarCanjear(r)} disabled={!puedeCanjear || cargando}>
+                  <Text style={styles.textoBoton}>{sinStock ? 'SIN STOCK (AGOTADO)' : sinPts ? 'TE FALTAN PTOS' : 'CANJEA'}</Text>
                 </TouchableOpacity>
               </View>
             );
@@ -152,7 +157,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       {subVista === 'menu' && (
         <View>
           <Text style={styles.titulo}>NUESTRO MENÚ</Text>
-          <Text style={{ color: '#F5B041', fontSize: 12, marginBottom: 10 }}>⏰ Horarios: Mañana 6:50am–11:00am | Noche 6:30pm–11:50pm</Text>
+          <Text style={{ color: '#F5B041', fontSize: 12, marginBottom: 10 }}>⏰ Horario Perú: Mañana 6:50am–11:00am | Noche 6:30pm–11:50pm</Text>
           {prodDetalle && (
             <View style={styles.tarjetaPedido}>
               <Image source={prodDetalle.imagen_url && prodDetalle.imagen_url.includes('supabase.co') ? { uri: prodDetalle.imagen_url } : LOGO} style={{ width: '100%', height: 180, borderRadius: 12, marginBottom: 10, backgroundColor: '#222' }} resizeMode="cover" />
@@ -174,17 +179,20 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             const st = p.stock != null ? Number(p.stock) : 10, hor = evaluarHorarioProducto(p);
             const activoAhora = p.disponible !== false && hor.disponibleTurno && st > 0;
             return (
-              <View key={p.id} style={[styles.tarjetaPedido, !activoAhora && { opacity: 0.65 }]}>
+              <View key={p.id} style={styles.tarjetaPedido}>
                 <TouchableOpacity onPress={() => setProdDetalle(p)} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                   <Image source={p.imagen_url && p.imagen_url.includes('supabase.co') ? { uri: p.imagen_url } : LOGO} style={{ width: 78, height: 78, borderRadius: 10, marginRight: 12, backgroundColor: '#222' }} resizeMode="cover" />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.nombreProducto}>{p.nombre}</Text>
                     <Text style={[styles.descripcionPedido, { color: '#DDD', marginTop: 2 }]}>{p.ingredientes || p.descripcion || ''}</Text>
-                    <Text style={styles.precioProducto}>S/ {Number(p.precio).toFixed(2)} • {st <= 0 ? 'AGOTADO' : `Stock: ${st} uds`}</Text>
+                    <Text style={styles.precioProducto}>S/ {Number(p.precio).toFixed(2)}</Text>
+                    <Text style={{ color: st <= 0 || !activoAhora ? '#E53935' : '#4CAF50', fontWeight: '800', fontSize: 12, marginTop: 3 }}>
+                      {st <= 0 ? '🔴 SIN STOCK (AGOTADO)' : !hor.abierto ? '🔴 LOCAL CERRADO' : !activoAhora ? '🔴 NO DISPONIBLE EN ESTE TURNO' : `🟢 DISPONIBLE (${st} uds)`}
+                    </Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.boton, { marginTop: 10 }, !activoAhora && styles.botonDeshabilitado]} onPress={() => agregar(p)} disabled={!activoAhora}>
-                  <Text style={styles.textoBoton}>{st <= 0 ? 'TERMINADO / SIN STOCK' : !hor.abierto ? 'LOCAL CERRADO' : !activoAhora ? 'NO DISPONIBLE EN ESTE TURNO' : '+ AGREGAR AL CARRITO'}</Text>
+                <TouchableOpacity style={[styles.boton, { marginTop: 10, backgroundColor: activoAhora ? '#2E7D32' : '#B71C1C' }]} onPress={() => agregar(p)} disabled={!activoAhora}>
+                  <Text style={styles.textoBoton}>{st <= 0 ? 'SIN STOCK' : !hor.abierto ? 'LOCAL CERRADO' : !activoAhora ? 'NO DISPONIBLE EN ESTE HORARIO' : '+ AGREGAR AL CARRITO'}</Text>
                 </TouchableOpacity>
               </View>
             );
@@ -193,5 +201,5 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       )}
     </ScrollView>
   );
-                }
-            
+            }
+        
