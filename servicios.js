@@ -2,7 +2,7 @@ const ID_PROYECTO = 'pripxtsriyxhafevokjg';
 export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
 export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaXB4dHNyaXl4aGFmZXZva2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5MTEzMDMsImV4cCI6MjEwOTQ4NzMwM30.uECAPmu6zRj4hN0Jrfq-3dWT49Dfm9fdM3Vb0HbWfOw';
 
-export const categorias = ['Todas', 'Hamburguesas', 'Pepitos', 'Perros calientes', 'Shawarmas', 'Tequeños', 'Salchipapas', 'Broaster', 'Bebidas'];
+export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Pepitos', 'Perros calientes', 'Shawarmas', 'Salchipapas', 'Broaster', 'Cafés y Jugos', 'Bebidas'];
 
 const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
 const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => ((c === 'x' ? Math.random() * 16 | 0 : (Math.random() * 16 | 0) & 0x3 | 0x8)).toString(16));
@@ -25,19 +25,23 @@ export async function obtenerConfigPagos() {
 
 export const guardarConfigPagos = (cfg) => apiRest('configuracion_pagos?id=eq.principal', 'PATCH', { qr_yape: cfg.qr_yape, qr_plin: cfg.qr_plin, titular: cfg.titular });
 export const obtenerCatalogo = (disp = true) => apiRest('productos?' + (disp ? 'disponible=eq.true&' : '') + 'order=categoria.asc,nombre.asc&select=*');
-export const guardarProductoAdmin = (p) => p.id
-  ? apiRest('productos?id=eq.' + p.id, 'PATCH', { nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: p.disponible })
-  : apiRest('productos', 'POST', { id: generarUUID(), nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: true });
+export const guardarProductoAdmin = (p) => {
+  const body = { nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), ingredientes: p.ingredientes, imagen_url: p.imagen_url, disponible: p.disponible, stock: p.stock != null && p.stock !== '' ? Number(p.stock) : 10 };
+  return p.id ? apiRest('productos?id=eq.' + p.id, 'PATCH', body) : apiRest('productos', 'POST', { id: generarUUID(), ...body });
+};
 
 export const obtenerRecompensas = (act = true) => apiRest('recompensas?' + (act ? 'activa=eq.true&' : '') + 'order=puntos_requeridos.asc&select=*');
-export const guardarRecompensaAdmin = (r) => r.id
-  ? apiRest('recompensas?id=eq.' + r.id, 'PATCH', { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: r.activa })
-  : apiRest('recompensas', 'POST', { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: true });
+export const guardarRecompensaAdmin = (r) => {
+  const body = { titulo: r.titulo, descripcion: r.descripcion, puntos_requeridos: Number(r.puntos_requeridos), activa: r.activa, stock: r.stock != null && r.stock !== '' ? Number(r.stock) : 5 };
+  return r.id ? apiRest('recompensas?id=eq.' + r.id, 'PATCH', body) : apiRest('recompensas', 'POST', body);
+};
 
 export async function canjearRecompensaCliente(clienteId, rec) {
+  if (rec.stock != null && Number(rec.stock) <= 0) throw new Error('Este premio está agotado en stock.');
   const pts = Math.abs(Number(rec.puntos_requeridos));
   await apiRest('movimientos_puntos', 'POST', { cliente_id: clienteId, tipo: 'canje', cantidad: -pts, descripcion: 'Canje: ' + rec.titulo });
   await apiRest('solicitudes_canje', 'POST', { cliente_id: clienteId, recompensa_titulo: rec.titulo, puntos_usados: pts, estado: 'Pendiente de entrega' });
+  if (rec.id && rec.stock != null) await apiRest('recompensas?id=eq.' + rec.id, 'PATCH', { stock: Math.max(0, Number(rec.stock) - 1) });
 }
 
 export const obtenerSolicitudesCanje = () => apiRest('solicitudes_canje?order=creado_en.desc&select=*,clientes(nombre_completo,telefono)');
@@ -76,16 +80,17 @@ export async function ingresarUsuario({ telefono, password }) {
 
 export async function crearNuevoPedido(pedidoData, carrito) {
   const num = pedidoData.numero_pedido || ('PED-' + Math.floor(100000 + Math.random() * 900000));
-  const payload = { ...pedidoData, numero_pedido: num, estado: pedidoData.estado || 'Pendiente' };
-  const creados = await apiRest('pedidos', 'POST', payload);
+  const creados = await apiRest('pedidos', 'POST', { ...pedidoData, numero_pedido: num, estado: pedidoData.estado || 'Pendiente' });
   const ped = creados.at(0);
   await apiRest('pedido_detalles', 'POST', carrito.map(p => ({ pedido_id: ped.id, producto_id: String(p.id).includes('-') ? p.id : null, nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre, precio_unitario: Number(p.precio), cantidad: p.cantidad, total_linea: Number(p.precio) * p.cantidad })));
+  for (const p of carrito) {
+    if (p.id && p.stock != null) await apiRest('productos?id=eq.' + p.id, 'PATCH', { stock: Math.max(0, Number(p.stock) - Number(p.cantidad || 1)) });
+  }
   return ped;
 }
 
 export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
-  const sub = Number(pedido.subtotal || pedido.total || 0);
-  const del = Number(costoDelivery || 0);
+  const sub = Number(pedido.subtotal || pedido.total || 0), del = Number(costoDelivery || 0);
   await apiRest('pedidos?id=eq.' + pedido.id, 'PATCH', { confirmado_admin: true, costo_delivery: del, total: sub + del, estado: 'Confirmado por local' });
 }
 
