@@ -5,20 +5,23 @@ import { categorias } from './servicios';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
 
-function evaluarHorarioProducto(p) {
+function obtenerTurnoActual() {
   const ahora = new Date();
   const min = ahora.getHours() * 60 + ahora.getMinutes();
-  const esManana = min >= (6 * 60 + 50) && min <= (11 * 60);
-  const esNoche = min >= (18 * 60 + 30) && min <= (23 * 60 + 50);
-  const txt = `${p.categoria || ''} ${p.nombre || ''}`.toLowerCase();
-  const esDesayuno = /(empanada|arepa|jugo|caf[eé])/.test(txt);
-  const esTequeno = /teque[ñn]o/.test(txt);
-  if (!esManana && !esNoche) return { abierto: false, disponibleTurno: false };
-  if (esManana) return { abierto: true, disponibleTurno: esDesayuno || esTequeno };
-  return { abierto: true, disponibleTurno: !esDesayuno };
+  if (min >= (6 * 60 + 50) && min <= (11 * 60)) return 'manana';
+  if (min >= (18 * 60 + 30) && min <= (23 * 60 + 50)) return 'noche';
+  return 'cerrado';
 }
 
-export function VistaInicio({ usuario, datos, productos, recompensas, carrito, setCarrito, categoriaActiva, setCategoriaActiva, navInfo, onCanjear, onRecibido, cerrarSesion, irACarrito, irATab, cargando }) {
+function evaluarHorarioProducto(p) {
+  const turnoActual = obtenerTurnoActual();
+  if (turnoActual === 'cerrado') return { abierto: false, disponibleTurno: false };
+  const tProd = p.turno || 'ambos';
+  if (tProd === 'ambos') return { abierto: true, disponibleTurno: true };
+  return { abierto: true, disponibleTurno: tProd === turnoActual };
+}
+
+export function VistaInicio({ usuario, datos, productos, recompensas, promociones, carrito, setCarrito, categoriaActiva, setCategoriaActiva, navInfo, onCanjear, onRecibido, cerrarSesion, irACarrito, irATab, cargando }) {
   const [subVista, setSubVista] = useState(navInfo?.tab || 'inicio');
   const [prodDetalle, setProdDetalle] = useState(null);
   const [canjeConfirmar, setCanjeConfirmar] = useState(null);
@@ -29,11 +32,18 @@ export function VistaInicio({ usuario, datos, productos, recompensas, carrito, s
   const filtrados = categoriaActiva === 'Todas' ? (productos || []) : (productos || []).filter(p => p.categoria === categoriaActiva);
   const totalItems = carrito.reduce((a, i) => a + i.cantidad, 0);
 
-  function agregar(p) {
+  function agregar(p, esPromo = false) {
+    if (obtenerTurnoActual() === 'cerrado') return mostrarAviso('Local cerrado', 'Local cerrado, intenta más tarde.');
     const stockActual = p.stock != null ? Number(p.stock) : 10;
     const ex = carrito.find(i => i.id === p.id);
     if (stockActual <= 0 || (ex ? ex.cantidad : 0) + 1 > stockActual) return mostrarAviso('Sin stock', 'No hay más unidades disponibles.');
-    setCarrito(ex ? carrito.map(i => i.id === p.id ? { ...i, cantidad: i.cantidad + 1 } : i) : [...carrito, { ...p, cantidad: 1 }]);
+    const item = esPromo ? { ...p, nombre: p.titulo, es_promo: true } : p;
+    setCarrito(ex ? carrito.map(i => i.id === p.id ? { ...i, cantidad: i.cantidad + 1 } : i) : [...carrito, { ...item, cantidad: 1 }]);
+  }
+
+  function intentarCanjear(r) {
+    if (obtenerTurnoActual() === 'cerrado') return mostrarAviso('Local cerrado', 'Local cerrado, intenta más tarde.');
+    setCanjeConfirmar(r);
   }
 
   if (subVista === 'inicio') {
@@ -59,6 +69,29 @@ export function VistaInicio({ usuario, datos, productos, recompensas, carrito, s
         {totalItems > 0 && <TouchableOpacity style={styles.botonCarrito} onPress={irACarrito}><Text style={styles.textoBotonCarrito}>CARRITO ({totalItems})</Text></TouchableOpacity>}
       </View>
 
+      {(subVista === 'promos' || subVista === 'ofertas') && (
+        <View>
+          <Text style={styles.titulo}>{subVista === 'promos' ? '🔥 PROMOCIONES ACTIVAS' : '🏷️ OFERTAS ESPECIALES'}</Text>
+          {(promociones || []).filter(x => (subVista === 'promos' ? x.tipo === 'promocion' : x.tipo === 'oferta')).length === 0 ? (
+            <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>No hay {subVista === 'promos' ? 'promociones' : 'ofertas'} disponibles por ahora.</Text></View>
+          ) : (
+            (promociones || []).filter(x => (subVista === 'promos' ? x.tipo === 'promocion' : x.tipo === 'oferta')).map(pr => {
+              const st = pr.stock != null ? Number(pr.stock) : 10, sinStock = st <= 0;
+              return (
+                <View key={pr.id} style={styles.tarjetaPedido}>
+                  {!!pr.imagen_url && <Image source={{ uri: pr.imagen_url }} style={{ width: '100%', height: 150, borderRadius: 10, marginBottom: 8 }} resizeMode="cover" />}
+                  <Text style={styles.nombreProducto}>{pr.titulo}</Text>
+                  <Text style={[styles.descripcionPedido, { color: '#DDD' }]}>{pr.descripcion}</Text>
+                  <Text style={styles.precioProducto}>S/ {Number(pr.precio).toFixed(2)} • {sinStock ? 'AGOTADO' : `Stock: ${st} uds`}</Text>
+                  <TouchableOpacity style={[styles.boton, { marginTop: 8 }, sinStock && styles.botonDeshabilitado]} onPress={() => agregar(pr, true)} disabled={sinStock}>
+                    <Text style={styles.textoBoton}>{sinStock ? 'TERMINADO / SIN STOCK' : '+ AGREGAR AL CARRITO'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })
+          )}
+        </View>
+      )}
       {subVista === 'canjear' && (
         <View>
           <View style={[styles.tarjetaSaldo, { paddingVertical: 12, marginBottom: 14 }]}><Text style={styles.etiquetaSaldo}>TUS PUNTOS DISPONIBLES</Text><Text style={[styles.numeroSaldo, { fontSize: 28 }]}>{datos?.puntos ?? 0} PTS</Text></View>
@@ -79,7 +112,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, carrito, s
                 <Text style={styles.nombreProducto}>{r.titulo}</Text>
                 <Text style={styles.descripcionPedido}>{r.descripcion}</Text>
                 <Text style={styles.precioProducto}>{r.puntos_requeridos} PUNTOS • {sinStock ? 'AGOTADO' : `Disponibles: ${st} uds`}</Text>
-                <TouchableOpacity style={[styles.boton, (sinPts || sinStock) && styles.botonDeshabilitado]} onPress={() => setCanjeConfirmar(r)} disabled={sinPts || sinStock || cargando}>
+                <TouchableOpacity style={[styles.boton, (sinPts || sinStock) && styles.botonDeshabilitado]} onPress={() => intentarCanjear(r)} disabled={sinPts || sinStock || cargando}>
                   <Text style={styles.textoBoton}>{sinStock ? 'TERMINADO / SIN STOCK' : sinPts ? 'PUNTOS INSUFICIENTES' : 'CANJEAR AHORA'}</Text>
                 </TouchableOpacity>
               </View>
@@ -98,6 +131,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, carrito, s
           )}
         </View>
       )}
+
       {subVista === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>MIS PEDIDOS</Text>
@@ -138,8 +172,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, carrito, s
           </ScrollView>
           {filtrados.map(p => {
             const st = p.stock != null ? Number(p.stock) : 10, hor = evaluarHorarioProducto(p);
-            const forzadoAdmin = p.disponible === true && !hor.disponibleTurno && hor.abierto;
-            const activoAhora = p.disponible !== false && (hor.disponibleTurno || forzadoAdmin) && st > 0;
+            const activoAhora = p.disponible !== false && hor.disponibleTurno && st > 0;
             return (
               <View key={p.id} style={[styles.tarjetaPedido, !activoAhora && { opacity: 0.65 }]}>
                 <TouchableOpacity onPress={() => setProdDetalle(p)} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
@@ -160,5 +193,5 @@ export function VistaInicio({ usuario, datos, productos, recompensas, carrito, s
       )}
     </ScrollView>
   );
-                           }
-                
+                }
+            
