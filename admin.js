@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
-import { obtenerCatalogo, guardarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje } from './servicios';
+import { obtenerCatalogo, guardarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje, subirImagenGaleria } from './servicios';
 
 function obtenerInfoHoraPeru() {
   const ahora = new Date();
@@ -27,6 +27,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [editProd, setEditProd] = useState(null);
   const [editRec, setEditRec] = useState(null);
   const [editPromo, setEditPromo] = useState(null);
+  const [subiendoImg, setSubiendoImg] = useState(false);
   const [sonando, setSonando] = useState(false);
   const [audioListo, setAudioListo] = useState(true);
   const conocidosRef = useRef(null), ctxAudioRef = useRef(null), timerRef = useRef(null), timeoutRef = useRef(null), wakeRef = useRef(null);
@@ -51,7 +52,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch (e) {}
     } else detenerAlarma();
   }
-
   const esPendiente = (est) => est === 'Pendiente' || est === 'Pendiente de confirmación';
 
   useEffect(() => {
@@ -85,11 +85,23 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     timerRef.current = setInterval(tocarPitidoWeb, 900);
     timeoutRef.current = setTimeout(detenerAlarma, 10000);
   }
+
   function estiloEstado(est) {
     if (esPendiente(est)) return { badge: { borderColor: '#F5B041', backgroundColor: '#2B210B' }, texto: { color: '#F5B041' } };
     if (est === 'Completado') return { badge: { borderColor: '#4CAF50', backgroundColor: '#132615' }, texto: { color: '#4CAF50' } };
     if (est === 'Cancelado') return { badge: { borderColor: '#E53935', backgroundColor: '#2A1215' }, texto: { color: '#E53935' } };
     return { badge: { borderColor: '#29B6F6', backgroundColor: '#0E2433' }, texto: { color: '#29B6F6' } };
+  }
+
+  async function elegirFoto(destino) {
+    try {
+      setSubiendoImg(true);
+      const url = await subirImagenGaleria();
+      if (!url) return;
+      if (destino === 'prod') setEditProd(prev => ({ ...prev, imagen_url: url }));
+      if (destino === 'promo') setEditPromo(prev => ({ ...prev, imagen_url: url }));
+      mostrarAviso('Foto cargada', 'La imagen se subió correctamente.');
+    } catch (e) { mostrarAviso('Error al subir', e.message); } finally { setSubiendoImg(false); }
   }
 
   async function cargarTodoAdmin() { try { const [p, r, pr, c, sc] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(false), obtenerConfigPagos(), obtenerSolicitudesCanje()]); setProductos(p || []); setRecompensas(r || []); setPromociones(pr || []); setCfgPagos(c); setSolicitudesCanje(sc || []); } catch (e) {} }
@@ -99,8 +111,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   async function guardarPromo() { if (!editPromo.titulo.trim()) return mostrarAviso('Faltan datos', 'Escribe el título.'); try { await guardarPromocionAdmin(editPromo); setEditPromo(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Guardado correctamente.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function entregarCanje(id) { try { await confirmarEntregaCanje(id); await cargarTodoAdmin(); mostrarAviso('Entregado', 'Canje entregado.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function guardarPagos() { try { await guardarConfigPagos(cfgPagos); mostrarAviso('Guardado', 'QR actualizados.'); } catch (e) { mostrarAviso('Error', e.message); } }
-
-  const infoPeru = obtenerInfoHoraPeru();
+    const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado'), cancelados = (pedidos || []).filter(p => p.estado === 'Cancelado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
@@ -114,6 +125,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   return (
     <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
       <NavegacionSuperior regresar={() => { setEditProd(null); setEditRec(null); setEditPromo(null); setTab('pedidos'); }} irAInicio={() => { setEditProd(null); setEditRec(null); setEditPromo(null); setTab('pedidos'); }} />
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 10 }}>
+        <TouchableOpacity onPress={cerrarSesion} style={{ backgroundColor: '#B71C1C', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 }}>
+          <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>CERRAR SESIÓN</Text>
+        </TouchableOpacity>
+      </View>
       {sonando && <TouchableOpacity onPress={detenerAlarma} style={{ backgroundColor: '#B81D24', padding: 14, borderRadius: 12, marginBottom: 14, alignItems: 'center' }}><Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>🔔 ¡NUEVO PEDIDO ENTRANTE! (TOCA PARA SILENCIAR)</Text></TouchableOpacity>}
       <View style={styles.filaSaludo}>
         <View><Text style={styles.saludo}>Panel Administrador,</Text><Text style={styles.nombreCliente}>{usuario?.nombre_completo}</Text></View>
@@ -165,7 +181,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ); })}
         </View>
       )}
-      {(tab === 'promos' || tab === 'ofertas') && (
+                      {(tab === 'promos' || tab === 'ofertas') && (
         <View>
           <View style={styles.filaSaludo}><Text style={styles.titulo}>{tab === 'promos' ? 'PROMOCIONES' : 'OFERTAS'}</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditPromo({ tipo: tab === 'promos' ? 'promocion' : 'oferta', titulo: '', descripcion: '', precio: '15', stock: '10', imagen_url: '', activa: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVA</Text></TouchableOpacity></View>
           {editPromo && (
@@ -174,7 +190,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Descripción" placeholderTextColor="#777" value={editPromo.descripcion || ''} onChangeText={v => setEditPromo({ ...editPromo, descripcion: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Precio S/" placeholderTextColor="#777" keyboardType="numeric" value={String(editPromo.precio)} onChangeText={v => setEditPromo({ ...editPromo, precio: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock disponible" placeholderTextColor="#777" keyboardType="numeric" value={String(editPromo.stock ?? 10)} onChangeText={v => setEditPromo({ ...editPromo, stock: v })} />
-              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="URL Imagen (opcional)" placeholderTextColor="#777" value={editPromo.imagen_url || ''} onChangeText={v => setEditPromo({ ...editPromo, imagen_url: v })} />
+              <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0', marginTop: 8 }]} onPress={() => elegirFoto('promo')} disabled={subiendoImg}><Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO FOTO...' : '📸 SUBIR FOTO DESDE MI CELULAR'}</Text></TouchableOpacity>
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="URL Imagen (automática)" placeholderTextColor="#777" value={editPromo.imagen_url || ''} onChangeText={v => setEditPromo({ ...editPromo, imagen_url: v })} />
               <TouchableOpacity style={[styles.opcionEntrega, editPromo.activa && styles.opcionEntregaActiva]} onPress={() => setEditPromo({ ...editPromo, activa: !editPromo.activa })}><Text style={styles.textoOpcionEntrega}>{editPromo.activa ? 'ACTIVA (VISIBLE)' : 'OCULTA'}</Text></TouchableOpacity>
               <TouchableOpacity style={styles.boton} onPress={guardarPromo}><Text style={styles.textoBoton}>GUARDAR</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditPromo(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
@@ -187,7 +204,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             </View>
           ))}
         </View>
-      )}      {tab === 'canjes' && (
+      )}
+      {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -211,7 +229,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           {recompensas.map(r => <View key={r.id} style={styles.producto}><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{r.titulo}</Text><Text style={styles.precioProducto}>{r.puntos_requeridos} PTS • Stock: {r.stock ?? 5} uds</Text></View><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRec(r)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity></View>)}
         </View>
       )}
-      {tab === 'menu' && (
+                              {tab === 'menu' && (
         <View>
           <View style={styles.filaSaludo}><Text style={styles.titulo}>MENÚ, HORARIOS Y STOCK</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditProd({ nombre: '', categoria: 'Hamburguesas', precio: '10', stock: '10', turno: 'ambos', ingredientes: '', imagen_url: '', disponible: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ PLATO</Text></TouchableOpacity></View>
           {editProd && (
@@ -221,14 +239,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Categoría" placeholderTextColor="#777" value={editProd.categoria} onChangeText={v => setEditProd({ ...editProd, categoria: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Precio S/" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.precio)} onChangeText={v => setEditProd({ ...editProd, precio: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock disponible" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.stock ?? 10)} onChangeText={v => setEditProd({ ...editProd, stock: v })} />
-              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="URL Imagen" placeholderTextColor="#777" value={editProd.imagen_url || ''} onChangeText={v => setEditProd({ ...editProd, imagen_url: v })} />
+              <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0', marginTop: 8 }]} onPress={() => elegirFoto('prod')} disabled={subiendoImg}><Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO FOTO...' : '📸 SUBIR FOTO DESDE MI CELULAR'}</Text></TouchableOpacity>
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="URL Imagen (automática)" placeholderTextColor="#777" value={editProd.imagen_url || ''} onChangeText={v => setEditProd({ ...editProd, imagen_url: v })} />
               <TextInput style={[styles.campo, styles.campoMultilinea, { marginTop: 8, color: '#FFF' }]} placeholder="Ingredientes" placeholderTextColor="#777" multiline value={editProd.ingredientes || ''} onChangeText={v => setEditProd({ ...editProd, ingredientes: v })} />
               <TouchableOpacity style={[styles.opcionEntrega, editProd.disponible && styles.opcionEntregaActiva]} onPress={() => setEditProd({ ...editProd, disponible: !editProd.disponible })}><Text style={styles.textoOpcionEntrega}>{editProd.disponible ? 'VISIBLE EN MENÚ' : 'OCULTO'}</Text></TouchableOpacity>
               <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditProd(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
             </View>
           )}
-          {productos.map(prod => <View key={prod.id} style={styles.producto}><Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 54, height: 54, borderRadius: 8, backgroundColor: '#222' }} /><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{prod.nombre} {!prod.disponible ? '(OCULTO)' : ''}</Text><Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10} • {(prod.turno || 'ambos').toUpperCase()}</Text></View><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity></View>)}
+          {productos.map(prod => <View key={prod.id} style={styles.producto}><Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 54, height: 54, borderRadius: 8, backgroundColor: '#222' }} /><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{prod.nombre} {!prod.disponible ? '(OCULTO)' : ''}</Text><Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10}</Text></View><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity></View>)}
         </View>
       )}
       {tab === 'qr pagos' && <View><Text style={styles.titulo}>QR YAPE Y PLIN</Text><View style={styles.tarjetaPedido}><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular y teléfono" placeholderTextColor="#777" value={cfgPagos.titular || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titular: v })} /><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Yape" placeholderTextColor="#777" value={cfgPagos.qr_yape || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_yape: v })} /><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Plin" placeholderTextColor="#777" value={cfgPagos.qr_plin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_plin: v })} /><TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR QR</Text></TouchableOpacity></View></View>}
@@ -246,9 +265,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 20 }]} onPress={cerrarSesion}><Text style={styles.textoBoton}>CERRAR SESIÓN</Text></TouchableOpacity>
     </ScrollView>
   );
-        }
-
-                                                                                                                                                                
+                                }
