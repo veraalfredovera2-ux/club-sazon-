@@ -341,3 +341,43 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   );
                                              }
                                                                                                                                                                        
+      {tab === 'menu' && (
+        <View>
+          <View style={styles.filaSaludo}><Text style={styles.titulo}>MENÚ, HORARIOS Y STOCK</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditProd({ nombre: '', categoria: 'Hamburguesas', precio: '10', stock: '10', turno: 'ambos', ingredientes: '', imagen_url: '', disponible: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ PLATO</Text></TouchableOpacity></View>
+          {editProd && (
+            <View style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>{editProd.id ? 'Editar Plato' : 'Nuevo Plato'}</Text>
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Nombre" placeholderTextColor="#777" value={editProd.nombre} onChangeText={v => setEditProd({ ...editProd, nombre: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Categoría" placeholderTextColor="#777" value={editProd.categoria} onChangeText={v => setEditProd({ ...editProd, categoria: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Precio S/" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.precio)} onChangeText={v => setEditProd({ ...editProd, precio: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock disponible" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.stock ?? 10)} onChangeText={v => setEditProd({ ...editProd, stock: v })} />
+              <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0', marginTop: 8 }]} onPress={() => elegirFoto('prod')} disabled={subiendoImg}><Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO FOTO...' : '📸 SUBIR FOTO DESDE MI CELULAR'}</Text></TouchableOpacity>
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="URL Imagen (automática)" placeholderTextColor="#777" value={editProd.imagen_url || ''} onChangeText={v => setEditProd({ ...editProd, imagen_url: v })} />
+              <TextInput style={[styles.campo, styles.campoMultilinea, { marginTop: 8, color: '#FFF' }]} placeholder="Ingredientes" placeholderTextColor="#777" multiline value={editProd.ingredientes || ''} onChangeText={v => setEditProd({ ...editProd, ingredientes: v })} />
+              <TouchableOpacity style={[styles.opcionEntrega, editProd.disponible && styles.opcionEntregaActiva]} onPress={() => setEditProd({ ...editProd, disponible: !editProd.disponible })}><Text style={styles.textoOpcionEntrega}>{editProd.disponible ? 'VISIBLE EN MENÚ' : 'OCULTO'}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditProd(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
+              {editProd.id && <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(editProd.id)}><Text style={styles.textoBoton}>🗑️ ELIMINAR PLATO</Text></TouchableOpacity>}
+            </View>
+          )}
+          {productos.map(prod => <View key={prod.id} style={styles.producto}><Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 54, height: 54, borderRadius: 8, backgroundColor: '#222' }} /><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{prod.nombre} {!prod.disponible ? '(OCULTO)' : ''}</Text><Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10}</Text></View><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity></View>)}
+        </View>
+      )}
+      {tab === 'qr pagos' && <View><Text style={styles.titulo}>QR YAPE Y PLIN</Text><View style={styles.tarjetaPedido}><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular y teléfono" placeholderTextColor="#777" value={cfgPagos.titular || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titular: v })} /><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Yape" placeholderTextColor="#777" value={cfgPagos.qr_yape || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_yape: v })} /><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Plin" placeholderTextColor="#777" value={cfgPagos.qr_plin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_plin: v })} /><TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR QR</Text></TouchableOpacity></View></View>}
+      {tab === 'ventas' && (
+        <View>
+          <View style={styles.tarjetaSaldo}><Text style={styles.etiquetaSaldo}>TOTAL VENTAS COMPLETADAS</Text><Text style={styles.numeroSaldo}>S/ {totalVentas.toFixed(2)}</Text><Text style={[styles.etiquetaSaldo, { marginTop: 6 }]}>{completados.length} VENTAS • {cancelados.length} DEVOLUCIONES</Text></View>
+          <Text style={styles.titulo}>HISTORIAL DIARIO DE VENTAS Y DEVOLUCIONES</Text>
+          {ventasPorDia.map(d => (
+            <View key={d.fecha} style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>📅 Fecha: {d.fecha}</Text>
+              <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '700' }]}>✅ Ventas ({d.cantVentas}): S/ {d.ventas.toFixed(2)}</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E53935', fontWeight: '700' }]}>❌ Devoluciones / Cancelados ({d.cantDev}): S/ {d.devoluciones.toFixed(2)}</Text>
+              <Text style={styles.totalPedidoTexto}>Neto del día: S/ {(d.ventas - d.devoluciones).toFixed(2)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </ScrollView>
+  );
+       }
