@@ -29,24 +29,21 @@ export default function App() {
   const [categoriaActiva, setCategoriaActiva] = useState('Todas');
   const [cargando, setCargando] = useState(false);
 
-  useEffect(() => {
+    useEffect(() => {
     registrarAvisoGlobal(setAviso);
     iniciar();
     if (typeof document !== 'undefined') {
       try {
-        const uri = Image.resolveAssetSource(LOGO)?.uri;
-        if (uri) {
-          ['icon', 'apple-touch-icon'].forEach(rel => {
-            let link = document.querySelector(`link[rel="${rel}"]`) || document.createElement('link');
-            link.rel = rel; link.href = uri; document.head.appendChild(link);
-          });
-          const manifest = { name: 'Club Sazón', short_name: 'Club Sazón', start_url: '/', display: 'standalone', background_color: '#0A0A0A', theme_color: '#0A0A0A', icons: [{ src: uri, sizes: '512x512', type: 'image/png' }] };
-          const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-          let mLink = document.querySelector('link[rel="manifest"]') || document.createElement('link');
-          mLink.rel = 'manifest'; mLink.href = URL.createObjectURL(blob); document.head.appendChild(mLink);
-        }
+        ['icon', 'apple-touch-icon'].forEach(rel => {
+          let link = document.querySelector(`link[rel="${rel}"]`) || document.createElement('link');
+          link.rel = rel; link.href = '/20261104_204552_0000%20(1).png'; document.head.appendChild(link);
+        });
+        let mLink = document.querySelector('link[rel="manifest"]') || document.createElement('link');
+        mLink.rel = 'manifest'; mLink.href = '/manifest.json'; document.head.appendChild(mLink);
       } catch (e) {}
     }
+  }, []);
+
   }, []);
   useEffect(() => {
     if (tipoUsuario !== 'cliente' || !usuario?.id) return;
