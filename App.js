@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
-import { VistaBienvenida, VistaRegistro } from './pantallas';
+import { VistaBienvenida, VistaRegistro, LOGO } from './pantallas';
 import { VistaInicio } from './vistas';
 import { VistaCarrito, VistaPanel, BannerAviso, registrarAvisoGlobal, mostrarAviso } from './avisos';
 import { VistaAdmin } from './admin';
@@ -29,8 +29,25 @@ export default function App() {
   const [categoriaActiva, setCategoriaActiva] = useState('Todas');
   const [cargando, setCargando] = useState(false);
 
-  useEffect(() => { registrarAvisoGlobal(setAviso); iniciar(); }, []);
-
+  useEffect(() => {
+    registrarAvisoGlobal(setAviso);
+    iniciar();
+    if (typeof document !== 'undefined') {
+      try {
+        const uri = Image.resolveAssetSource(LOGO)?.uri;
+        if (uri) {
+          ['icon', 'apple-touch-icon'].forEach(rel => {
+            let link = document.querySelector(`link[rel="${rel}"]`) || document.createElement('link');
+            link.rel = rel; link.href = uri; document.head.appendChild(link);
+          });
+          const manifest = { name: 'Club Sazón', short_name: 'Club Sazón', start_url: '/', display: 'standalone', background_color: '#0A0A0A', theme_color: '#0A0A0A', icons: [{ src: uri, sizes: '512x512', type: 'image/png' }] };
+          const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+          let mLink = document.querySelector('link[rel="manifest"]') || document.createElement('link');
+          mLink.rel = 'manifest'; mLink.href = URL.createObjectURL(blob); document.head.appendChild(mLink);
+        }
+      } catch (e) {}
+    }
+  }, []);
   useEffect(() => {
     if (tipoUsuario !== 'cliente' || !usuario?.id) return;
     const t = setInterval(async () => {
@@ -70,6 +87,7 @@ export default function App() {
       else if (usuario?.id) setDatos(await obtenerDatosCliente(usuario.id));
     } catch (e) {}
   }
+
   function irATabCliente(tab) { setNavInfo(prev => ({ tab, seq: prev.seq + 1 })); setPantalla('inicio'); recargarTodo(); }
 
   async function manejarRegistro(form) {
@@ -93,8 +111,7 @@ export default function App() {
       else { setDatos(await obtenerDatosCliente(r.perfil.id)); irATabCliente('inicio'); }
     } catch (e) { throw e; } finally { setCargando(false); }
   }
-
-  async function manejarCanje(rec) {
+    async function manejarCanje(rec) {
     setCargando(true);
     try { await canjearRecompensaCliente(usuario.id, rec); await recargarTodo(); mostrarAviso('¡Canje solicitado!', 'Tu canje quedó registrado.'); }
     catch (e) { await recargarTodo(); mostrarAviso('No se pudo canjear', e.message); } finally { setCargando(false); }
