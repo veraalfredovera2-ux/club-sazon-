@@ -41,7 +41,7 @@ export default function App() {
         if (rec) setRecompensas(rec);
         if (proms) setPromociones(proms);
       } catch (e) {}
-    }, 5000);
+    }, 3000);
     return () => clearInterval(t);
   }, [tipoUsuario, usuario?.id]);
 
@@ -70,7 +70,7 @@ export default function App() {
       else if (usuario?.id) setDatos(await obtenerDatosCliente(usuario.id));
     } catch (e) {}
   }
-  function irATabCliente(tab) { setNavInfo(prev => ({ tab, seq: prev.seq + 1 })); setPantalla('inicio'); }
+  function irATabCliente(tab) { setNavInfo(prev => ({ tab, seq: prev.seq + 1 })); setPantalla('inicio'); recargarTodo(); }
 
   async function manejarRegistro(form) {
     setCargando(true);
@@ -150,7 +150,7 @@ export default function App() {
             { id: 'ofertas', ico: '🏷️', txt: 'OFERTAS', act: pantalla === 'inicio' && navInfo.tab === 'ofertas', fn: () => irATabCliente('ofertas') },
             { id: 'carrito', ico: '🛒', txt: totalItems > 0 ? `CARRITO(${totalItems})` : 'CARRITO', act: pantalla === 'carrito', fn: () => setPantalla('carrito') },
             { id: 'pedidos', ico: '📋', txt: 'PEDIDOS', act: pantalla === 'inicio' && navInfo.tab === 'pedidos', fn: () => irATabCliente('pedidos') },
-            { id: 'puntos', ico: '⭐', txt: 'PUNTOS', act: pantalla === 'panel', fn: () => setPantalla('panel') },
+            { id: 'puntos', ico: '⭐', txt: 'PUNTOS', act: pantalla === 'panel', fn: () => { setPantalla('panel'); recargarTodo(); } },
             { id: 'canjes', ico: '🎁', txt: 'CANJES', act: pantalla === 'inicio' && navInfo.tab === 'canjear', fn: () => irATabCliente('canjear') }
           ].map(b => (
             <TouchableOpacity key={b.id} style={{ flex: 1, alignItems: 'center', paddingVertical: 3 }} onPress={b.fn}>
@@ -164,4 +164,3 @@ export default function App() {
     </SafeAreaView>
   );
           }
-        
