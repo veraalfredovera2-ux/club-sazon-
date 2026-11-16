@@ -8,9 +8,11 @@ const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
 const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => ((c === 'x' ? Math.random() * 16 | 0 : (Math.random() * 16 | 0) & 0x3 | 0x8)).toString(16));
 
 async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
-  const op = { method: metodo, headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=representation' } };
+  const sep = ruta.includes('?') ? '&' : '?';
+  const urlFinal = SUPABASE_URL + '/rest/v1/' + ruta + (metodo === 'GET' ? `${sep}_t=${Date.now()}` : '');
+  const op = { method: metodo, cache: 'no-store', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate', Pragma: 'no-cache', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=representation' } };
   if (cuerpo) op.body = JSON.stringify(cuerpo);
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + ruta, op);
+  const res = await fetch(urlFinal, op);
   const txt = await res.text();
   let datos = [];
   try { datos = txt ? JSON.parse(txt) : []; } catch (e) { throw new Error('Error de red (' + res.status + ')'); }
@@ -47,7 +49,7 @@ export async function canjearRecompensaCliente(clienteId, rec) {
   const pts = Math.abs(Number(rec.puntos_requeridos));
   const movsActuales = await apiRest('movimientos_puntos?cliente_id=eq.' + clienteId + '&select=cantidad');
   const saldoReal = (movsActuales || []).reduce((a, m) => a + Number(m.cantidad || 0), 0);
-  if (saldoReal < pts) throw new Error(`Puntos insuficientes. Tu saldo real es de ${saldoReal} pts.`);
+  if (saldoReal < pts) throw new Error(`Puntos insuficientes. Tu saldo real actualizado es de ${saldoReal} pts.`);
   await apiRest('movimientos_puntos', 'POST', { cliente_id: clienteId, tipo: 'canje', cantidad: -pts, descripcion: 'Canje: ' + rec.titulo });
   await apiRest('solicitudes_canje', 'POST', { cliente_id: clienteId, recompensa_titulo: rec.titulo, puntos_usados: pts, estado: 'Pendiente de entrega' });
   if (rec.id && rec.stock != null) await apiRest('recompensas?id=eq.' + rec.id, 'PATCH', { stock: Math.max(0, Number(rec.stock) - 1) });
@@ -132,4 +134,4 @@ export async function cancelarPedidoYDescontar(pedido) {
     return pendienteRestar;
   }
   return 0;
-}
+    }
