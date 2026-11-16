@@ -159,3 +159,9 @@ export function subirImagenGaleria() {
   });
 }
 export const eliminarProductoAdmin = (id) => apiRest('productos?id=eq.' + id, 'DELETE');
+export const obtenerRidersAdmin = () => apiRest('riders?order=creado_en.desc&select=*');
+export async function guardarRiderAdmin(r) {
+  const datos = { nombre_completo: r.nombre_completo.trim(), telefono: limpiarTel(r.telefono), password: String(r.password || '').trim(), placa_vehiculo: (r.placa_vehiculo || '').trim(), disponible: r.disponible !== false };
+  return r.id ? apiRest('riders?id=eq.' + r.id, 'PATCH', datos) : apiRest('riders', 'POST', datos);
+}
+export const eliminarRiderAdmin = (id) => apiRest('riders?id=eq.' + id, 'DELETE');
