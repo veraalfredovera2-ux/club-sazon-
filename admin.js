@@ -23,7 +23,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [promociones, setPromociones] = useState([]);
   const [solicitudesCanje, setSolicitudesCanje] = useState([]);
   const [riders, setRiders] = useState([]);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '' });
+  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50' });
   const [costosDel, setCostosDel] = useState({});
   const [editProd, setEditProd] = useState(null);
   const [editRec, setEditRec] = useState(null);
@@ -106,7 +106,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     } catch (e) { mostrarAviso('Error al subir', e.message); } finally { setSubiendoImg(false); }
   }
 
-  async function cargarTodoAdmin() { try { const [p, r, pr, c, sc, rd] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(false), obtenerConfigPagos(), obtenerSolicitudesCanje(), obtenerRidersAdmin()]); setProductos(p || []); setRecompensas(r || []); setPromociones(pr || []); setCfgPagos(c); setSolicitudesCanje(sc || []); setRiders(rd || []); } catch (e) {} }
+  async function cargarTodoAdmin() { try { const [p, r, pr, c, sc, rd] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(false), obtenerConfigPagos(), obtenerSolicitudesCanje(), obtenerRidersAdmin()]); setProductos(p || []); setRecompensas(r || []); setPromociones(pr || []); setCfgPagos(prev => ({ ...prev, ...c })); setSolicitudesCanje(sc || []); setRiders(rd || []); } catch (e) {} }
   async function guardarProd() { if (editProd.nombre.trim()) try { await guardarProductoAdmin(editProd); setEditProd(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Producto actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function borrarProd(id) { try { await eliminarProductoAdmin(id); setEditProd(null); await cargarTodoAdmin(); mostrarAviso('Eliminado', 'Plato eliminado del menú.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function guardarRider() { if (!editRider.nombre_completo.trim() || !editRider.telefono.trim() || !editRider.password.trim()) return mostrarAviso('Faltan datos', 'Completa nombre, teléfono y contraseña.'); try { await guardarRiderAdmin(editRider); setEditRider(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Repartidor actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
@@ -115,8 +115,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   async function guardarRec() { if (!editRec.titulo.trim() || !String(editRec.puntos_requeridos).trim()) return mostrarAviso('Faltan datos', 'Escribe título y puntos.'); try { await guardarRecompensaAdmin(editRec); setEditRec(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Premio actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function guardarPromo() { if (!editPromo.titulo.trim()) return mostrarAviso('Faltan datos', 'Escribe el título.'); try { await guardarPromocionAdmin(editPromo); setEditPromo(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Guardado correctamente.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function entregarCanje(id) { try { await confirmarEntregaCanje(id); await cargarTodoAdmin(); mostrarAviso('Entregado', 'Canje entregado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function guardarPagos() { try { await guardarConfigPagos(cfgPagos); mostrarAviso('Guardado', 'QR actualizados.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  const infoPeru = obtenerInfoHoraPeru();
+  async function guardarPagos() { try { await guardarConfigPagos(cfgPagos); mostrarAviso('Guardado', 'Configuración guardada.'); } catch (e) { mostrarAviso('Error', e.message); } }
+    const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado'), cancelados = (pedidos || []).filter(p => p.estado === 'Cancelado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
@@ -148,13 +148,16 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       </ScrollView>
       {tab === 'riders' && (
         <View>
-          <View style={styles.filaSaludo}><Text style={styles.titulo}>ORIENTAL RIDERS ({riders.length})</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRider({ nombre_completo: '', telefono: '', password: '', placa_vehiculo: '', disponible: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ RIDER</Text></TouchableOpacity></View>
+          <View style={styles.filaSaludo}><Text style={styles.titulo}>ORIENTAL RIDERS ({riders.length})</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRider({ nombre_completo: '', telefono: '', password: '', placa_vehiculo: '', hora_entrada: '18:30', hora_salida: '23:50', dias_libres: 'Ninguno', disponible: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ RIDER</Text></TouchableOpacity></View>
           {editRider && (
             <View style={styles.tarjetaPedido}>
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Nombre completo" placeholderTextColor="#777" value={editRider.nombre_completo} onChangeText={v => setEditRider({ ...editRider, nombre_completo: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Teléfono (9 dígitos)" placeholderTextColor="#777" keyboardType="phone-pad" value={editRider.telefono} onChangeText={v => setEditRider({ ...editRider, telefono: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Contraseña" placeholderTextColor="#777" value={editRider.password} onChangeText={v => setEditRider({ ...editRider, password: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Placa o vehículo (ej. Moto ABC-123)" placeholderTextColor="#777" value={editRider.placa_vehiculo || ''} onChangeText={v => setEditRider({ ...editRider, placa_vehiculo: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Hora entrada (ej. 18:30)" placeholderTextColor="#777" value={editRider.hora_entrada || ''} onChangeText={v => setEditRider({ ...editRider, hora_entrada: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Hora salida (ej. 23:50)" placeholderTextColor="#777" value={editRider.hora_salida || ''} onChangeText={v => setEditRider({ ...editRider, hora_salida: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Días libres (ej. Lunes y Martes)" placeholderTextColor="#777" value={editRider.dias_libres || ''} onChangeText={v => setEditRider({ ...editRider, dias_libres: v })} />
               <TouchableOpacity style={styles.boton} onPress={guardarRider}><Text style={styles.textoBoton}>GUARDAR RIDER</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditRider(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
               {editRider.id && <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C' }]} onPress={() => borrarRider(editRider.id)}><Text style={styles.textoBoton}>🗑️ ELIMINAR RIDER</Text></TouchableOpacity>}
@@ -162,7 +165,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
           {riders.map(r => (
             <View key={r.id} style={styles.producto}>
-              <View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{r.nombre_completo} {r.disponible ? '🟢' : '🔴'}</Text><Text style={styles.precioProducto}>Tel: {r.telefono} • {r.placa_vehiculo || 'Sin placa'}</Text></View>
+              <View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{r.nombre_completo} {r.disponible ? '🟢' : '🔴'}</Text><Text style={styles.precioProducto}>Tel: {r.telefono} • {r.placa_vehiculo || 'Sin placa'}</Text><Text style={[styles.precioProducto, { color: '#F5B041' }]}>⏰ {r.hora_entrada || '18:30'} - {r.hora_salida || '23:50'} • Libres: {r.dias_libres || 'Ninguno'}</Text></View>
               <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRider(r)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
             </View>
           ))}
@@ -171,6 +174,20 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               {tab === 'horarios' && (
         <View>
           <View style={[styles.tarjetaSaldo, { paddingVertical: 12, marginBottom: 12 }]}><Text style={styles.etiquetaSaldo}>🇵🇪 HORA PERÚ-LIMA: {infoPeru.hora}</Text><Text style={{ color: '#F5B041', fontWeight: '900', fontSize: 14, textAlign: 'center', marginTop: 4 }}>{infoPeru.turno}</Text></View>
+          <Text style={styles.titulo}>CONFIGURAR HORA DE APERTURA Y CIERRE</Text>
+          <View style={styles.tarjetaPedido}>
+            <Text style={styles.descripcionPedido}>🌅 Turno Mañana (Inicio — Fin):</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="06:50" placeholderTextColor="#777" value={cfgPagos.manana_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_inicio: v })} />
+              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="11:00" placeholderTextColor="#777" value={cfgPagos.manana_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_fin: v })} />
+            </View>
+            <Text style={[styles.descripcionPedido, { marginTop: 10 }]}>🌙 Turno Noche (Inicio — Fin):</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="18:30" placeholderTextColor="#777" value={cfgPagos.noche_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_inicio: v })} />
+              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="23:50" placeholderTextColor="#777" value={cfgPagos.noche_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_fin: v })} />
+            </View>
+            <TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR HORARIOS DEL LOCAL</Text></TouchableOpacity>
+          </View>
           <Text style={styles.titulo}>CONTROL DE PRODUCTOS POR HORARIO</Text>
           {productos.map(prod => (
             <View key={prod.id} style={styles.tarjetaPedido}>
@@ -209,7 +226,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ); })}
         </View>
       )}
-                        {(tab === 'promos' || tab === 'ofertas') && (
+                  {(tab === 'promos' || tab === 'ofertas') && (
         <View>
           <View style={styles.filaSaludo}><Text style={styles.titulo}>{tab === 'promos' ? 'PROMOCIONES' : 'OFERTAS'}</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditPromo({ tipo: tab === 'promos' ? 'promocion' : 'oferta', titulo: '', descripcion: '', precio: '15', stock: '10', imagen_url: '', activa: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVA</Text></TouchableOpacity></View>
           {editPromo && (
@@ -257,7 +274,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           {recompensas.map(r => <View key={r.id} style={styles.producto}><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{r.titulo}</Text><Text style={styles.precioProducto}>{r.puntos_requeridos} PTS • Stock: {r.stock ?? 5} uds</Text></View><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRec(r)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity></View>)}
         </View>
       )}
-      {tab === 'menu' && (
+                          {tab === 'menu' && (
         <View>
           <View style={styles.filaSaludo}><Text style={styles.titulo}>MENÚ, HORARIOS Y STOCK</Text><TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditProd({ nombre: '', categoria: 'Hamburguesas', precio: '10', stock: '10', turno: 'ambos', ingredientes: '', imagen_url: '', disponible: true })}><Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ PLATO</Text></TouchableOpacity></View>
           {editProd && (
@@ -273,10 +290,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TouchableOpacity style={[styles.opcionEntrega, editProd.disponible && styles.opcionEntregaActiva]} onPress={() => setEditProd({ ...editProd, disponible: !editProd.disponible })}><Text style={styles.textoOpcionEntrega}>{editProd.disponible ? 'VISIBLE EN MENÚ' : 'OCULTO'}</Text></TouchableOpacity>
               <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditProd(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
-              {editProd.id && <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(editProd.id)}><Text style={styles.textoBoton}>🗑️ ELIMINAR PLATO</Text></TouchableOpacity>}
             </View>
           )}
-          {productos.map(prod => <View key={prod.id} style={styles.producto}><Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 54, height: 54, borderRadius: 8, backgroundColor: '#222' }} /><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{prod.nombre} {!prod.disponible ? '(OCULTO)' : ''}</Text><Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10}</Text></View><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity></View>)}
+          {productos.map(prod => <View key={prod.id} style={styles.producto}><Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 54, height: 54, borderRadius: 8, backgroundColor: '#222' }} /><View style={{ flex: 1 }}><Text style={styles.nombreProducto}>{prod.nombre} {!prod.disponible ? '(OCULTO)' : ''}</Text><Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10}</Text></View><View style={{ flexDirection: 'row', gap: 6 }}><TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity><TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(prod.id)}><Text style={[styles.textoAgregar, { color: '#FFF' }]}>🗑️</Text></TouchableOpacity></View></View>)}
         </View>
       )}
       {tab === 'qr pagos' && <View><Text style={styles.titulo}>QR YAPE Y PLIN</Text><View style={styles.tarjetaPedido}><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular y teléfono" placeholderTextColor="#777" value={cfgPagos.titular || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titular: v })} /><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Yape" placeholderTextColor="#777" value={cfgPagos.qr_yape || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_yape: v })} /><TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Plin" placeholderTextColor="#777" value={cfgPagos.qr_plin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_plin: v })} /><TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR QR</Text></TouchableOpacity></View></View>}
@@ -296,5 +312,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-        }
-            
+                            }
