@@ -45,11 +45,13 @@ export const guardarRecompensaAdmin = (r) => {
 export async function canjearRecompensaCliente(clienteId, rec) {
   if (rec.stock != null && Number(rec.stock) <= 0) throw new Error('Este premio está agotado en stock.');
   const pts = Math.abs(Number(rec.puntos_requeridos));
+  const movsActuales = await apiRest('movimientos_puntos?cliente_id=eq.' + clienteId + '&select=cantidad');
+  const saldoReal = (movsActuales || []).reduce((a, m) => a + Number(m.cantidad || 0), 0);
+  if (saldoReal < pts) throw new Error(`Puntos insuficientes. Tu saldo real es de ${saldoReal} pts.`);
   await apiRest('movimientos_puntos', 'POST', { cliente_id: clienteId, tipo: 'canje', cantidad: -pts, descripcion: 'Canje: ' + rec.titulo });
   await apiRest('solicitudes_canje', 'POST', { cliente_id: clienteId, recompensa_titulo: rec.titulo, puntos_usados: pts, estado: 'Pendiente de entrega' });
   if (rec.id && rec.stock != null) await apiRest('recompensas?id=eq.' + rec.id, 'PATCH', { stock: Math.max(0, Number(rec.stock) - 1) });
 }
-
 export const obtenerSolicitudesCanje = () => apiRest('solicitudes_canje?order=creado_en.desc&select=*,clientes(nombre_completo,telefono)');
 export const confirmarEntregaCanje = (id) => apiRest('solicitudes_canje?id=eq.' + id, 'PATCH', { estado: 'Entregado' });
 
@@ -59,7 +61,7 @@ export async function obtenerDatosCliente(id) {
     apiRest('pedidos?cliente_id=eq.' + id + '&order=creado_en.desc&select=*,pedido_detalles(*)'),
     apiRest('solicitudes_canje?cliente_id=eq.' + id + '&order=creado_en.desc&select=*')
   ]);
-  return { puntos: (movs || []).reduce((a, m) => a + (m.cantidad || 0), 0), historial: movs || [], pedidos: peds || [], canjes: canjes || [] };
+  return { puntos: (movs || []).reduce((a, m) => a + Number(m.cantidad || 0), 0), historial: movs || [], pedidos: peds || [], canjes: canjes || [] };
 }
 
 export const obtenerPedidosAdmin = () => apiRest('pedidos?order=creado_en.desc&select=*,clientes(nombre_completo,telefono),pedido_detalles(*)');
@@ -115,14 +117,18 @@ export async function confirmarRecepcionYDarPuntos(pedido) {
 }
 
 export async function cancelarPedidoYDescontar(pedido) {
+  const pedActual = await apiRest('pedidos?id=eq.' + pedido.id + '&select=*');
+  const infoPed = pedActual?.at(0) || pedido;
   await apiRest('pedidos?id=eq.' + pedido.id, 'PATCH', { estado: 'Cancelado' });
   const movsCompra = await apiRest('movimientos_puntos?pedido_id=eq.' + pedido.id + '&tipo=eq.compra&select=cantidad');
   const movsCancel = await apiRest('movimientos_puntos?pedido_id=eq.' + pedido.id + '&tipo=eq.cancelacion&select=cantidad');
-  const totalDado = (movsCompra || []).reduce((acc, m) => acc + Number(m.cantidad || 0), 0);
+  const puntosRegistrados = (movsCompra || []).reduce((acc, m) => acc + Number(m.cantidad || 0), 0);
+  const puntosPorMonto = (infoPed.estado === 'Completado' || infoPed.recibido_cliente) ? Math.floor(Number(infoPed.subtotal || infoPed.total || 0) * 10) : 0;
+  const totalDado = Math.max(puntosRegistrados, puntosPorMonto);
   const totalYaRestado = Math.abs((movsCancel || []).reduce((acc, m) => acc + Number(m.cantidad || 0), 0));
   const pendienteRestar = totalDado - totalYaRestado;
   if (pendienteRestar > 0) {
-    await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'cancelacion', cantidad: -pendienteRestar, descripcion: 'Descuento por cancelación pedido ' + pedido.numero_pedido });
+    await apiRest('movimientos_puntos', 'POST', { cliente_id: infoPed.cliente_id, pedido_id: pedido.id, tipo: 'cancelacion', cantidad: -pendienteRestar, descripcion: 'Descuento por cancelación pedido ' + infoPed.numero_pedido });
     return pendienteRestar;
   }
   return 0;
