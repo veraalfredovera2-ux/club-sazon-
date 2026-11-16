@@ -8,17 +8,16 @@ const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
 const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => ((c === 'x' ? Math.random() * 16 | 0 : (Math.random() * 16 | 0) & 0x3 | 0x8)).toString(16));
 
 async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
-  const sep = ruta.includes('?') ? '&' : '?';
-  const urlFinal = SUPABASE_URL + '/rest/v1/' + ruta + (metodo === 'GET' ? `${sep}_t=${Date.now()}` : '');
   const op = { method: metodo, cache: 'no-store', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate', Pragma: 'no-cache', apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=representation' } };
   if (cuerpo) op.body = JSON.stringify(cuerpo);
-  const res = await fetch(urlFinal, op);
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + ruta, op);
   const txt = await res.text();
   let datos = [];
   try { datos = txt ? JSON.parse(txt) : []; } catch (e) { throw new Error('Error de red (' + res.status + ')'); }
   if (!res.ok) throw new Error(datos.message || datos.error || 'Error ' + res.status);
   return datos;
 }
+
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?id=eq.principal&select=*');
