@@ -134,3 +134,27 @@ export async function cancelarPedidoYDescontar(pedido) {
   }
   return 0;
     }
+export function subirImagenGaleria() {
+  return new Promise((resolve, reject) => {
+    if (typeof document === 'undefined') return reject(new Error('Solo disponible en navegador web.'));
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return resolve(null);
+      try {
+        const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '');
+        const ruta = `plato_${Date.now()}.${ext}`;
+        const res = await fetch(`${SUPABASE_URL}/storage/v1/object/productos/${ruta}`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': file.type || 'image/jpeg' },
+          body: file
+        });
+        if (!res.ok) throw new Error('No se pudo subir la imagen (' + res.status + ').');
+        resolve(`${SUPABASE_URL}/storage/v1/object/public/productos/${ruta}`);
+      } catch (e) { reject(e); }
+    };
+    input.click();
+  });
+}
