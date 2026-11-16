@@ -158,3 +158,4 @@ export function subirImagenGaleria() {
     input.click();
   });
 }
+export const eliminarProductoAdmin = (id) => apiRest('productos?id=eq.' + id, 'DELETE');
