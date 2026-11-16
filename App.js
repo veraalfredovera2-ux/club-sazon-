@@ -31,6 +31,20 @@ export default function App() {
 
   useEffect(() => { registrarAvisoGlobal(setAviso); iniciar(); }, []);
 
+  useEffect(() => {
+    if (tipoUsuario !== 'cliente' || !usuario?.id) return;
+    const t = setInterval(async () => {
+      try {
+        const [d, cat, rec, proms] = await Promise.all([obtenerDatosCliente(usuario.id), obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(true)]);
+        if (d) setDatos(d);
+        if (cat) setProductos(cat);
+        if (rec) setRecompensas(rec);
+        if (proms) setPromociones(proms);
+      } catch (e) {}
+    }, 5000);
+    return () => clearInterval(t);
+  }, [tipoUsuario, usuario?.id]);
+
   async function iniciar() {
     try {
       const [cat, rec, proms, cfg, ses] = await Promise.all([obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(true), obtenerConfigPagos(), AsyncStorage.getItem('sesion_club_sazon')]);
@@ -56,7 +70,6 @@ export default function App() {
       else if (usuario?.id) setDatos(await obtenerDatosCliente(usuario.id));
     } catch (e) {}
   }
-
   function irATabCliente(tab) { setNavInfo(prev => ({ tab, seq: prev.seq + 1 })); setPantalla('inicio'); }
 
   async function manejarRegistro(form) {
@@ -84,7 +97,7 @@ export default function App() {
   async function manejarCanje(rec) {
     setCargando(true);
     try { await canjearRecompensaCliente(usuario.id, rec); await recargarTodo(); mostrarAviso('¡Canje solicitado!', 'Tu canje quedó registrado.'); }
-    catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
+    catch (e) { await recargarTodo(); mostrarAviso('No se pudo canjear', e.message); } finally { setCargando(false); }
   }
 
   async function manejarPedido(pedidoData) {
@@ -150,4 +163,5 @@ export default function App() {
       <BannerAviso aviso={aviso} onCerrar={() => setAviso(null)} />
     </SafeAreaView>
   );
-}
+          }
+        
