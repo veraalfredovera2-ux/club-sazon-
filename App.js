@@ -1,345 +1,178 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, TextInput, ScrollView, Image } from 'react-native';
+import { View, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
+import * as S from './servicios';
+import { VistaBienvenida, VistaRegistro, VistaIngreso, VistaInicioCliente, VistaMenu } from './pantallas';
+import { VistaCarrito, VistaPedidos, VistaPuntos, VistaCuenta, BarraInferior } from './vistas';
 import { VistaAdmin } from './admin';
-import { VistaBienvenida, VistaRegistro, NavegacionSuperior, LOGO } from './pantallas';
-import { BannerAviso, mostrarAviso, registrarAvisoGlobal } from './avisos';
-import {
-  obtenerCatalogo, obtenerRecompensas, obtenerPromociones, obtenerConfigPagos,
-  crearPedidoCliente, obtenerPedidosCliente, obtenerTodosPedidos, obtenerMovimientosCliente, obtenerCanjesCliente,
-  canjearRecompensa, confirmarPedidoAdmin, marcarCompletadoPedido, cancelarPedidoAdmin, obtenerPerfilActualizado
-} from './servicios';
+
+const TELEFONOS_ADMIN = ['967738806', '967142393'];
 
 export default function App() {
+  const [cargando, setCargando] = useState(true);
+  const [pantalla, setPantalla] = useState('bienvenida');
+  const [hist, setHist] = useState([]);
   const [usuario, setUsuario] = useState(null);
-  const [vista, setVista] = useState('bienvenida');
-  const [pantalla, setPantalla] = useState('inicio');
-  const [catalogo, setCatalogo] = useState([]);
-  const [recompensas, setRecompensas] = useState([]);
-  const [promociones, setPromociones] = useState([]);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '' });
-  const [pedidos, setPedidos] = useState([]);
-  const [movimientos, setMovimientos] = useState([]);
-  const [canjes, setCanjes] = useState([]);
+  const [esAdmin, setEsAdmin] = useState(false);
+  const [proc, setProc] = useState(false);
+  const [form, setForm] = useState({ nombre: '', tel: '', pass: '', distrito: '', dir: '' });
+  const [datos, setDatos] = useState({ prods: [], recs: [], pts: 0, movs: [], peds: [], adminPeds: [], cfgPagos: {} });
+  const [cat, setCat] = useState('Todas');
   const [carrito, setCarrito] = useState([]);
-  const [categoriaSel, setCategoriaSel] = useState('Todos');
-  const [tipoEntrega, setTipoEntrega] = useState('DELIVERY');
-  const [distrito, setDistrito] = useState('');
-  const [direccion, setDireccion] = useState('');
-  const [metodoPago, setMetodoPago] = useState('Yape');
-  const [notas, setNotas] = useState('');
-  const [cargando, setCargando] = useState(false);
-  const [aviso, setAviso] = useState(null);
+  const [entrega, setEntrega] = useState('DELIVERY');
+  const [pago, setPago] = useState('Yape');
 
-  useEffect(() => {
-    registrarAvisoGlobal(setAviso);
-    AsyncStorage.getItem('sesion_club_sazon').then(s => { if (s) { setUsuario(JSON.parse(s)); setVista('app'); } });
-    cargarPublico();
-  }, []);
+  useEffect(() => { iniciar(); }, []);
 
-  useEffect(() => {
-    if (!usuario?.id) return;
-    cargarDatosUsuario(usuario);
-    const t = setInterval(() => cargarDatosUsuario(usuario), 5000);
-    return () => clearInterval(t);
-  }, [usuario?.id]);
-
-  async function cargarPublico() {
+  async function iniciar() {
     try {
-      const [cat, rec, pro, cfg] = await Promise.all([obtenerCatalogo(true), obtenerRecompensas(true), obtenerPromociones(true), obtenerConfigPagos()]);
-      setCatalogo(cat || []); setRecompensas(rec || []); setPromociones(pro || []); setCfgPagos(cfg);
-    } catch (e) {}
-  }
-
-  async function cargarDatosUsuario(u) {
-    try {
-      const perf = await obtenerPerfilActualizado(u.id);
-      if (perf) { setUsuario(perf); await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(perf)); }
-      if (u.rol === 'admin') setPedidos(await obtenerTodosPedidos());
-      else {
-        const [p, m, c] = await Promise.all([obtenerPedidosCliente(u.id), obtenerMovimientosCliente(u.id), obtenerCanjesCliente(u.id)]);
-        setPedidos(p || []); setMovimientos(m || []); setCanjes(c || []);
+      const u = await AsyncStorage.getItem('club_sazon_usuario');
+      const a = await AsyncStorage.getItem('club_sazon_admin');
+      if (u) {
+        const user = JSON.parse(u);
+        const adm = a === 'true' || TELEFONOS_ADMIN.includes(String(user.telefono || '').replace(/\D/g, ''));
+        setUsuario(user); setEsAdmin(adm);
+        if (adm) { setPantalla('admin'); await cargarAdmin(); }
+        else { setPantalla('inicio'); await cargarCliente(user.id); }
       }
     } catch (e) {}
-  }
-  async function iniciarSesionOk(u) {
-    await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(u));
-    setUsuario(u); setVista('app'); setPantalla('inicio');
-    await cargarDatosUsuario(u);
+    setCargando(false);
   }
 
-  async function cerrarSesion() {
-    await AsyncStorage.removeItem('sesion_club_sazon');
-    setUsuario(null); setCarrito([]); setVista('bienvenida'); setPantalla('inicio');
+  async function cargarCliente(id) {
+    const [prods, d, recs, cfg] = await Promise.all([S.obtenerCatalogo(true), S.obtenerDatosCliente(id), S.obtenerRecompensas(true), S.obtenerConfigPagos()]);
+    setDatos(prev => ({ ...prev, prods: prods || [], pts: d.puntos || 0, movs: d.historial || [], peds: d.pedidos || [], recs: recs || [], cfgPagos: cfg || {} }));
   }
 
-  function agregarCarrito(item, esPromo = false) {
-    const stockMax = Number(item.stock ?? 10);
-    if (stockMax <= 0) return mostrarAviso('Agotado', 'Este producto no tiene stock disponible.');
-    setCarrito(prev => {
-      const ex = prev.find(x => x.id === item.id && x.esPromo === esPromo);
-      if (ex) {
-        if (ex.cantidad >= stockMax) { mostrarAviso('Stock límite', `Solo quedan ${stockMax} unidades.`); return prev; }
-        return prev.map(x => (x.id === item.id && x.esPromo === esPromo) ? { ...x, cantidad: x.cantidad + 1 } : x);
-      }
-      return [...prev, { id: item.id, nombre: esPromo ? item.titulo : item.nombre, precio: Number(item.precio), stock: stockMax, esPromo, cantidad: 1 }];
-    });
+  async function cargarAdmin() {
+    const adminPeds = await S.obtenerPedidosAdmin();
+    setDatos(prev => ({ ...prev, adminPeds: adminPeds || [] }));
   }
 
-  function cambiarCantidad(id, esPromo, delta) {
-    setCarrito(prev => prev.map(x => (x.id === id && x.esPromo === esPromo) ? { ...x, cantidad: Math.min(x.stock, x.cantidad + delta) } : x).filter(x => x.cantidad > 0));
+  const ir = (p) => { setHist(h => [...h, pantalla]); setPantalla(p); };
+  const atras = () => { if (hist.length) { setPantalla(hist.at(-1)); setHist(h => h.slice(0, -1)); } else setPantalla(usuario ? (esAdmin ? 'admin' : 'inicio') : 'bienvenida'); };
+
+  async function registrar() {
+    if (!form.nombre.trim() || !form.tel.trim() || !form.pass.trim()) return Alert.alert('Faltan datos', 'Completa todos los campos.');
+    setProc(true);
+    try {
+      const r = await S.registrarCliente({ nombreCompleto: form.nombre.trim(), telefono: form.tel.trim(), password: form.pass.trim() });
+      const adm = TELEFONOS_ADMIN.includes(String(r.perfil?.telefono || '').replace(/\D/g, ''));
+      await AsyncStorage.setItem('club_sazon_usuario', JSON.stringify(r.perfil));
+      await AsyncStorage.setItem('club_sazon_admin', adm ? 'true' : 'false');
+      setUsuario(r.perfil); setEsAdmin(adm); setForm({ nombre: '', tel: '', pass: '', distrito: '', dir: '' });
+      if (adm) { await cargarAdmin(); setPantalla('admin'); }
+      else { await cargarCliente(r.perfil.id); setPantalla('inicio'); }
+      Alert.alert('¡Bienvenido!', r.mensaje);
+    } catch (e) { Alert.alert('Error', e.message); }
+    setProc(false);
   }
 
-  async function enviarPedido() {
+  async function ingresar() {
+    if (!form.tel.trim() || !form.pass.trim()) return Alert.alert('Faltan datos', 'Ingresa teléfono y contraseña.');
+    setProc(true);
+    try {
+      const r = await S.ingresarUsuario({ telefono: form.tel.trim(), password: form.pass.trim() });
+      const telLimpio = String(r.perfil?.telefono || form.tel).replace(/\D/g, '');
+      const adm = r.tipo === 'administrador' || TELEFONOS_ADMIN.includes(telLimpio);
+      await AsyncStorage.setItem('club_sazon_usuario', JSON.stringify(r.perfil));
+      await AsyncStorage.setItem('club_sazon_admin', adm ? 'true' : 'false');
+      setUsuario(r.perfil); setEsAdmin(adm); setForm({ nombre: '', tel: '', pass: '', distrito: '', dir: '' });
+      if (adm) { await cargarAdmin(); setPantalla('admin'); }
+      else { await cargarCliente(r.perfil.id); setPantalla('inicio'); }
+    } catch (e) { Alert.alert('Acceso denegado', e.message); }
+    setProc(false);
+  }
+
+  async function salir() {
+    await AsyncStorage.multiRemove(['club_sazon_usuario', 'club_sazon_admin']);
+    setUsuario(null); setEsAdmin(false); setCarrito([]); setPantalla('bienvenida');
+  }
+  const agregar = (p) => {
+    setCarrito(c => c.find(i => i.id === p.id) ? c.map(i => i.id === p.id ? { ...i, cantidad: i.cantidad + 1 } : i) : [...c, { ...p, cantidad: 1 }]);
+    Alert.alert('Agregado', p.nombre + ' añadido al carrito.');
+  };
+
+  const cant = (id, d) => setCarrito(c => c.map(i => i.id === id ? { ...i, cantidad: i.cantidad + d } : i).filter(i => i.cantidad > 0));
+
+  async function pedir(pagoConfirmado) {
     if (!carrito.length) return;
-    if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) return mostrarAviso('Faltan datos', 'Ingresa tu distrito y dirección exacta.');
-    setCargando(true);
+    if (entrega === 'DELIVERY' && (!form.distrito.trim() || !form.dir.trim())) return Alert.alert('Falta dirección', 'Ingresa distrito y dirección.');
+    setProc(true);
     try {
-      const creado = await crearPedidoCliente({ cliente: usuario, items: carrito, tipoEntrega, distrito, direccion, metodoPago, notas });
-      setCarrito([]); setNotas(''); setPantalla('pedidos');
-      await Promise.all([cargarPublico(), cargarDatosUsuario(usuario)]);
-      mostrarAviso('¡Pedido enviado!', `Código ${creado.numero_pedido} registrado. Espera la confirmación del local.`);
-    } catch (e) { mostrarAviso('No se pudo enviar', e.message); } finally { setCargando(false); }
+      const sub = carrito.reduce((a, i) => a + Number(i.precio) * i.cantidad, 0);
+      const num = 'CS-' + Math.floor(100000 + Math.random() * 900000);
+      await S.crearNuevoPedido({
+        numero_pedido: num, cliente_id: usuario.id, tipo_entrega: entrega,
+        distrito: entrega === 'DELIVERY' ? form.distrito : null,
+        direccion: entrega === 'DELIVERY' ? form.dir : null,
+        metodo_pago: pago, pago_confirmado: Boolean(pagoConfirmado),
+        subtotal: sub, costo_delivery: 0, total: sub, estado: 'Pendiente de confirmación'
+      }, carrito);
+      setCarrito([]); await cargarCliente(usuario.id); setPantalla('pedidos');
+      Alert.alert('¡Pedido enviado!', 'Pedido ' + num + ' recibido. Espera confirmación del local.');
+    } catch (e) { Alert.alert('Error', e.message); }
+    setProc(false);
   }
 
-  async function ejecutarCanje(rec) {
-    setCargando(true);
-    try { await canjearRecompensa(usuario, rec); await Promise.all([cargarPublico(), cargarDatosUsuario(usuario)]); mostrarAviso('¡Canje solicitado!', 'Revisa tus puntos y reclama tu premio en el local.'); }
-    catch (e) { mostrarAviso('No disponible', e.message); } finally { setCargando(false); }
+  async function canjear(rec) {
+    if (datos.pts < rec.puntos_requeridos) return Alert.alert('Puntos insuficientes', 'Necesitas ' + rec.puntos_requeridos + ' puntos.');
+    setProc(true);
+    try {
+      await S.canjearRecompensaCliente(usuario.id, rec);
+      await cargarCliente(usuario.id);
+      Alert.alert('¡Canje exitoso!', 'Canjeaste: ' + rec.titulo);
+    } catch (e) { Alert.alert('Error', e.message); }
+    setProc(false);
   }
 
-  async function onConfirmarAdmin(ped, costoDel) {
-    setCargando(true);
-    try { await confirmarPedidoAdmin(ped, costoDel); await cargarDatosUsuario(usuario); mostrarAviso('Confirmado', 'Pedido aceptado y enviado a cocina/riders.'); }
-    catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
+  async function confirmarAdmin(ped, costoDel) {
+    setProc(true);
+    try {
+      await S.confirmarAdminPedido(ped, costoDel);
+      await cargarAdmin();
+      Alert.alert('Confirmado', 'Pedido confirmado y monto actualizado.');
+    } catch (e) { Alert.alert('Error', e.message); }
+    setProc(false);
   }
 
-  async function onCompletar(ped) {
-    setCargando(true);
-    try { await marcarCompletadoPedido(ped); await cargarDatosUsuario(usuario); mostrarAviso('Entregado', 'Pedido completado y puntos acreditados al cliente.'); }
-    catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
+  async function recibirYDarPuntos(ped, desdeAdmin) {
+    setProc(true);
+    try {
+      const p = await S.confirmarRecepcionYDarPuntos(ped);
+      if (desdeAdmin) await cargarAdmin(); else await cargarCliente(usuario.id);
+      Alert.alert('¡Pedido completado!', 'Se acreditaron ' + p + ' puntos.');
+    } catch (e) { Alert.alert('Error', e.message); }
+    setProc(false);
   }
 
-  async function onCancelar(ped) {
-    setCargando(true);
-    try { await cancelarPedidoAdmin(ped); await Promise.all([cargarPublico(), cargarDatosUsuario(usuario)]); mostrarAviso('Cancelado', 'Pedido cancelado y puntos ajustados.'); }
-    catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
+  async function cancelar(ped, desdeAdmin) {
+    setProc(true);
+    try {
+      const desc = await S.cancelarPedidoYDescontar(ped);
+      if (desdeAdmin) await cargarAdmin(); else await cargarCliente(usuario.id);
+      Alert.alert('Pedido cancelado', desc > 0 ? 'Se descontaron ' + desc + ' puntos por la cancelación.' : 'El pedido fue cancelado.');
+    } catch (e) { Alert.alert('Error', e.message); }
+    setProc(false);
   }
 
-  const categorias = ['Todos', ...new Set(catalogo.map(p => p.categoria))];
-  const platosFiltrados = categoriaSel === 'Todos' ? catalogo : catalogo.filter(p => p.categoria === categoriaSel);
-  const totalCarrito = carrito.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
+  if (cargando) return <View style={[styles.fondo, { justifyContent: 'center', alignItems: 'center' }]}><ActivityIndicator size="large" color="#B81D24" /></View>;
 
-  if (vista === 'bienvenida') {
-    return (
-      <SafeAreaView style={styles.pantallaCompleta}>
-        <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-        <VistaBienvenida irARegistro={() => setVista('registro')} onIngresar={iniciarSesionOk} cargando={cargando} />
-      </SafeAreaView>
-    );
-  }
-  if (vista === 'registro') {
-    return (
-      <SafeAreaView style={styles.pantallaCompleta}>
-        <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-        <VistaRegistro onRegistrar={iniciarSesionOk} regresar={() => setVista('bienvenida')} cargando={cargando} />
-      </SafeAreaView>
-    );
-  }
-  if (usuario?.rol === 'admin') {
-    return (
-      <SafeAreaView style={styles.pantallaCompleta}>
-        <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-        <VistaAdmin usuario={usuario} pedidos={pedidos} recargar={() => cargarDatosUsuario(usuario)} onConfirmarAdmin={onConfirmarAdmin} onCompletar={onCompletar} onCancelar={onCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />
-      </SafeAreaView>
-    );
-    }
   return (
-    <SafeAreaView style={styles.pantallaCompleta}>
-      <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-      <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
-        <NavegacionSuperior regresar={() => setPantalla('inicio')} irAInicio={() => setPantalla('inicio')} />
-        <View style={styles.filaSaludo}>
-          <View>
-            <Text style={styles.saludo}>Hola,</Text>
-            <Text style={styles.nombreCliente}>{usuario?.nombre_completo}</Text>
-          </View>
-          <TouchableOpacity onPress={cerrarSesion} style={[styles.boton, styles.botonPequeno, { backgroundColor: '#B71C1C' }]}>
-            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>SALIR</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.tarjetaSaldo}>
-          <Text style={styles.etiquetaSaldo}>TUS PUNTOS CLUB SAZÓN</Text>
-          <Text style={styles.numeroSaldo}>{usuario?.puntos ?? 0} PTS</Text>
-          <Text style={styles.textoSecundarioSaldo}>Gana 10 puntos por cada S/ 1 en tus compras</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
-          {[
-            { id: 'inicio', txt: '🍽️ MENÚ' },
-            { id: 'promos', txt: '🔥 PROMOS' },
-            { id: 'carrito', txt: `🛒 CARRITO (${carrito.reduce((a, b) => a + b.cantidad, 0)})` },
-            { id: 'pedidos', txt: '📦 MIS PEDIDOS' },
-            { id: 'puntos', txt: '🎁 CANJEAR' }
-          ].map(m => (
-            <TouchableOpacity key={m.id} style={[styles.categoria, pantalla === m.id && styles.categoriaActiva]} onPress={() => setPantalla(m.id)}>
-              <Text style={styles.textoCategoria}>{m.txt}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        {pantalla === 'inicio' && (
-          <View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
-              {categorias.map(c => (
-                <TouchableOpacity key={c} style={[styles.categoria, categoriaSel === c && styles.categoriaActiva]} onPress={() => setCategoriaSel(c)}>
-                  <Text style={styles.textoCategoria}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {platosFiltrados.length === 0 ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>Nuestro local está cerrado en este momento o no hay platos disponibles en este turno.</Text>
-              </View>
-            ) : (
-              platosFiltrados.map(item => (
-                <View key={item.id} style={styles.producto}>
-                  <Image source={item.imagen_url && item.imagen_url.includes('supabase.co') ? { uri: item.imagen_url } : LOGO} style={{ width: 64, height: 64, borderRadius: 10, backgroundColor: '#222' }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.nombreProducto}>{item.nombre}</Text>
-                    {!!item.ingredientes && <Text style={styles.descripcionPedido}>{item.ingredientes}</Text>}
-                    <Text style={styles.precioProducto}>S/ {Number(item.precio).toFixed(2)} • Stock: {item.stock ?? 10}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.botonAgregar} onPress={() => agregarCarrito(item, false)}>
-                    <Text style={styles.textoAgregar}>+ PEDIR</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
-            )}
-          </View>
-        )}
-        {pantalla === 'promos' && (
-          <View>
-            <Text style={styles.titulo}>PROMOCIONES Y OFERTAS</Text>
-            {promociones.map(pr => (
-              <View key={pr.id} style={styles.tarjetaPedido}>
-                {pr.imagen_url && pr.imagen_url.includes('supabase.co') && <Image source={{ uri: pr.imagen_url }} style={{ width: '100%', height: 150, borderRadius: 10, marginBottom: 8 }} />}
-                <Text style={styles.nombreProducto}>{pr.titulo}</Text>
-                {!!pr.descripcion && <Text style={styles.descripcionPedido}>{pr.descripcion}</Text>}
-                <Text style={styles.precioProducto}>S/ {Number(pr.precio).toFixed(2)} • Stock: {pr.stock ?? 10}</Text>
-                <TouchableOpacity style={styles.boton} onPress={() => agregarCarrito(pr, true)}>
-                  <Text style={styles.textoBoton}>AGREGAR AL CARRITO</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-            {pantalla === 'carrito' && (
-          <View>
-            <Text style={styles.titulo}>TU PEDIDO</Text>
-            {carrito.length === 0 ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>Tu carrito está vacío.</Text>
-              </View>
-            ) : (
-              <View>
-                {carrito.map(it => (
-                  <View key={it.id + String(it.esPromo)} style={styles.producto}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.nombreProducto}>{it.nombre}</Text>
-                      <Text style={styles.precioProducto}>S/ {(it.precio * it.cantidad).toFixed(2)}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <TouchableOpacity style={styles.botonAgregar} onPress={() => cambiarCantidad(it.id, it.esPromo, -1)}>
-                        <Text style={styles.textoAgregar}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.nombreProducto}>{it.cantidad}</Text>
-                      <TouchableOpacity style={styles.botonAgregar} onPress={() => cambiarCantidad(it.id, it.esPromo, 1)}>
-                        <Text style={styles.textoAgregar}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-                <Text style={styles.totalPedidoTexto}>Subtotal: S/ {totalCarrito.toFixed(2)}</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                  {['DELIVERY', 'RECOJO EN LOCAL'].map(t => (
-                    <TouchableOpacity key={t} style={[styles.opcionEntrega, tipoEntrega === t && styles.opcionEntregaActiva, { flex: 1 }]} onPress={() => setTipoEntrega(t)}>
-                      <Text style={styles.textoOpcionEntrega}>{t}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {tipoEntrega === 'DELIVERY' && (
-                  <View>
-                    <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Distrito (ej. San Juan de Lurigancho)" placeholderTextColor="#777" value={distrito} onChangeText={setDistrito} />
-                    <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Dirección exacta y referencia" placeholderTextColor="#777" value={direccion} onChangeText={setDireccion} />
-                  </View>
-                )}
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                  {['Yape', 'Plin', 'Efectivo'].map(mp => (
-                    <TouchableOpacity key={mp} style={[styles.opcionEntrega, metodoPago === mp && styles.opcionEntregaActiva, { flex: 1 }]} onPress={() => setMetodoPago(mp)}>
-                      <Text style={styles.textoOpcionEntrega}>{mp}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {(metodoPago === 'Yape' || metodoPago === 'Plin') && (
-                  <View style={[styles.tarjetaPedido, { marginTop: 10, alignItems: 'center' }]}>
-                    <Text style={styles.nombreProducto}>Titular: {cfgPagos.titular || 'Club Sazón'}</Text>
-                    {metodoPago === 'Yape' && !!cfgPagos.qr_yape && <Image source={{ uri: cfgPagos.qr_yape }} style={{ width: 180, height: 180, borderRadius: 10, marginTop: 8 }} />}
-                    {metodoPago === 'Plin' && !!cfgPagos.qr_plin && <Image source={{ uri: cfgPagos.qr_plin }} style={{ width: 180, height: 180, borderRadius: 10, marginTop: 8 }} />}
-                  </View>
-                )}
-                <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Notas adicionales (opcional)" placeholderTextColor="#777" value={notas} onChangeText={setNotas} />
-                <TouchableOpacity style={styles.boton} onPress={enviarPedido} disabled={cargando}>
-                  <Text style={styles.textoBoton}>{cargando ? 'ENVIANDO...' : 'CONFIRMAR PEDIDO'}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
-        {pantalla === 'pedidos' && (
-          <View>
-            <Text style={styles.titulo}>MIS PEDIDOS</Text>
-            {pedidos.map(p => (
-              <View key={p.id} style={styles.tarjetaPedido}>
-                <Text style={styles.nombreProducto}>Pedido {p.numero_pedido} — S/ {Number(p.total).toFixed(2)}</Text>
-                <View style={styles.estadoPedido}>
-                  <Text style={styles.textoEstado}>{p.estado}</Text>
-                </View>
-                {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '700' }]}>🛵 Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
-                {(p.pedido_detalles || []).map(d => (
-                  <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>
-                ))}
-              </View>
-            ))}
-          </View>
-        )}
-        {pantalla === 'puntos' && (
-          <View>
-            <Text style={styles.titulo}>CANJEAR PUNTOS</Text>
-            {recompensas.map(r => (
-              <View key={r.id} style={styles.tarjetaPedido}>
-                <Text style={styles.nombreProducto}>🎁 {r.titulo} ({r.puntos_requeridos} PTS)</Text>
-                {!!r.descripcion && <Text style={styles.descripcionPedido}>{r.descripcion}</Text>}
-                <TouchableOpacity style={styles.boton} onPress={() => ejecutarCanje(r)} disabled={cargando}>
-                  <Text style={styles.textoBoton}>CANJEAR PREMIO</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-            <Text style={[styles.titulo, { marginTop: 12 }]}>MIS CANJES Y MOVIMIENTOS</Text>
-            {canjes.map(c => (
-              <View key={c.id} style={styles.producto}>
-                <Text style={styles.nombreProducto}>{c.recompensa_titulo}</Text>
-                <Text style={styles.precioProducto}>{c.estado}</Text>
-              </View>
-            ))}
-            {movimientos.map(m => (
-              <View key={m.id} style={styles.producto}>
-                <Text style={styles.descripcionPedido}>{m.descripcion}</Text>
-                <Text style={styles.precioProducto}>{m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad} pts</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.fondo}>
+      {pantalla === 'bienvenida' && <VistaBienvenida irARegistro={() => ir('registro')} irAIngreso={() => ir('ingreso')} />}
+      {pantalla === 'registro' && <VistaRegistro nombre={form.nombre} setNombre={v => setForm({ ...form, nombre: v })} telefono={form.tel} setTelefono={v => setForm({ ...form, tel: v })} password={form.pass} setPassword={v => setForm({ ...form, pass: v })} onRegistrar={registrar} irAIngreso={() => ir('ingreso')} regresar={atras} irAInicio={() => setPantalla('bienvenida')} cargando={proc} />}
+      {pantalla === 'ingreso' && <VistaIngreso telefono={form.tel} setTelefono={v => setForm({ ...form, tel: v })} password={form.pass} setPassword={v => setForm({ ...form, pass: v })} onIngresar={ingresar} irARegistro={() => ir('registro')} regresar={atras} irAInicio={() => setPantalla('bienvenida')} cargando={proc} />}
+      {pantalla === 'inicio' && <VistaInicioCliente usuario={usuario} puntos={datos.pts} irA={ir} cerrarSesion={salir} />}
+      {pantalla === 'menu' && <VistaMenu productos={datos.prods} categoriaActiva={cat} setCategoriaActiva={setCat} agregarAlCarrito={agregar} regresar={atras} irAInicio={() => setPantalla('inicio')} />}
+      {pantalla === 'carrito' && <VistaCarrito carrito={carrito} cambiarCantidad={cant} entrega={entrega} setEntrega={setEntrega} distrito={form.distrito} setDistrito={v => setForm({ ...form, distrito: v })} direccion={form.dir} setDireccion={v => setForm({ ...form, dir: v })} pago={pago} setPago={setPago} cfgPagos={datos.cfgPagos} confirmarPedido={pedir} cargando={proc} regresar={atras} irAInicio={() => setPantalla('inicio')} />}
+      {pantalla === 'pedidos' && <VistaPedidos pedidos={datos.peds} onRecibirPedido={p => recibirYDarPuntos(p, false)} onCancelarPedido={p => cancelar(p, false)} cargando={proc} regresar={atras} irAInicio={() => setPantalla('inicio')} />}
+      {pantalla === 'puntos' && <VistaPuntos puntos={datos.pts} historial={datos.movs} recompensas={datos.recs} onCanjear={canjear} cargando={proc} regresar={atras} irAInicio={() => setPantalla('inicio')} />}
+      {pantalla === 'cuenta' && <VistaCuenta usuario={usuario} cerrarSesion={salir} regresar={atras} irAInicio={() => setPantalla('inicio')} />}
+      {pantalla === 'admin' && <VistaAdmin usuario={usuario} pedidos={datos.adminPeds} recargar={cargarAdmin} onConfirmarAdmin={confirmarAdmin} onCompletar={p => recibirYDarPuntos(p, true)} onCancelar={p => cancelar(p, true)} cerrarSesion={salir} cargando={proc} />}
+      {usuario && !esAdmin && ['inicio', 'menu', 'carrito', 'pedidos', 'puntos', 'cuenta'].includes(pantalla) && <BarraInferior pantalla={pantalla} irA={ir} cantidadCarrito={carrito.reduce((a, i) => a + i.cantidad, 0)} />}
+    </View>
   );
-}
+       }
+        
