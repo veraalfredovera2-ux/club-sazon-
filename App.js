@@ -67,14 +67,31 @@ export default function App() {
     } catch (e) {}
   }
 
-  async function entrarOk(res) {
-    const perfil = res?.perfil || res;
-    if (!perfil?.id) return;
-    const adm = TELEFONOS_ADMIN.includes(String(perfil.telefono || '').replace(/\D/g, ''));
-    await AsyncStorage.setItem('club_sazon_usuario', JSON.stringify(perfil));
-    setUsuario(perfil); setEsAdmin(adm);
-    if (adm) { await cargarAdmin(); setPantalla('admin'); }
-    else { await cargarCliente(perfil.id); setPantalla('inicio'); }
+  async function manejarIngreso({ telefono, password }) {
+    setProc(true);
+    try {
+      const r = await S.ingresarUsuario({ telefono, password });
+      const perfil = r.perfil;
+      const adm = r.tipo === 'administrador' || TELEFONOS_ADMIN.includes(String(perfil.telefono || telefono).replace(/\D/g, ''));
+      await AsyncStorage.setItem('club_sazon_usuario', JSON.stringify(perfil));
+      setUsuario(perfil); setEsAdmin(adm);
+      if (adm) { await cargarAdmin(); setPantalla('admin'); }
+      else { await cargarCliente(perfil.id); setPantalla('inicio'); }
+    } finally { setProc(false); }
+  }
+
+  async function manejarRegistro({ nombreCompleto, telefono, password }) {
+    setProc(true);
+    try {
+      const r = await S.registrarCliente({ nombreCompleto, telefono, password });
+      const perfil = r.perfil;
+      const adm = TELEFONOS_ADMIN.includes(String(perfil.telefono || telefono).replace(/\D/g, ''));
+      await AsyncStorage.setItem('club_sazon_usuario', JSON.stringify(perfil));
+      setUsuario(perfil); setEsAdmin(adm);
+      if (adm) { await cargarAdmin(); setPantalla('admin'); }
+      else { await cargarCliente(perfil.id); setPantalla('inicio'); }
+      mostrarAviso('¡Bienvenido!', r.mensaje || 'Cuenta creada con éxito.');
+    } finally { setProc(false); }
   }
 
   async function salir() {
@@ -132,6 +149,8 @@ export default function App() {
     setProc(false);
   }
 
+  const categorias = ['Todas', ...new Set((datos.prods || []).map(p => p.categoria).filter(Boolean))];
+
   if (cargando) {
     return (
       <SafeAreaView style={[styles.pantallaCompleta, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -144,16 +163,17 @@ export default function App() {
     <SafeAreaView style={styles.pantallaCompleta}>
       <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
       {pantalla === 'bienvenida' && (
-        <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={entrarOk} cargando={proc} />
+        <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={proc} />
       )}
       {pantalla === 'registro' && (
-        <VistaRegistro onRegistrar={entrarOk} regresar={() => setPantalla('bienvenida')} cargando={proc} />
+        <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={proc} />
       )}
       {pantalla === 'inicio' && (
         <VistaInicio
           usuario={usuario}
           datos={datos}
           productos={datos.prods}
+          categorias={categorias}
           recompensas={datos.recs}
           promociones={datos.promos}
           cfgPagos={datos.cfgPagos}
@@ -181,4 +201,4 @@ export default function App() {
       )}
     </SafeAreaView>
   );
-        }
+}
