@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, TextInput, ScrollView, Image, Linking } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, TextInput, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import { VistaAdmin } from './admin';
-import { PantallaBienvenida, PantallaAcceso, NavegacionSuperior, LOGO } from './pantallas';
-import { BannerAviso, mostrarAviso, registrarAlerta } from './avisos';
+import { VistaBienvenida, VistaRegistro, NavegacionSuperior, LOGO } from './pantallas';
+import { BannerAviso, mostrarAviso, registrarAvisoGlobal } from './avisos';
 import {
   obtenerCatalogo, obtenerRecompensas, obtenerPromociones, obtenerConfigPagos,
   crearPedidoCliente, obtenerPedidosCliente, obtenerTodosPedidos, obtenerMovimientosCliente, obtenerCanjesCliente,
@@ -33,7 +33,7 @@ export default function App() {
   const [aviso, setAviso] = useState(null);
 
   useEffect(() => {
-    registrarAlerta(setAviso);
+    registrarAvisoGlobal(setAviso);
     AsyncStorage.getItem('sesion_club_sazon').then(s => { if (s) { setUsuario(JSON.parse(s)); setVista('app'); } });
     cargarPublico();
   }, []);
@@ -44,6 +44,7 @@ export default function App() {
     const t = setInterval(() => cargarDatosUsuario(usuario), 5000);
     return () => clearInterval(t);
   }, [usuario?.id]);
+
   async function cargarPublico() {
     try {
       const [cat, rec, pro, cfg] = await Promise.all([obtenerCatalogo(true), obtenerRecompensas(true), obtenerPromociones(true), obtenerConfigPagos()]);
@@ -62,7 +63,6 @@ export default function App() {
       }
     } catch (e) {}
   }
-
   async function iniciarSesionOk(u) {
     await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(u));
     setUsuario(u); setVista('app'); setPantalla('inicio');
@@ -126,6 +126,7 @@ export default function App() {
     try { await cancelarPedidoAdmin(ped); await Promise.all([cargarPublico(), cargarDatosUsuario(usuario)]); mostrarAviso('Cancelado', 'Pedido cancelado y puntos ajustados.'); }
     catch (e) { mostrarAviso('Error', e.message); } finally { setCargando(false); }
   }
+
   const categorias = ['Todos', ...new Set(catalogo.map(p => p.categoria))];
   const platosFiltrados = categoriaSel === 'Todos' ? catalogo : catalogo.filter(p => p.categoria === categoriaSel);
   const totalCarrito = carrito.reduce((acc, i) => acc + i.precio * i.cantidad, 0);
@@ -134,15 +135,15 @@ export default function App() {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-        <PantallaBienvenida onIngresar={() => setVista('login')} onRegistrar={() => setVista('registro')} />
+        <VistaBienvenida irARegistro={() => setVista('registro')} onIngresar={iniciarSesionOk} cargando={cargando} />
       </SafeAreaView>
     );
   }
-  if (vista === 'login' || vista === 'registro') {
+  if (vista === 'registro') {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-        <PantallaAcceso modo={vista} onCambiarModo={setVista} onRegresar={() => setVista('bienvenida')} onExito={iniciarSesionOk} />
+        <VistaRegistro onRegistrar={iniciarSesionOk} regresar={() => setVista('bienvenida')} cargando={cargando} />
       </SafeAreaView>
     );
   }
@@ -153,8 +154,7 @@ export default function App() {
         <VistaAdmin usuario={usuario} pedidos={pedidos} recargar={() => cargarDatosUsuario(usuario)} onConfirmarAdmin={onConfirmarAdmin} onCompletar={onCompletar} onCancelar={onCancelar} cerrarSesion={cerrarSesion} cargando={cargando} />
       </SafeAreaView>
     );
-  }
-
+    }
   return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
@@ -342,5 +342,4 @@ export default function App() {
       </ScrollView>
     </SafeAreaView>
   );
-                  }
-                  
+}
