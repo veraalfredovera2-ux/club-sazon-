@@ -12,7 +12,7 @@ function obtenerInfoHoraPeru() {
   const peru = new Date(utc - 5 * 3600000);
   const hh = String(peru.getHours()).padStart(2, '0'), mm = String(peru.getMinutes()).padStart(2, '0');
   const min = peru.getHours() * 60 + peru.getMinutes();
-  const turno = (min >= 410 && min <= 660) ? 'TURNO MAÑANA (6:50am - 11:00am)' : (min >= 1110 && min <= 1430) ? 'TURNO NOCHE (6:30pm - 11:50pm)' : 'LOCAL CERRADO';
+  const turno = (min >= 410 && min <= 660) ? 'TURNO MAÑANA' : (min >= 1110 && min <= 1430) ? 'TURNO NOCHE' : 'LOCAL CERRADO';
   return { hora: `${hh}:${mm}`, turno };
 }
 
@@ -56,7 +56,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch (e) {}
     } else detenerAlarma();
   }
-
   const esPendiente = (est) => est === 'Pendiente' || est === 'Pendiente de confirmación';
 
   useEffect(() => {
@@ -121,48 +120,17 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       }
     } catch (e) {}
   }
-  async function guardarProd() {
-    if (!editProd?.nombre?.trim()) return;
-    try { await guardarProductoAdmin(editProd); setEditProd(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Producto actualizado.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function borrarProd(id) {
-    try { await eliminarProductoAdmin(id); await cargarTodoAdmin(); mostrarAviso('Eliminado', 'Plato eliminado del menú.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function guardarRider() {
-    if (!editRider?.nombre_completo?.trim() || !editRider?.telefono?.trim()) return mostrarAviso('Faltan datos', 'Ingresa nombre y teléfono del rider.');
-    try { await guardarRiderAdmin(editRider); setEditRider(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Motorizado actualizado.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function borrarRider(id) {
-    try { await eliminarRiderAdmin(id); await cargarTodoAdmin(); mostrarAviso('Eliminado', 'Motorizado eliminado.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function cambiarHorarioRapido(prod, nuevoTurno, nuevaDisp) {
-    try { await guardarProductoAdmin({ ...prod, turno: nuevoTurno, disponible: nuevaDisp }); await cargarTodoAdmin(); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function guardarRec() {
-    if (!editRec?.titulo?.trim() || !String(editRec?.puntos_requeridos || '').trim()) return;
-    try { await guardarRecompensaAdmin(editRec); setEditRec(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Recompensa actualizada.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function guardarPromo() {
-    if (!editPromo?.titulo?.trim()) return;
-    try { await guardarPromocionAdmin(editPromo); setEditPromo(null); await cargarTodoAdmin(); mostrarAviso('Guardado', 'Promoción/oferta guardada.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function entregarCanje(id) {
-    try { await confirmarEntregaCanje(id); await cargarTodoAdmin(); mostrarAviso('Entregado', 'Canje marcado como entregado.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
-  async function guardarPagos() {
-    try { await guardarConfigPagos(cfgPagos); await cargarTodoAdmin(true); mostrarAviso('Guardado', 'Configuración y horarios guardados.'); }
-    catch (e) { mostrarAviso('Error', e.message); }
-  }
 
-  const infoPeru = obtenerInfoHoraPeru();
+  async function guardarProd() { if (editProd?.nombre?.trim()) try { await guardarProductoAdmin(editProd); setEditProd(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Producto actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function borrarProd(id) { try { await eliminarProductoAdmin(id); cargarTodoAdmin(); mostrarAviso('Eliminado', 'Plato eliminado del menú.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function guardarRider() { if (editRider?.nombre_completo?.trim() && editRider?.telefono?.trim()) try { await guardarRiderAdmin(editRider); setEditRider(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Repartidor guardado.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function borrarRider(id) { try { await eliminarRiderAdmin(id); cargarTodoAdmin(); mostrarAviso('Eliminado', 'Repartidor eliminado.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function cambiarHorarioRapido(prod, nuevoTurno, nuevaDisp) { try { await guardarProductoAdmin({ ...prod, turno: nuevoTurno, disponible: nuevaDisp }); cargarTodoAdmin(); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function guardarRec() { if (editRec?.titulo?.trim() && Number(editRec.puntos_requeridos) > 0) try { await guardarRecompensaAdmin(editRec); setEditRec(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Premio actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function guardarPromo() { if (editPromo?.titulo?.trim()) try { await guardarPromocionAdmin(editPromo); setEditPromo(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Publicado.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function entregarCanje(id) { try { await confirmarEntregaCanje(id); cargarTodoAdmin(); mostrarAviso('Entregado', 'Canje confirmado.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function guardarPagos() { try { await guardarConfigPagos(cfgPagos); cargarTodoAdmin(true); mostrarAviso('Guardado', 'Horarios y pagos actualizados.'); } catch (e) { mostrarAviso('Error', e.message); } }
+    const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
@@ -172,7 +140,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     if (p.estado === 'Cancelado') { acc[fecha].devoluciones += Number(p.total || 0); acc[fecha].cantCanc += 1; }
     return acc;
   }, {}));
-    return (
+
+  return (
     <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
       <NavegacionSuperior regresar={() => { setEditProd(null); setEditRec(null); setEditPromo(null); setEditRider(null); setTab('pedidos'); }} irAInicio={() => setTab('pedidos')} />
       <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 8 }}>
@@ -274,155 +243,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </View>
           <Text style={styles.titulo}>CONFIGURAR HORA DE APERTURA Y CIERRE</Text>
           <View style={styles.tarjetaPedido}>
-            <Text style={styles.descripcionPedido}>Turno Mañana (Inicio y Fin)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="06:50" placeholderTextColor="#777" value={cfgPagos.manana_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_inicio: v })} />
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="11:00" placeholderTextColor="#777" value={cfgPagos.manana_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_fin: v })} />
-            </View>
-            <Text style={[styles.descripcionPedido, { marginTop: 10 }]}>Turno Noche (Inicio y Fin)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="18:30" placeholderTextColor="#777" value={cfgPagos.noche_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_inicio: v })} />
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="23:50" placeholderTextColor="#777" value={cfgPagos.noche_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_fin: v })} />
-            </View>
-            <TouchableOpacity style={styles.boton} onPress={guardarPagos}>
-              <Text style={styles.textoBoton}>GUARDAR HORARIOS DEL LOCAL</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.titulo}>CONTROL DE PRODUCTOS POR HORARIO</Text>
-          {productos.map(prod => (
-            <View key={prod.id} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{prod.nombre} ({prod.categoria})</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                {[{ id: 'manana', txt: '🌅 MAÑANA' }, { id: 'noche', txt: '🌙 NOCHE' }, { id: 'ambos', txt: '🔄 AMBOS' }].map(op => (
-                  <TouchableOpacity key={op.id} onPress={() => cambiarHorarioRapido(prod, op.id, prod.disponible !== false)} style={[styles.opcionEntrega, (prod.turno || 'ambos') === op.id && styles.opcionEntregaActiva, { flex: 1 }]}>
-                    <Text style={{ color: (prod.turno || 'ambos') === op.id ? '#F5B041' : '#AAA', fontSize: 10, fontWeight: '800', textAlign: 'center' }}>{op.txt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-                              {riders.map(r => {
-            const entRider = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
-            const totalDelRider = entRider.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-            const abierto = riderHistId === r.id;
-            return (
-              <View key={r.id} style={styles.tarjetaPedido}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.nombreProducto}>{r.nombre_completo} {r.placa ? `(${r.placa})` : ''}</Text>
-                    <Text style={styles.precioProducto}>Tel: {r.telefono} • Clave: {r.password}</Text>
-                    <Text style={[styles.precioProducto, { color: '#F5B041' }]}>Horario: {r.horario_trabajo || 'Sin asignar'} • Libre: {r.dias_libres || 'Ninguno'}</Text>
-                    <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '800' }]}>Entregas: {entRider.length} • Delivery: S/ {totalDelRider.toFixed(2)}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRider(r)}>
-                    <Text style={styles.textoAgregar}>EDITAR</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 8, paddingVertical: 8 }]} onPress={() => setRiderHistId(abierto ? null : r.id)}>
-                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `📋 VER HISTORIAL (${entRider.length})`}</Text>
-                </TouchableOpacity>
-                {abierto && (entRider.length === 0 ? (
-                  <Text style={[styles.descripcionPedido, { marginTop: 6 }]}>Sin entregas completadas.</Text>
-                ) : (
-                  entRider.map(p => (
-                    <View key={p.id} style={{ borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingTop: 6, marginTop: 6 }}>
-                      <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '700' }]}>{p.numero_pedido} • {(p.creado_en || '').slice(0, 10)}</Text>
-                      <Text style={styles.descripcionPedido}>Cliente: {p.clientes?.nombre_completo || 'Cliente'} • {p.distrito || ''} {p.direccion || ''}</Text>
-                      <Text style={styles.descripcionPedido}>Pedido: S/ {Number(p.total).toFixed(2)} • Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)}</Text>
-                    </View>
-                  ))
-                ))}
-              </View>
-            );
-          })}
-        </View>
-      )}
-      {tab === 'horarios' && (
-        <View>
-          <View style={[styles.tarjetaSaldo, { paddingVertical: 12, marginBottom: 12 }]}>
-            <Text style={styles.etiquetaSaldo}>HORA PERÚ: {infoPeru.hora} • {infoPeru.turno}</Text>
-          </View>
-          <Text style={styles.titulo}>CONFIGURAR HORA DE APERTURA Y CIERRE</Text>
-          <View style={styles.tarjetaPedido}>
-            <Text style={styles.descripcionPedido}>Turno Mañana (Inicio y Fin)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="06:50" placeholderTextColor="#777" value={cfgPagos.manana_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_inicio: v })} />
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="11:00" placeholderTextColor="#777" value={cfgPagos.manana_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_fin: v })} />
-            </View>
-            <Text style={[styles.descripcionPedido, { marginTop: 10 }]}>Turno Noche (Inicio y Fin)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="18:30" placeholderTextColor="#777" value={cfgPagos.noche_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_inicio: v })} />
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="23:50" placeholderTextColor="#777" value={cfgPagos.noche_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_fin: v })} />
-            </View>
-            <TouchableOpacity style={styles.boton} onPress={guardarPagos}>
-              <Text style={styles.textoBoton}>GUARDAR HORARIOS DEL LOCAL</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.titulo}>CONTROL DE PRODUCTOS POR HORARIO</Text>
-          {productos.map(prod => (
-            <View key={prod.id} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{prod.nombre} ({prod.categoria})</Text>
-              <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
-                {[{ id: 'manana', txt: 'MAÑANA' }, { id: 'noche', txt: 'NOCHE' }, { id: 'ambos', txt: 'AMBOS' }].map(h => (
-                  <TouchableOpacity key={h.id} style={[styles.opcionEntrega, (prod.turno || 'ambos') === h.id && styles.opcionEntregaActiva, { flex: 1 }]} onPress={() => cambiarHorarioRapido(prod, h.id, prod.disponible)}>
-                    <Text style={{ color: (prod.turno || 'ambos') === h.id ? '#111' : '#FFF', fontSize: 10, fontWeight: '900' }}>{h.txt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TouchableOpacity onPress={() => cambiarHorarioRapido(prod, prod.turno || 'ambos', !prod.disponible)} style={{ marginTop: 8, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: prod.disponible ? '#2E7D32' : '#B71C1C' }}>
-                <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{prod.disponible ? 'ACTIVO EN CARTA (TOCA PARA PAUSAR)' : 'PAUSADO MANUALMENTE (TOCA PARA ACTIVAR)'}</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      )}
-                  {riders.map(r => {
-            const entRider = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
-            const totalDelRider = entRider.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-            const abierto = riderHistId === r.id;
-            return (
-              <View key={r.id} style={styles.tarjetaPedido}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.nombreProducto}>{r.nombre_completo} {r.placa ? `(${r.placa})` : ''}</Text>
-                    <Text style={styles.precioProducto}>Tel: {r.telefono} • Clave: {r.password}</Text>
-                    <Text style={[styles.precioProducto, { color: '#F5B041' }]}>Horario: {r.horario_trabajo || 'Sin asignar'} • Libre: {r.dias_libres || 'Ninguno'}</Text>
-                    <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '800' }]}>Entregas: {entRider.length} • Delivery: S/ {totalDelRider.toFixed(2)}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRider(r)}>
-                    <Text style={styles.textoAgregar}>EDITAR</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 8, paddingVertical: 8 }]} onPress={() => setRiderHistId(abierto ? null : r.id)}>
-                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `📋 VER HISTORIAL (${entRider.length})`}</Text>
-                </TouchableOpacity>
-                {abierto && (
-                  entRider.length === 0 ? (
-                    <Text style={[styles.descripcionPedido, { marginTop: 6 }]}>Sin entregas completadas.</Text>
-                  ) : (
-                    entRider.map(p => (
-                      <View key={p.id} style={{ borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingTop: 6, marginTop: 6 }}>
-                        <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '700' }]}>{p.numero_pedido} • {(p.creado_en || '').slice(0, 10)}</Text>
-                        <Text style={styles.descripcionPedido}>Cliente: {p.clientes?.nombre_completo || 'Cliente'} • {p.distrito || ''} {p.direccion || ''}</Text>
-                        <Text style={styles.descripcionPedido}>Pedido: S/ {Number(p.total).toFixed(2)} • Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)}</Text>
-                      </View>
-                    ))
-                  )
-                )}
-              </View>
-            );
-          })}
-        </View>
-      )}
-      {tab === 'horarios' && (
-        <View>
-          <View style={[styles.tarjetaSaldo, { paddingVertical: 12, marginBottom: 12 }]}>
-            <Text style={styles.etiquetaSaldo}>HORA PERÚ: {infoPeru.hora} • {infoPeru.turno}</Text>
-          </View>
-          <Text style={styles.titulo}>CONFIGURAR HORA DE APERTURA Y CIERRE</Text>
-          <View style={styles.tarjetaPedido}>
             <Text style={styles.descripcionPedido}>Turno Mañana (Inicio / Fin)</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
               <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="06:50" placeholderTextColor="#777" value={cfgPagos.manana_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_inicio: v })} />
@@ -452,7 +272,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                        {tab === 'pedidos' && (
+                          {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -531,7 +351,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                  {tab === 'canjes' && (
+                                         {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -549,7 +369,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
           <View style={[styles.filaSaludo, { marginTop: 14 }]}>
             <Text style={styles.titulo}>PREMIOS Y STOCK</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRec({ titulo: '', descripcion: '', puntos_requeridos: '100', stock: '5', activa: true })}>
+            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRec({ titulo: '', descripcion: '', puntos_requeridos: '', stock: '5', activa: true })}>
               <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
             </TouchableOpacity>
           </View>
@@ -558,7 +378,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Título del premio" placeholderTextColor="#777" value={editRec.titulo} onChangeText={v => setEditRec({ ...editRec, titulo: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Descripción" placeholderTextColor="#777" value={editRec.descripcion || ''} onChangeText={v => setEditRec({ ...editRec, descripcion: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Puntos requeridos" placeholderTextColor="#777" keyboardType="numeric" value={String(editRec.puntos_requeridos)} onChangeText={v => setEditRec({ ...editRec, puntos_requeridos: v })} />
-              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock disponible" placeholderTextColor="#777" keyboardType="numeric" value={String(editRec.stock ?? 5)} onChangeText={v => setEditRec({ ...editRec, stock: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock" placeholderTextColor="#777" keyboardType="numeric" value={String(editRec.stock ?? 5)} onChangeText={v => setEditRec({ ...editRec, stock: v })} />
               <TouchableOpacity style={styles.boton} onPress={guardarRec}><Text style={styles.textoBoton}>GUARDAR PREMIO</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditRec(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
             </View>
@@ -566,8 +386,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           {recompensas.map(r => (
             <View key={r.id} style={styles.producto}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.nombreProducto}>{r.titulo} (Stock: {r.stock ?? 5})</Text>
-                <Text style={styles.precioProducto}>{r.puntos_requeridos} puntos</Text>
+                <Text style={styles.nombreProducto}>{r.titulo}</Text>
+                <Text style={styles.precioProducto}>{r.puntos_requeridos} PTS • Stock: {r.stock ?? 5}</Text>
               </View>
               <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRec(r)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
             </View>
@@ -577,18 +397,19 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       {tab === 'menu' && (
         <View>
           <View style={styles.filaSaludo}>
-            <Text style={styles.titulo}>MENÚ Y STOCK</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditProd({ nombre: '', categoria: 'Hamburguesas', precio: '', stock: '10', ingredientes: '', imagen_url: '', disponible: true, turno: 'ambos' })}>
-              <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO PLATO</Text>
+            <Text style={styles.titulo}>MENÚ, HORARIOS Y STOCK</Text>
+            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditProd({ nombre: '', ingredientes: '', categoria: 'Hamburguesas', precio: '', stock: '10', imagen_url: '', turno: 'ambos', disponible: true })}>
+              <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
             </TouchableOpacity>
           </View>
           {editProd && (
             <View style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>{editProd.id ? 'Editar Plato' : 'Nuevo Plato'}</Text>
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Nombre del plato" placeholderTextColor="#777" value={editProd.nombre} onChangeText={v => setEditProd({ ...editProd, nombre: v })} />
+              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Ingredientes" placeholderTextColor="#777" value={editProd.ingredientes || ''} onChangeText={v => setEditProd({ ...editProd, ingredientes: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Categoría" placeholderTextColor="#777" value={editProd.categoria} onChangeText={v => setEditProd({ ...editProd, categoria: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Precio (S/)" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.precio)} onChangeText={v => setEditProd({ ...editProd, precio: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.stock ?? 10)} onChangeText={v => setEditProd({ ...editProd, stock: v })} />
-              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Ingredientes" placeholderTextColor="#777" value={editProd.ingredientes || ''} onChangeText={v => setEditProd({ ...editProd, ingredientes: v })} />
               <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0' }]} onPress={() => elegirFoto('prod')} disabled={subiendoImg}>
                 <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : '📷 SUBIR FOTO'}</Text>
               </TouchableOpacity>
@@ -598,14 +419,14 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
           {productos.map(prod => (
             <View key={prod.id} style={styles.producto}>
-              <Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 50, height: 50, borderRadius: 8 }} />
+              <Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={{ width: 52, height: 52, borderRadius: 8 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.nombreProducto}>{prod.nombre} (Stock: {prod.stock ?? 10})</Text>
-                <Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)}</Text>
+                <Text style={styles.nombreProducto}>{prod.nombre} ({prod.categoria})</Text>
+                <Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10}</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(prod.id)}><Text style={styles.textoAgregar}>🗑️</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(prod.id)}><Text style={styles.textoAgregar, { color: '#FFF' }}>🗑️</Text></TouchableOpacity>
               </View>
             </View>
           ))}
@@ -615,7 +436,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         <View>
           <Text style={styles.titulo}>QR YAPE Y PLIN</Text>
           <View style={styles.tarjetaPedido}>
-            <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular de la cuenta" placeholderTextColor="#777" value={cfgPagos.titular || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titular: v })} />
+            <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular de cuenta" placeholderTextColor="#777" value={cfgPagos.titular || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titular: v })} />
             <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Yape" placeholderTextColor="#777" value={cfgPagos.qr_yape || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_yape: v })} />
             <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Plin" placeholderTextColor="#777" value={cfgPagos.qr_plin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_plin: v })} />
             <TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR QR</Text></TouchableOpacity>
@@ -627,14 +448,14 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <View style={styles.tarjetaSaldo}>
             <Text style={styles.etiquetaSaldo}>TOTAL VENTAS COMPLETADAS</Text>
             <Text style={styles.numeroSaldo}>S/ {totalVentas.toFixed(2)}</Text>
-            <Text style={[styles.etiquetaSaldo, { marginTop: 6 }]}>{completados.length} PEDIDOS ENTREGADOS</Text>
+            <Text style={[styles.etiquetaSaldo, { marginTop: 6 }]}>{completados.length} pedidos completados</Text>
           </View>
           <Text style={styles.titulo}>HISTORIAL DIARIO DE VENTAS Y DEVOLUCIONES</Text>
           {ventasPorDia.map(d => (
             <View key={d.fecha} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>📅 Fecha: {d.fecha}</Text>
               <Text style={[styles.descripcionPedido, { color: '#4CAF50' }]}>✅ Ventas ({d.cantComp}): S/ {d.ventas.toFixed(2)}</Text>
-              <Text style={[styles.descripcionPedido, { color: '#E53935' }]}>❌ Devoluciones ({d.cantCanc}): S/ {d.devoluciones.toFixed(2)}</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E53935' }]}>❌ Cancelados ({d.cantCanc}): S/ {d.devoluciones.toFixed(2)}</Text>
               <Text style={styles.totalPedidoTexto}>Neto del día: S/ {(d.ventas - d.devoluciones).toFixed(2)}</Text>
             </View>
           ))}
@@ -642,4 +463,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-                                                                                                                                                                                                                                             }
+                                                                                                                                                                                                                            }
+            
