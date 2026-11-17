@@ -261,3 +261,125 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   );
                   }
           
+        {subVista === 'canjear' && (
+          <View>
+            <View style={[styles.tarjetaSaldo, { paddingVertical: 12, marginBottom: 12 }]}>
+              <Text style={styles.etiquetaSaldo}>TUS PUNTOS: {datos?.puntos ?? 0} PTS</Text>
+            </View>
+            <Text style={styles.titulo}>RECOMPENSAS Y CANJES</Text>
+            {canjeConfirmar && (
+              <View style={[styles.tarjetaPedido, { borderColor: '#F5B041' }]}>
+                <Text style={[styles.titulo, { color: '#F5B041', marginBottom: 6 }]}>CONFIRMAR CANJE</Text>
+                <Text style={styles.nombreProducto}>¿Deseas canjear "{canjeConfirmar.titulo}"?</Text>
+                <Text style={[styles.descripcionPedido, { marginTop: 4 }]}>Se descontarán {canjeConfirmar.puntos_requeridos} puntos.</Text>
+                <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => { onCanjear(canjeConfirmar); setCanjeConfirmar(null); }} disabled={cargando}>
+                  <Text style={styles.textoBoton}>SÍ, CANJEAR AHORA</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setCanjeConfirmar(null)}>
+                  <Text style={styles.textoBoton}>CANCELAR</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {(recompensas || []).filter(r => r.activa !== false).map(r => {
+              const st = r.stock != null ? Number(r.stock) : 5, sinStock = st <= 0;
+              const puedeCanjear = !sinStock && (datos?.puntos ?? 0) >= Number(r.puntos_requeridos);
+              return (
+                <View key={r.id} style={styles.tarjetaPedido}>
+                  <Text style={styles.nombreProducto}>{r.titulo}</Text>
+                  <Text style={styles.descripcionPedido}>{r.descripcion}</Text>
+                  <Text style={styles.precioProducto}>{r.puntos_requeridos} PTS • Stock: {st}</Text>
+                  <TouchableOpacity style={[styles.boton, { backgroundColor: puedeCanjear ? '#F5B041' : '#555' }]} disabled={!puedeCanjear || cargando} onPress={() => intentarCanjear(r)}>
+                    <Text style={[styles.textoBoton, { color: puedeCanjear ? '#111' : '#CCC' }]}>{sinStock ? 'SIN STOCK' : puedeCanjear ? 'CANJEAR PREMIO' : 'PUNTOS INSUFICIENTES'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        {subVista === 'pedidos' && (
+          <View>
+            <Text style={styles.titulo}>MIS PEDIDOS</Text>
+            {(datos?.pedidos || []).length === 0 ? (
+              <View style={styles.tarjetaVacia}>
+                <Text style={styles.textoVacio}>Aún no tienes pedidos realizados.</Text>
+              </View>
+            ) : (
+              (datos?.pedidos || []).map(p => (
+                <View key={p.id} style={styles.tarjetaPedido}>
+                  <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
+                  <View style={styles.estadoPedido}><Text style={styles.textoEstado}>{p.estado}</Text></View>
+                  {(p.pedido_detalles || []).map(d => <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>)}
+                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)}</Text>
+                  {p.estado === 'Confirmado por local' && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => onRecibirPedido(p)}>
+                      <Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        )}
+        {subVista === 'menu' && (
+          <View>
+            <Text style={styles.titulo}>NUESTRO MENÚ</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
+              {listaCategorias.map(cat => (
+                <TouchableOpacity key={cat} onPress={() => setCategoriaActiva && setCategoriaActiva(cat)} style={[styles.categoria, catSel === cat && styles.categoriaActiva]}>
+                  <Text style={{ color: catSel === cat ? '#111' : '#FFF', fontWeight: '800', fontSize: 12 }}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {filtrados.map(p => {
+              const st = p.stock != null ? Number(p.stock) : 10;
+              return (
+                <View key={p.id} style={styles.tarjetaPedido}>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Image source={p.imagen_url && p.imagen_url.includes('supabase.co') ? { uri: p.imagen_url } : LOGO} style={{ width: 64, height: 64, borderRadius: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.nombreProducto}>{p.nombre}</Text>
+                      {!!p.ingredientes && <Text style={[styles.descripcionPedido, { color: '#AAA' }]}>{p.ingredientes}</Text>}
+                      <Text style={styles.precioProducto}>S/ {Number(p.precio).toFixed(2)} • Stock: {st}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity style={[styles.boton, { marginTop: 10, backgroundColor: st <= 0 ? '#555' : '#F5B041' }]} disabled={st <= 0} onPress={() => agregar(p, false)}>
+                    <Text style={[styles.textoBoton, { color: st <= 0 ? '#CCC' : '#111' }]}>{st <= 0 ? 'SIN STOCK' : '+ AGREGAR AL CARRITO'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        {subVista === 'carrito' && (
+          <View>
+            <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
+            {(carrito || []).map(it => (
+              <View key={it.id} style={styles.producto}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nombreProducto}>{it.nombre}</Text>
+                  <Text style={styles.precioProducto}>S/ {(Number(it.precio) * it.cantidad).toFixed(2)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <TouchableOpacity style={styles.botonAgregar} onPress={() => setCarrito(carrito.map(x => x.id === it.id ? { ...x, cantidad: x.cantidad - 1 } : x).filter(x => x.cantidad > 0))}>
+                    <Text style={styles.textoAgregar}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.nombreProducto}>{it.cantidad}</Text>
+                  <TouchableOpacity style={styles.botonAgregar} onPress={() => setCarrito(carrito.map(x => x.id === it.id ? { ...x, cantidad: x.cantidad + 1 } : x))}>
+                    <Text style={styles.textoAgregar}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+            {totalItems > 0 && (
+              <TouchableOpacity style={styles.boton} onPress={() => onConfirmarPedido({ numero_pedido: 'CS-' + Math.floor(100000 + Math.random() * 900000), cliente_id: usuario.id, tipo_entrega: 'RECOJO', metodo_pago: 'Yape', subtotal: carrito.reduce((a, b) => a + Number(b.precio) * b.cantidad, 0), costo_delivery: 0, total: carrito.reduce((a, b) => a + Number(b.precio) * b.cantidad, 0), estado: 'Pendiente de confirmación' }, carrito)}>
+                <Text style={styles.textoBoton}>CONFIRMAR PEDIDO</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </ScrollView>
+      {barraInferior}
+    </View>
+  );
+                                                                                                                             }
+          
