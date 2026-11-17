@@ -18,6 +18,7 @@ export default function App() {
   const [proc, setProc] = useState(false);
   const [aviso, setAviso] = useState(null);
   const [carrito, setCarrito] = useState([]);
+  const [categoriaActiva, setCategoriaActiva] = useState('Todas');
   const [navInfo, setNavInfo] = useState({ tab: 'inicio', t: 0 });
   const [datos, setDatos] = useState({ prods: [], recs: [], promos: [], puntos: 0, historial: [], canjes: [], pedidos: [], adminPeds: [], cfgPagos: {} });
 
@@ -176,6 +177,8 @@ export default function App() {
           datos={datos}
           productos={datos.prods}
           categorias={categorias}
+          categoriaActiva={categoriaActiva}
+          setCategoriaActiva={setCategoriaActiva}
           recompensas={datos.recs}
           promociones={datos.promos}
           cfgPagos={datos.cfgPagos}
@@ -205,4 +208,4 @@ export default function App() {
       )}
     </SafeAreaView>
   );
-            }
+}
