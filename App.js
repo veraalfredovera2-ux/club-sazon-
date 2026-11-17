@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ActivityIndicator, Text } from 'react-native';
+import { SafeAreaView, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import * as S from './servicios';
@@ -10,22 +10,6 @@ import { BannerAviso, mostrarAviso, registrarAvisoGlobal } from './avisos';
 
 const TELEFONOS_ADMIN = ['967738806', '967142393'];
 
-class CapturadorError extends React.Component {
-  state = { error: null };
-  static getDerivedStateFromError(error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#111', padding: 20, justifyContent: 'center' }}>
-          <Text style={{ color: '#FF5252', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Error detectado:</Text>
-          <Text style={{ color: '#FFF', fontSize: 14 }}>{String(this.state.error?.message || this.state.error)}</Text>
-        </SafeAreaView>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 export default function App() {
   const [cargando, setCargando] = useState(true);
   const [pantalla, setPantalla] = useState('bienvenida');
@@ -33,6 +17,7 @@ export default function App() {
   const [esAdmin, setEsAdmin] = useState(false);
   const [proc, setProc] = useState(false);
   const [aviso, setAviso] = useState(null);
+  const [carrito, setCarrito] = useState([]);
   const [navInfo, setNavInfo] = useState({ tab: 'inicio', t: 0 });
   const [datos, setDatos] = useState({ prods: [], recs: [], promos: [], puntos: 0, historial: [], canjes: [], pedidos: [], adminPeds: [], cfgPagos: {} });
 
@@ -112,12 +97,13 @@ export default function App() {
 
   async function salir() {
     await AsyncStorage.removeItem('club_sazon_usuario');
-    setUsuario(null); setEsAdmin(false); setPantalla('bienvenida');
+    setUsuario(null); setEsAdmin(false); setCarrito([]); setPantalla('bienvenida');
   }
   async function confirmarPedido(pedidoBase, items) {
     setProc(true);
     try {
       await S.crearNuevoPedido(pedidoBase, items);
+      setCarrito([]);
       await cargarCliente(usuario.id);
       setNavInfo({ tab: 'pedidos', t: Date.now() });
       mostrarAviso('¡Pedido enviado!', 'Tu pedido fue registrado. Espera la confirmación del local.');
@@ -176,47 +162,47 @@ export default function App() {
   }
 
   return (
-    <CapturadorError>
-      <SafeAreaView style={styles.pantallaCompleta}>
-        <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-        {pantalla === 'bienvenida' && (
-          <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={proc} />
-        )}
-        {pantalla === 'registro' && (
-          <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={proc} />
-        )}
-        {pantalla === 'inicio' && (
-          <VistaInicio
-            usuario={usuario}
-            datos={datos}
-            productos={datos.prods}
-            categorias={categorias}
-            recompensas={datos.recs}
-            promociones={datos.promos}
-            cfgPagos={datos.cfgPagos}
-            navInfo={navInfo}
-            irA={tab => setNavInfo({ tab, t: Date.now() })}
-            onConfirmarPedido={confirmarPedido}
-            onCanjear={canjear}
-            onRecibirPedido={p => recibirPedido(p, false)}
-            onCancelarPedido={p => cancelarPedido(p, false)}
-            cerrarSesion={salir}
-            cargando={proc}
-          />
-        )}
-        {pantalla === 'admin' && (
-          <VistaAdmin
-            usuario={usuario}
-            pedidos={datos.adminPeds}
-            recargar={cargarAdmin}
-            onConfirmarAdmin={confirmarAdmin}
-            onCompletar={p => recibirPedido(p, true)}
-            onCancelar={p => cancelarPedido(p, true)}
-            cerrarSesion={salir}
-            cargando={proc}
-          />
-        )}
-      </SafeAreaView>
-    </CapturadorError>
+    <SafeAreaView style={styles.pantallaCompleta}>
+      <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
+      {pantalla === 'bienvenida' && (
+        <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={proc} />
+      )}
+      {pantalla === 'registro' && (
+        <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={proc} />
+      )}
+      {pantalla === 'inicio' && (
+        <VistaInicio
+          usuario={usuario}
+          datos={datos}
+          productos={datos.prods}
+          categorias={categorias}
+          recompensas={datos.recs}
+          promociones={datos.promos}
+          cfgPagos={datos.cfgPagos}
+          carrito={carrito}
+          setCarrito={setCarrito}
+          navInfo={navInfo}
+          irA={tab => setNavInfo({ tab, t: Date.now() })}
+          onConfirmarPedido={confirmarPedido}
+          onCanjear={canjear}
+          onRecibirPedido={p => recibirPedido(p, false)}
+          onCancelarPedido={p => cancelarPedido(p, false)}
+          cerrarSesion={salir}
+          cargando={proc}
+        />
+      )}
+      {pantalla === 'admin' && (
+        <VistaAdmin
+          usuario={usuario}
+          pedidos={datos.adminPeds}
+          recargar={cargarAdmin}
+          onConfirmarAdmin={confirmarAdmin}
+          onCompletar={p => recibirPedido(p, true)}
+          onCancelar={p => cancelarPedido(p, true)}
+          cerrarSesion={salir}
+          cargando={proc}
+        />
+      )}
+    </SafeAreaView>
   );
-}
+            }
