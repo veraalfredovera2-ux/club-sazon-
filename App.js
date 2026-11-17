@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, ActivityIndicator } from 'react-native';
+import { SafeAreaView, ActivityIndicator, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import * as S from './servicios';
@@ -9,6 +9,22 @@ import { VistaAdmin } from './admin';
 import { BannerAviso, mostrarAviso, registrarAvisoGlobal } from './avisos';
 
 const TELEFONOS_ADMIN = ['967738806', '967142393'];
+
+class CapturadorError extends React.Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#111', padding: 20, justifyContent: 'center' }}>
+          <Text style={{ color: '#FF5252', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Error detectado:</Text>
+          <Text style={{ color: '#FFF', fontSize: 14 }}>{String(this.state.error?.message || this.state.error)}</Text>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const [cargando, setCargando] = useState(true);
@@ -160,45 +176,47 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.pantallaCompleta}>
-      <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
-      {pantalla === 'bienvenida' && (
-        <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={proc} />
-      )}
-      {pantalla === 'registro' && (
-        <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={proc} />
-      )}
-      {pantalla === 'inicio' && (
-        <VistaInicio
-          usuario={usuario}
-          datos={datos}
-          productos={datos.prods}
-          categorias={categorias}
-          recompensas={datos.recs}
-          promociones={datos.promos}
-          cfgPagos={datos.cfgPagos}
-          navInfo={navInfo}
-          irA={tab => setNavInfo({ tab, t: Date.now() })}
-          onConfirmarPedido={confirmarPedido}
-          onCanjear={canjear}
-          onRecibirPedido={p => recibirPedido(p, false)}
-          onCancelarPedido={p => cancelarPedido(p, false)}
-          cerrarSesion={salir}
-          cargando={proc}
-        />
-      )}
-      {pantalla === 'admin' && (
-        <VistaAdmin
-          usuario={usuario}
-          pedidos={datos.adminPeds}
-          recargar={cargarAdmin}
-          onConfirmarAdmin={confirmarAdmin}
-          onCompletar={p => recibirPedido(p, true)}
-          onCancelar={p => cancelarPedido(p, true)}
-          cerrarSesion={salir}
-          cargando={proc}
-        />
-      )}
-    </SafeAreaView>
+    <CapturadorError>
+      <SafeAreaView style={styles.pantallaCompleta}>
+        <BannerAviso aviso={aviso} cerrar={() => setAviso(null)} />
+        {pantalla === 'bienvenida' && (
+          <VistaBienvenida irARegistro={() => setPantalla('registro')} onIngresar={manejarIngreso} cargando={proc} />
+        )}
+        {pantalla === 'registro' && (
+          <VistaRegistro onRegistrar={manejarRegistro} regresar={() => setPantalla('bienvenida')} cargando={proc} />
+        )}
+        {pantalla === 'inicio' && (
+          <VistaInicio
+            usuario={usuario}
+            datos={datos}
+            productos={datos.prods}
+            categorias={categorias}
+            recompensas={datos.recs}
+            promociones={datos.promos}
+            cfgPagos={datos.cfgPagos}
+            navInfo={navInfo}
+            irA={tab => setNavInfo({ tab, t: Date.now() })}
+            onConfirmarPedido={confirmarPedido}
+            onCanjear={canjear}
+            onRecibirPedido={p => recibirPedido(p, false)}
+            onCancelarPedido={p => cancelarPedido(p, false)}
+            cerrarSesion={salir}
+            cargando={proc}
+          />
+        )}
+        {pantalla === 'admin' && (
+          <VistaAdmin
+            usuario={usuario}
+            pedidos={datos.adminPeds}
+            recargar={cargarAdmin}
+            onConfirmarAdmin={confirmarAdmin}
+            onCompletar={p => recibirPedido(p, true)}
+            onCancelar={p => cancelarPedido(p, true)}
+            cerrarSesion={salir}
+            cargando={proc}
+          />
+        )}
+      </SafeAreaView>
+    </CapturadorError>
   );
 }
