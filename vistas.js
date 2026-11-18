@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { styles } from './estilos';
-import { categorias } from './servicios';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
 
 function aMinutos(hhmm, def) {
   const p = String(hhmm || def).split(':');
-  return p.length === 2 ? Number(p[0]) * 60 + Number(p[1]) : 0;
+  return p.length === 2 ? Number(p) * 60 + Number(p) : 0;
 }
 
 function obtenerTurnoPeru(cfg) {
+  if (cfg?.local_cerrado) return 'cerrado_hoy';
   const ahora = new Date();
   const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
   const peru = new Date(utc - 5 * 3600000);
@@ -43,7 +43,9 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const subtotal = (carrito || []).reduce((a, b) => a + Number(b.precio) * b.cantidad, 0);
 
   function agregar(p, esPromo = false) {
-    if (obtenerTurnoPeru(cfgPagos) === 'cerrado') return mostrarAviso('Local cerrado', `Horario: ${cfgPagos?.manana_inicio || '06:50'} - ${cfgPagos?.manana_fin || '11:00'} y ${cfgPagos?.noche_inicio || '18:30'} - ${cfgPagos?.noche_fin || '23:50'}.`);
+    const est = obtenerTurnoPeru(cfgPagos);
+    if (est === 'cerrado_hoy') return mostrarAviso('Local cerrado hoy', 'Hoy no estamos atendiendo. ¡Te esperamos pronto!');
+    if (est === 'cerrado') return mostrarAviso('Local cerrado', `Horario: ${cfgPagos?.manana_inicio || '06:50'} - ${cfgPagos?.manana_fin || '11:00'} y ${cfgPagos?.noche_inicio || '18:30'} - ${cfgPagos?.noche_fin || '23:50'}.`);
     const stockActual = p.stock != null ? Number(p.stock) : 10;
     const ex = (carrito || []).find(i => i.id === p.id);
     if (stockActual <= 0 || (ex ? ex.cantidad : 0) + 1 > stockActual) return mostrarAviso('Sin stock', 'No hay más unidades disponibles.');
@@ -53,14 +55,16 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   }
 
   function intentarCanjear(r) {
-    if (obtenerTurnoPeru(cfgPagos) === 'cerrado') return mostrarAviso('Local cerrado', 'Solo puedes canjear en horario de atención.');
+    const est = obtenerTurnoPeru(cfgPagos);
+    if (est === 'cerrado_hoy') return mostrarAviso('Local cerrado hoy', 'Hoy no estamos atendiendo.');
+    if (est === 'cerrado') return mostrarAviso('Local cerrado', 'Solo puedes canjear en horario de atención.');
     setCanjeConfirmar(r);
   }
   const barraInferior = (
     <View style={{ backgroundColor: '#111111', borderTopWidth: 1, borderTopColor: '#2A2A2A' }}>
       {totalItems > 0 && subVista !== 'carrito' && (
         <TouchableOpacity onPress={() => setSubVista('carrito')} style={{ backgroundColor: '#D32F2F', alignSelf: 'center', marginTop: 6, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>🛒 CARRITO ({totalItems})</Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>CARRITO ({totalItems})</Text>
           <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>S/ {subtotal.toFixed(2)} →</Text>
         </TouchableOpacity>
       )}
@@ -87,6 +91,11 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       <View style={styles.pantallaCompleta}>
         <ScrollView style={styles.pantallaCompleta} contentContainerStyle={[styles.contenido, { alignItems: 'center', paddingBottom: 24 }]}>
           <Image source={LOGO} style={{ width: 150, height: 150, borderRadius: 75, marginBottom: 12, borderWidth: 2, borderColor: '#F5B041' }} />
+          {cfgPagos?.local_cerrado && (
+            <View style={{ backgroundColor: '#B71C1C', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, marginBottom: 10, width: '100%', borderWidth: 1.5, borderColor: '#FFF' }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900', textAlign: 'center' }}>HOY EL LOCAL SE ENCUENTRA CERRADO</Text>
+            </View>
+          )}
           <Text style={{ color: '#F5B041', fontSize: 22, fontWeight: '900', textAlign: 'center' }}>¡Bienvenido, {usuario?.nombre_completo}!</Text>
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginTop: 4 }}>Tienes {datos?.puntos ?? 0} PUNTOS acumulados</Text>
           <Text style={{ color: '#CCCCCC', fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 18 }}>Elige una opción abajo o explora nuestros platos</Text>
@@ -111,15 +120,20 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         {barraInferior}
       </View>
     );
-               }
-  return (
+}
+                 return (
     <View style={styles.pantallaCompleta}>
       <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
         <NavegacionSuperior regresar={() => { if (prodDetalle) return setProdDetalle(null); setSubVista('inicio'); }} irAInicio={() => setSubVista('inicio')} />
+        {cfgPagos?.local_cerrado && (
+          <View style={{ backgroundColor: '#B71C1C', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, marginBottom: 8 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900', textAlign: 'center' }}>HOY EL LOCAL SE ENCUENTRA CERRADO</Text>
+          </View>
+        )}
         <View style={styles.filaSaludo}>
           <View><Text style={styles.saludo}>Hola,</Text><Text style={styles.nombreCliente}>{usuario?.nombre_completo} • {datos?.puntos ?? 0} PTS</Text></View>
           <TouchableOpacity style={{ backgroundColor: '#D32F2F', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }} onPress={() => setSubVista('carrito')}>
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>🛒 CARRITO ({totalItems})</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>CARRITO ({totalItems})</Text>
           </TouchableOpacity>
         </View>
         {(subVista === 'promos' || subVista === 'ofertas') && (
@@ -190,7 +204,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-            {subVista === 'pedidos' && (
+                  {subVista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {(datos?.pedidos || []).length === 0 ? (
@@ -238,7 +252,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                  {subVista === 'carrito' && (
+                      {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -295,7 +309,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   )}
                   {metodoPago === 'Efectivo' && <Text style={[styles.descripcionPedido, { marginTop: 10, color: '#4CAF50' }]}>Pagarás en efectivo al recibir tu pedido.</Text>}
                 </View>
-                                    <View style={styles.tarjetaPedido}>
+                                      <View style={styles.tarjetaPedido}>
                   <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {subtotal.toFixed(2)}</Text>
                   {!confirmarPedModal ? (
                     <TouchableOpacity style={styles.boton} onPress={() => {
