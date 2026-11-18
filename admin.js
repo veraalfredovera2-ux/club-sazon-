@@ -23,7 +23,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [promociones, setPromociones] = useState([]);
   const [solicitudesCanje, setSolicitudesCanje] = useState([]);
   const [riders, setRiders] = useState([]);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50' });
+  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '' });
+  const [hMananaIni, setHMananaIni] = useState('06:50');
+  const [hMananaFin, setHMananaFin] = useState('11:00');
+  const [hNocheIni, setHNocheIni] = useState('18:30');
+  const [hNocheFin, setHNocheFin] = useState('23:50');
   const [costosDel, setCostosDel] = useState({});
   const [editProd, setEditProd] = useState(null);
   const [editRec, setEditRec] = useState(null);
@@ -35,7 +39,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [audioListo, setAudioListo] = useState(true);
   const cfgCargadaRef = useRef(false);
   const conocidosRef = useRef(null), ctxAudioRef = useRef(null), timerRef = useRef(null), timeoutRef = useRef(null), wakeRef = useRef(null);
-
   useEffect(() => {
     AsyncStorage.getItem('admin_sonido_activo').then(v => { if (v !== null) setAudioListo(v === '1'); });
     cargarTodoAdmin();
@@ -56,6 +59,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch (e) {}
     } else detenerAlarma();
   }
+
   const esPendiente = (est) => est === 'Pendiente' || est === 'Pendiente de confirmación';
 
   useEffect(() => {
@@ -89,7 +93,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     timerRef.current = setInterval(tocarPitidoWeb, 900);
     timeoutRef.current = setTimeout(detenerAlarma, 10000);
   }
-
   function estiloEstado(est) {
     if (esPendiente(est)) return { badge: { borderColor: '#F5B041', backgroundColor: '#2A200B' }, txt: { color: '#F5B041' } };
     if (est === 'Completado') return { badge: { borderColor: '#4CAF50', backgroundColor: '#0E2612' }, txt: { color: '#4CAF50' } };
@@ -115,7 +118,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       ]);
       setProductos(p || []); setRecompensas(r || []); setPromociones(pr || []); setSolicitudesCanje(sc || []); setRiders(rd || []);
       if (!cfgCargadaRef.current || forzarCfg) {
-        setCfgPagos(prev => ({ ...prev, ...(c || {}) }));
+        const cfg = c || {};
+        setCfgPagos(prev => ({ ...prev, ...cfg }));
+        if (cfg.manana_inicio) setHMananaIni(cfg.manana_inicio);
+        if (cfg.manana_fin) setHMananaFin(cfg.manana_fin);
+        if (cfg.noche_inicio) setHNocheIni(cfg.noche_inicio);
+        if (cfg.noche_fin) setHNocheFin(cfg.noche_fin);
         cfgCargadaRef.current = true;
       }
     } catch (e) {}
@@ -129,7 +137,14 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   async function guardarRec() { if (editRec?.titulo?.trim() && Number(editRec.puntos_requeridos) > 0) try { await guardarRecompensaAdmin(editRec); setEditRec(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Premio actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function guardarPromo() { if (editPromo?.titulo?.trim()) try { await guardarPromocionAdmin(editPromo); setEditPromo(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Publicado.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function entregarCanje(id) { try { await confirmarEntregaCanje(id); cargarTodoAdmin(); mostrarAviso('Entregado', 'Canje confirmado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function guardarPagos() { try { await guardarConfigPagos(cfgPagos); cargarTodoAdmin(true); mostrarAviso('Guardado', 'Horarios y pagos actualizados.'); } catch (e) { mostrarAviso('Error', e.message); } }
+  async function guardarPagos() {
+    try {
+      const payload = { ...cfgPagos, manana_inicio: hMananaIni.trim() || '06:50', manana_fin: hMananaFin.trim() || '11:00', noche_inicio: hNocheIni.trim() || '18:30', noche_fin: hNocheFin.trim() || '23:50' };
+      await guardarConfigPagos(payload);
+      setCfgPagos(payload);
+      mostrarAviso('Guardado', 'Horarios y pagos guardados correctamente.');
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
     const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
@@ -141,6 +156,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     return acc;
   }, {}));
 
+  const estiloHoraAzul = { width: 85, height: 34, backgroundColor: '#0C4A6E', borderColor: '#38BDF8', borderWidth: 1.5, borderRadius: 8, color: '#E0F2FE', fontSize: 13, fontWeight: '900', textAlign: 'center', paddingHorizontal: 6 };
+
   return (
     <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
       <NavegacionSuperior regresar={() => { setEditProd(null); setEditRec(null); setEditPromo(null); setEditRider(null); setTab('pedidos'); }} irAInicio={() => setTab('pedidos')} />
@@ -151,7 +168,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       </View>
       {sonando && (
         <TouchableOpacity onPress={detenerAlarma} style={{ backgroundColor: '#D32F2F', padding: 14, borderRadius: 12, marginBottom: 10, alignItems: 'center' }}>
-          <Text style={{ color: '#FFF', fontWeight: '900' }}>🔔 NUEVO PEDIDO — TOCA PARA SILENCIAR</Text>
+          <Text style={{ color: '#FFF', fontWeight: '900' }}>NUEVO PEDIDO - TOCA PARA SILENCIAR</Text>
         </TouchableOpacity>
       )}
       <View style={styles.filaSaludo}>
@@ -161,7 +178,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         </View>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: audioListo ? '#2E7D32' : '#555' }]} onPress={alternarSonido}>
-            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{audioListo ? '🔔 ON' : '🔕 OFF'}</Text>
+            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{audioListo ? 'ON' : 'OFF'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => { recargar(); cargarTodoAdmin(); }}>
             <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>↻</Text>
@@ -195,7 +212,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditRider(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
               {editRider.id && (
                 <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C', marginTop: 8 }]} onPress={() => { borrarRider(editRider.id); setEditRider(null); }}>
-                  <Text style={styles.textoBoton}>🗑️ ELIMINAR RIDER</Text>
+                  <Text style={styles.textoBoton}>ELIMINAR RIDER</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -218,7 +235,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 8, paddingVertical: 8 }]} onPress={() => setRiderHistId(abierto ? null : r.id)}>
-                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `📋 VER HISTORIAL (${entRider.length})`}</Text>
+                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `VER HISTORIAL (${entRider.length})`}</Text>
                 </TouchableOpacity>
                 {abierto && (entRider.length === 0 ? (
                   <Text style={[styles.descripcionPedido, { marginTop: 6 }]}>Sin entregas completadas.</Text>
@@ -238,23 +255,29 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
       {tab === 'horarios' && (
         <View>
-          <View style={[styles.tarjetaSaldo, { paddingVertical: 12, marginBottom: 12 }]}>
+          <View style={[styles.tarjetaSaldo, { paddingVertical: 10, marginBottom: 10 }]}>
             <Text style={styles.etiquetaSaldo}>HORA PERÚ: {infoPeru.hora} • {infoPeru.turno}</Text>
           </View>
-          <Text style={styles.titulo}>CONFIGURAR HORA DE APERTURA Y CIERRE</Text>
+          <Text style={styles.titulo}>APERTURA Y CIERRE DEL LOCAL</Text>
           <View style={styles.tarjetaPedido}>
-            <Text style={styles.descripcionPedido}>Turno Mañana (Inicio / Fin)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="06:50" placeholderTextColor="#777" value={cfgPagos.manana_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_inicio: v })} />
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="11:00" placeholderTextColor="#777" value={cfgPagos.manana_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, manana_fin: v })} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ color: '#38BDF8', fontWeight: '800', fontSize: 12 }}>MAÑANA:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TextInput editable={true} style={estiloHoraAzul} placeholder="06:50" placeholderTextColor="#7DD3FC" value={hMananaIni} onChangeText={setHMananaIni} />
+                <Text style={{ color: '#FFF', fontWeight: '900' }}>a</Text>
+                <TextInput editable={true} style={estiloHoraAzul} placeholder="11:00" placeholderTextColor="#7DD3FC" value={hMananaFin} onChangeText={setHMananaFin} />
+              </View>
             </View>
-            <Text style={[styles.descripcionPedido, { marginTop: 10 }]}>Turno Noche (Inicio / Fin)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="18:30" placeholderTextColor="#777" value={cfgPagos.noche_inicio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_inicio: v })} />
-              <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="23:50" placeholderTextColor="#777" value={cfgPagos.noche_fin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, noche_fin: v })} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ color: '#38BDF8', fontWeight: '800', fontSize: 12 }}>NOCHE:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TextInput editable={true} style={estiloHoraAzul} placeholder="18:30" placeholderTextColor="#7DD3FC" value={hNocheIni} onChangeText={setHNocheIni} />
+                <Text style={{ color: '#FFF', fontWeight: '900' }}>a</Text>
+                <TextInput editable={true} style={estiloHoraAzul} placeholder="23:50" placeholderTextColor="#7DD3FC" value={hNocheFin} onChangeText={setHNocheFin} />
+              </View>
             </View>
-            <TouchableOpacity style={styles.boton} onPress={guardarPagos}>
-              <Text style={styles.textoBoton}>GUARDAR HORARIOS DEL LOCAL</Text>
+            <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', paddingVertical: 10 }]} onPress={guardarPagos}>
+              <Text style={styles.textoBoton}>GUARDAR HORARIOS</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.titulo}>CONTROL DE PRODUCTOS POR HORARIO</Text>
@@ -262,7 +285,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             <View key={prod.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{prod.nombre} ({prod.categoria})</Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
-                {[{ id: 'manana', txt: '🌅 MAÑANA' }, { id: 'noche', txt: '🌙 NOCHE' }, { id: 'ambos', txt: '🔄 AMBOS' }].map(h => (
+                {[{ id: 'manana', txt: 'MAÑANA' }, { id: 'noche', txt: 'NOCHE' }, { id: 'ambos', txt: 'AMBOS' }].map(h => (
                   <TouchableOpacity key={h.id} style={[styles.opcionEntrega, (prod.turno || 'ambos') === h.id && styles.opcionEntregaActiva, { flex: 1, paddingVertical: 6 }]} onPress={() => cambiarHorarioRapido(prod, h.id, prod.disponible !== false)}>
                     <Text style={{ color: (prod.turno || 'ambos') === h.id ? '#111' : '#FFF', fontSize: 10, fontWeight: '800', textAlign: 'center' }}>{h.txt}</Text>
                   </TouchableOpacity>
@@ -272,7 +295,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                          {tab === 'pedidos' && (
+              {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -291,9 +314,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   {(p.pedido_detalles || []).map(d => (
                     <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {Number(d.subtotal).toFixed(2)})</Text>
                   ))}
-                  {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>📍 {p.distrito} - {p.direccion}</Text>}
-                  {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>🛵 Rider: {p.rider_nombre} ({p.estado_rider})</Text>}
-                  {!!p.notas && <Text style={[styles.descripcionPedido, { color: '#F5B041' }]}>📝 Nota: {p.notas}</Text>}
+                  {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>Distrito: {p.distrito} - {p.direccion}</Text>}
+                  {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>Rider: {p.rider_nombre} ({p.estado_rider})</Text>}
+                  {!!p.notas && <Text style={[styles.descripcionPedido, { color: '#F5B041' }]}>Nota: {p.notas}</Text>}
                   <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
                   {esPendiente(p.estado) && p.tipo_entrega === 'DELIVERY' && (
                     <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Costo delivery (ej. 5.00)" placeholderTextColor="#777" keyboardType="numeric" value={costosDel[p.id] ?? ''} onChangeText={v => setCostosDel({ ...costosDel, [p.id]: v })} />
@@ -334,7 +357,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Precio (S/)" placeholderTextColor="#777" keyboardType="numeric" value={String(editPromo.precio)} onChangeText={v => setEditPromo({ ...editPromo, precio: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock disponible" placeholderTextColor="#777" keyboardType="numeric" value={String(editPromo.stock ?? 10)} onChangeText={v => setEditPromo({ ...editPromo, stock: v })} />
               <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0' }]} onPress={() => elegirFoto('promo')} disabled={subiendoImg}>
-                <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : '📷 SUBIR FOTO'}</Text>
+                <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : 'SUBIR FOTO'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.boton} onPress={guardarPromo}><Text style={styles.textoBoton}>GUARDAR</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditPromo(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
@@ -351,7 +374,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                                         {tab === 'canjes' && (
+                  {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -411,7 +434,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Precio (S/)" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.precio)} onChangeText={v => setEditProd({ ...editProd, precio: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Stock" placeholderTextColor="#777" keyboardType="numeric" value={String(editProd.stock ?? 10)} onChangeText={v => setEditProd({ ...editProd, stock: v })} />
               <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0' }]} onPress={() => elegirFoto('prod')} disabled={subiendoImg}>
-                <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : '📷 SUBIR FOTO'}</Text>
+                <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : 'SUBIR FOTO'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR PLATO</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditProd(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
@@ -426,7 +449,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </View>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(prod.id)}><Text style={styles.textoAgregar, { color: '#FFF' }}>🗑️</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#B71C1C' }]} onPress={() => borrarProd(prod.id)}><Text style={[styles.textoAgregar, { color: '#FFF' }]}>🗑️</Text></TouchableOpacity>
               </View>
             </View>
           ))}
@@ -453,9 +476,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <Text style={styles.titulo}>HISTORIAL DIARIO DE VENTAS Y DEVOLUCIONES</Text>
           {ventasPorDia.map(d => (
             <View key={d.fecha} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>📅 Fecha: {d.fecha}</Text>
-              <Text style={[styles.descripcionPedido, { color: '#4CAF50' }]}>✅ Ventas ({d.cantComp}): S/ {d.ventas.toFixed(2)}</Text>
-              <Text style={[styles.descripcionPedido, { color: '#E53935' }]}>❌ Cancelados ({d.cantCanc}): S/ {d.devoluciones.toFixed(2)}</Text>
+              <Text style={styles.nombreProducto}>Fecha: {d.fecha}</Text>
+              <Text style={[styles.descripcionPedido, { color: '#4CAF50' }]}>Ventas ({d.cantComp}): S/ {d.ventas.toFixed(2)}</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E53935' }]}>Cancelados ({d.cantCanc}): S/ {d.devoluciones.toFixed(2)}</Text>
               <Text style={styles.totalPedidoTexto}>Neto del día: S/ {(d.ventas - d.devoluciones).toFixed(2)}</Text>
             </View>
           ))}
@@ -463,5 +486,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-                                                                                                                                                                                                                            }
-            
+}
