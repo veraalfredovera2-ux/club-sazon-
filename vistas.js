@@ -7,7 +7,7 @@ import { mostrarAviso } from './avisos';
 
 function aMinutos(hhmm, def) {
   const p = String(hhmm || def).split(':');
-  return p.length === 2 ? Number(p) * 60 + Number(p) : 0;
+  return p.length === 2 ? Number(p[0]) * 60 + Number(p[1]) : 0;
 }
 
 function obtenerTurnoPeru(cfg) {
@@ -35,9 +35,10 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
 
   useEffect(() => { if (navInfo?.tab) { setProdDetalle(null); setCanjeConfirmar(null); setConfirmarPedModal(false); setSubVista(navInfo.tab); } }, [navInfo]);
 
-  const listaCategorias = Array.isArray(categorias) && categorias.length ? ['Todas', ...categorias] : ['Todas', ...new Set((productos || []).map(p => p.categoria).filter(Boolean))];
+  const todosProds = Array.isArray(productos) ? productos : (datos?.prods || []);
+  const listaCategorias = ['Todas', ...new Set(todosProds.map(p => p.categoria).filter(Boolean))];
   const catSel = categoriaActiva || 'Todas';
-  const filtrados = catSel === 'Todas' ? (productos || []) : (productos || []).filter(p => p.categoria === catSel);
+  const filtrados = catSel === 'Todas' ? todosProds : todosProds.filter(p => p.categoria === catSel);
   const totalItems = (carrito || []).reduce((a, i) => a + i.cantidad, 0);
   const subtotal = (carrito || []).reduce((a, b) => a + Number(b.precio) * b.cantidad, 0);
 
@@ -110,7 +111,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         {barraInferior}
       </View>
     );
-}
+               }
   return (
     <View style={styles.pantallaCompleta}>
       <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
@@ -189,7 +190,55 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                      {subVista === 'carrito' && (
+            {subVista === 'pedidos' && (
+          <View>
+            <Text style={styles.titulo}>MIS PEDIDOS</Text>
+            {(datos?.pedidos || []).length === 0 ? (
+              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no tienes pedidos realizados.</Text></View>
+            ) : (datos?.pedidos || []).map(p => (
+              <View key={p.id} style={styles.tarjetaPedido}>
+                <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
+                <View style={styles.estadoPedido}><Text style={styles.textoEstado}>{p.estado}</Text></View>
+                {(p.pedido_detalles || []).map(d => <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>)}
+                <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.tipo_entrega} • {p.metodo_pago})</Text>
+                {p.estado === 'Confirmado por local' && <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => onRecibirPedido(p)}><Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO</Text></TouchableOpacity>}
+              </View>
+            ))}
+          </View>
+        )}
+        {subVista === 'menu' && (
+          <View>
+            <Text style={styles.titulo}>NUESTRO MENÚ ({filtrados.length})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
+              {listaCategorias.map(cat => (
+                <TouchableOpacity key={cat} onPress={() => setCategoriaActiva && setCategoriaActiva(cat)} style={[styles.categoria, catSel === cat && styles.categoriaActiva]}>
+                  <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {filtrados.length === 0 ? (
+              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Cargando platos del menú...</Text></View>
+            ) : filtrados.map(p => {
+              const st = p.stock != null ? Number(p.stock) : 10;
+              return (
+                <View key={p.id} style={styles.tarjetaPedido}>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <Image source={p.imagen_url && p.imagen_url.includes('supabase.co') ? { uri: p.imagen_url } : LOGO} style={{ width: 64, height: 64, borderRadius: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.nombreProducto}>{p.nombre}</Text>
+                      {!!p.ingredientes && <Text style={[styles.descripcionPedido, { color: '#AAA' }]}>{p.ingredientes}</Text>}
+                      <Text style={styles.precioProducto}>S/ {Number(p.precio).toFixed(2)} • Stock: {st}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity style={[styles.boton, { marginTop: 10, backgroundColor: st <= 0 ? '#555' : '#F5B041' }]} disabled={st <= 0} onPress={() => agregar(p, false)}>
+                    <Text style={[styles.textoBoton, { color: st <= 0 ? '#CCC' : '#111' }]}>{st <= 0 ? 'SIN STOCK' : '+ AGREGAR AL CARRITO'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+                  {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -211,7 +260,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                     {[{ id: 'DELIVERY', txt: 'DELIVERY' }, { id: 'RECOJO', txt: 'RECOJO EN LOCAL' }].map(op => (
                       <TouchableOpacity key={op.id} onPress={() => setTipoEntrega(op.id)} style={[styles.opcionEntrega, tipoEntrega === op.id && styles.opcionEntregaActiva, { flex: 1 }]}>
-                        <Text style={{ color: tipoEntrega === op.id ? '#111' : '#FFF', fontWeight: '900', fontSize: 12, textAlign: 'center' }}>{op.txt}</Text>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 12, textAlign: 'center' }}>{op.txt}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -228,7 +277,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                     {['Yape', 'Plin', 'Efectivo'].map(mp => (
                       <TouchableOpacity key={mp} onPress={() => setMetodoPago(mp)} style={[styles.opcionEntrega, metodoPago === mp && styles.opcionEntregaActiva, { flex: 1 }]}>
-                        <Text style={{ color: metodoPago === mp ? '#111' : '#FFF', fontWeight: '900', fontSize: 12, textAlign: 'center' }}>{mp.toUpperCase()}</Text>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 12, textAlign: 'center' }}>{mp.toUpperCase()}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
