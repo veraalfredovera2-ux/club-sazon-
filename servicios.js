@@ -1,6 +1,6 @@
 const ID_PROYECTO = 'pripxtsriyxhafevokjg';
 export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
-export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaXB4dHNyaXl4aGFmZXZva2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MTA5MDQsImV4cCI6MjA5MTI4NjkwNH0.XQiDje3DTN5NTezMDXsIev4cCi8WjEmOTQNmZMW8I0_uECAPm62lRj4hNJJrfq-3dWT49DFm9fdN3Vb0W6wfOw';
+export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
 
@@ -8,7 +8,7 @@ const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
 const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
 
 async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
-  const op = { method: metodo, cache: 'no-store', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Prefer: 'return=representation' } };
+  const op = { method: metodo, cache: 'no-store', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Prefer: 'return=representation' } };
   if (cuerpo) op.body = JSON.stringify(cuerpo);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${ruta}`, op);
   const txt = await res.text();
@@ -156,7 +156,7 @@ export async function subirImagenGaleria() {
         const nombre = `img_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
         const res = await fetch(`${SUPABASE_URL}/storage/v1/object/imagenes/${nombre}`, {
           method: 'POST',
-          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'true' },
+          headers: { apikey: SUPABASE_KEY, 'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'true' },
           body: file
         });
         if (!res.ok) throw new Error('Error al subir imagen al Storage');
