@@ -16,6 +16,19 @@ function obtenerInfoHoraPeru() {
   return { hora: `${hh}:${mm}`, turno };
 }
 
+async function lanzarNotificacionNativaAdmin(titulo, cuerpo) {
+  try {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    const opciones = { body: cuerpo, vibrate:, tag: 'pedido-nuevo-' + Date.now(), renotify: true, requireInteraction: true };
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && reg.showNotification) { await reg.showNotification(titulo, opciones); return; }
+    }
+    new Notification(titulo, opciones);
+  } catch (e) {}
+}
+
 export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCompletar, onCancelar, cerrarSesion, cargando }) {
   const [tab, setTab] = useState('pedidos');
   const [productos, setProductos] = useState([]);
@@ -42,7 +55,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   useEffect(() => {
     AsyncStorage.getItem('admin_sonido_activo').then(v => { if (v !== null) setAudioListo(v === '1'); });
     cargarTodoAdmin();
-    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 5000);
+    try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 4000);
     return () => { clearInterval(t); liberarWakeLock(); };
   }, []);
 
@@ -56,7 +70,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     await AsyncStorage.setItem('admin_sonido_activo', nuevo ? '1' : '0');
     if (nuevo) {
       tocarPitidoWeb();
-      try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch (e) {}
+      try {
+        if (Platform.OS === 'web' && 'Notification' in window) {
+          const perm = await Notification.requestPermission();
+          if (perm === 'granted') lanzarNotificacionNativaAdmin('Notificaciones activadas', 'Recibirás alertas sonoras aunque la app esté en segundo plano.');
+        }
+      } catch (e) {}
     } else detenerAlarma();
   }
 
@@ -65,7 +84,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   useEffect(() => {
     const pendientes = (pedidos || []).filter(p => esPendiente(p.estado));
     if (conocidosRef.current === null) { conocidosRef.current = pendientes.map(p => p.id); return; }
-    if (pendientes.some(p => !conocidosRef.current.includes(p.id)) && audioListo) activarAlarma10Seg();
+    const nuevos = pendientes.filter(p => !conocidosRef.current.includes(p.id));
+    if (nuevos.length > 0 && audioListo) {
+      activarAlarma10Seg();
+      const ult = nuevos.at(0);
+      lanzarNotificacionNativaAdmin(
+        `¡Nuevo Pedido ${ult?.numero_pedido || ''}!`,
+        `Cliente: ${ult?.clientes?.nombre_completo || 'Cliente'} • Total: S/ ${Number(ult?.total || 0).toFixed(2)}`
+      );
+    }
     if (pendientes.length === 0) detenerAlarma();
     conocidosRef.current = pendientes.map(p => p.id);
   }, [pedidos, audioListo]);
@@ -76,11 +103,14 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!ctxAudioRef.current) ctxAudioRef.current = new Ctx();
         if (ctxAudioRef.current.state === 'suspended') ctxAudioRef.current.resume();
+        const t0 = ctxAudioRef.current.currentTime;
         const osc = ctxAudioRef.current.createOscillator(), gain = ctxAudioRef.current.createGain();
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(880, ctxAudioRef.current.currentTime);
-        gain.gain.setValueAtTime(0.6, ctxAudioRef.current.currentTime);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, t0);
+        osc.frequency.setValueAtTime(1174, t0 + 0.18);
+        gain.gain.setValueAtTime(0.9, t0);
         osc.connect(gain); gain.connect(ctxAudioRef.current.destination);
-        osc.start(); osc.stop(ctxAudioRef.current.currentTime + 0.35);
+        osc.start(t0); osc.stop(t0 + 0.4);
       }
     } catch (e) {}
   }
@@ -88,12 +118,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   function detenerAlarma() { if (timerRef.current) clearInterval(timerRef.current); if (timeoutRef.current) clearTimeout(timeoutRef.current); setSonando(false); }
   function activarAlarma10Seg() {
     detenerAlarma(); setSonando(true);
-    try { Vibration.vibrate(1000); } catch (e) {}
+    try { Vibration.vibrate([500, 200, 500, 200, 500]); } catch (e) {}
     tocarPitidoWeb();
-    timerRef.current = setInterval(tocarPitidoWeb, 900);
-    timeoutRef.current = setTimeout(detenerAlarma, 10000);
+    timerRef.current = setInterval(() => {
+      tocarPitidoWeb();
+      try { Vibration.vibrate(400); } catch (e) {}
+    }, 850);
+    timeoutRef.current = setTimeout(detenerAlarma, 12000);
   }
-  function estiloEstado(est) {
+    function estiloEstado(est) {
     if (esPendiente(est)) return { badge: { borderColor: '#F5B041', backgroundColor: '#2A200B' }, txt: { color: '#F5B041' } };
     if (est === 'Completado') return { badge: { borderColor: '#4CAF50', backgroundColor: '#0E2612' }, txt: { color: '#4CAF50' } };
     if (est === 'Cancelado') return { badge: { borderColor: '#E53935', backgroundColor: '#2A0D0D' }, txt: { color: '#E53935' } };
@@ -145,7 +178,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       mostrarAviso('Guardado', 'Horarios y pagos guardados correctamente.');
     } catch (e) { mostrarAviso('Error', e.message); }
   }
-    const infoPeru = obtenerInfoHoraPeru();
+   const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
@@ -178,7 +211,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         </View>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: audioListo ? '#2E7D32' : '#555' }]} onPress={alternarSonido}>
-            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{audioListo ? 'ON' : 'OFF'}</Text>
+            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{audioListo ? 'SONIDO ON' : 'OFF'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => { recargar(); cargarTodoAdmin(); }}>
             <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>↻</Text>
@@ -217,7 +250,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               )}
             </View>
           )}
-          {riders.map(r => {
+            {riders.map(r => {
             const entRider = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
             const totalDelRider = entRider.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
             const abierto = riderHistId === r.id;
@@ -390,7 +423,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {tab === 'canjes' && (
+                          {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
