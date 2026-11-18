@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Platform } from 'react-native';
 import { styles } from './estilos';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
@@ -33,6 +33,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const [direccion, setDireccion] = useState('');
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState('Yape');
+  const [buscandoGps, setBuscandoGps] = useState(false);
 
   useEffect(() => { if (navInfo?.tab) { setProdDetalle(null); setCanjeConfirmar(null); setConfirmarPedModal(false); setSubVista(navInfo.tab); } }, [navInfo]);
 
@@ -44,6 +45,28 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const subtotal = (carrito || []).reduce((a, b) => a + Number(b.precio) * b.cantidad, 0);
   const textoHorario = `Mañana: ${cfgPagos?.manana_inicio || '06:50'} - ${cfgPagos?.manana_fin || '11:00'} • Noche: ${cfgPagos?.noche_inicio || '18:30'} - ${cfgPagos?.noche_fin || '23:50'}`;
   const turnoActual = obtenerTurnoPeru(cfgPagos);
+
+  function usarUbicacionActual() {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
+      return mostrarAviso('GPS no disponible', 'Pega aquí el enlace compartido desde Google Maps o escribe tu dirección.');
+    }
+    setBuscandoGps(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setDireccion(`https://google.com{lat},${lng}`);
+        if (!distrito.trim()) setDistrito('Ubicación GPS');
+        setBuscandoGps(false);
+        mostrarAviso('Ubicación capturada', 'Tu enlace exacto de Google Maps se ha pegado en la dirección.');
+      },
+      () => {
+        setBuscandoGps(false);
+        mostrarAviso('Permiso de ubicación', 'Activa el GPS de tu celular o pega el enlace copiado desde Google Maps.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   function agregar(p, esPromo = false) {
     const est = obtenerTurnoPeru(cfgPagos);
@@ -218,7 +241,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                      {subVista === 'pedidos' && (
+                  {subVista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {(datos?.pedidos || []).length === 0 ? (
@@ -265,7 +288,8 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
               );
             })}
           </View>
-        )}        {subVista === 'carrito' && (
+        )}
+                          {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -293,8 +317,11 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   </View>
                   {tipoEntrega === 'DELIVERY' && (
                     <View style={{ marginTop: 8 }}>
+                      <TouchableOpacity onPress={usarUbicacionActual} disabled={buscandoGps} style={{ backgroundColor: '#1565C0', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 12 }}>{buscandoGps ? 'OBTENIENDO GPS...' : '📍 USAR MI UBICACIÓN ACTUAL (GOOGLE MAPS)'}</Text>
+                      </TouchableOpacity>
                       <TextInput style={[styles.campo, { marginTop: 6, color: '#FFF' }]} placeholder="Distrito (ej. San Borja, Surco...)" placeholderTextColor="#777" value={distrito} onChangeText={setDistrito} />
-                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Dirección exacta y referencia" placeholderTextColor="#777" value={direccion} onChangeText={setDireccion} />
+                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Pega enlace de Google Maps o escribe dirección" placeholderTextColor="#777" value={direccion} onChangeText={setDireccion} />
                     </View>
                   )}
                   <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Notas para cocina o motorizado (opcional)" placeholderTextColor="#777" value={notas} onChangeText={setNotas} />
@@ -322,12 +349,11 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   )}
                   {metodoPago === 'Efectivo' && <Text style={[styles.descripcionPedido, { marginTop: 10, color: '#4CAF50' }]}>Pagarás en efectivo al recibir tu pedido.</Text>}
                 </View>
-                      
-                                              <View style={styles.tarjetaPedido}>
+                                    <View style={styles.tarjetaPedido}>
                   <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {subtotal.toFixed(2)}</Text>
                   {!confirmarPedModal ? (
                     <TouchableOpacity style={styles.boton} onPress={() => {
-                      if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) return mostrarAviso('Falta dirección', 'Ingresa tu distrito y dirección para el delivery.');
+                      if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) return mostrarAviso('Falta dirección', 'Ingresa tu distrito y dirección o usa tu ubicación GPS.');
                       setConfirmarPedModal(true);
                     }}><Text style={styles.textoBoton}>CONTINUAR Y CONFIRMAR PAGO</Text></TouchableOpacity>
                   ) : (
@@ -363,4 +389,4 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       {barraInferior}
     </View>
   );
-                    }
+                                                                                                         }
