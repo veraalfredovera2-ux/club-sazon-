@@ -1,6 +1,7 @@
-const ID_PROYECTO = 'priptariyohafevolcjg';
-export const SUPABASE_URL = `https://${ID_PROYECTO}.supabase.co`;
-export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaXBhdGFyaXlvaGFmZXZvbGNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MTA5MDQsImV4cCI6MjA5MTI4NjkwNH0.s1cC6vQ1y_5xI73b0S9F2W47X79L4h_k9H7yE5V1qI8';
+const ID_PROYECTO = 'pripxtsriyxhafevokjg';
+export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
+export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaXB4dHNyaXl4aGFmZXZva2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5MTEzMDMsImV4cCI6MjEwOTQ4NzMwM30.uECAPmu6zRj4hN0Jrfq-3dWT49Dfm9fdM3Vb0HbWfOw';
+
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
 
