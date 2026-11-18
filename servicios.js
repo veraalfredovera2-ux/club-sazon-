@@ -1,7 +1,6 @@
 const ID_PROYECTO = 'pripxtsriyxhafevokjg';
-export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
-export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaXB4dHNyaXl4aGFmZXZva2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5MTEzMDMsImV4cCI6MjEwOTQ4NzMwM30.uECAPmu6zRj4hN0Jrfq-3dWT49Dfm9fdM3Vb0HbWfOw';
-
+export const SUPABASE_URL = `https://${ID_PROYECTO}.supabase.co`;
+export const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByaXB4dHNyaXl4aGFmZXZva2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MTA5MDQsImV4cCI6MjA5MTI4NjkwNH0.s1cC6vQ1y_5xI73b0S9F2W47X79L4h_k9H7yE5V1qI8';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
 
@@ -21,7 +20,7 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  return (r && r[0]) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50', local_cerrado: false };
+  return (Array.isArray(r) && r.at(0)) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50', local_cerrado: false };
 }
 
 export async function guardarConfigPagos(cfg) {
@@ -83,54 +82,65 @@ export async function obtenerDatosCliente(id) {
 }
 
 export const obtenerPedidosAdmin = () => apiRest('pedidos?order=creado_en.desc&select=*,clientes(nombre_completo,telefono),pedido_detalles(*)');
-export async function registrarUsuario(nombreCompleto, telefono, password) {
+export async function registrarUsuario({ nombreCompleto, telefono, password }) {
   const tel = limpiarTel(telefono);
-  if (tel.length < 8 || tel.length > 15) throw new Error('Teléfono inválido (debe tener entre 8 y 15 dígitos)');
+  if (tel.length < 8 || tel.length > 15) throw new Error('Teléfono inválido (8 a 15 dígitos).');
   const ex = await apiRest(`clientes?telefono=eq.${tel}&select=id`);
-  if (ex?.length) throw new Error('Este teléfono ya tiene una cuenta registrada');
+  if (ex?.length) throw new Error('Este teléfono ya tiene una cuenta registrada.');
   const id = generarUUID();
-  await apiRest('clientes', 'POST', { id, nombre_completo: nombreCompleto.trim(), telefono: tel, password, rol: 'cliente' });
-  const r = await apiRest(`clientes?id=eq.${id}&select=*`);
-  return r;
+  await apiRest('clientes', 'POST', { id, nombre_completo: nombreCompleto, telefono: tel, email_login: `${tel}@clubsazon.com`, password });
+  await apiRest('movimientos_puntos', 'POST', { cliente_id: id, tipo: 'bienvenida', cantidad: 100, descripcion: '100 puntos de bienvenida por registrarse' });
+  return { ok: true, mensaje: `¡Bienvenido/a, ${nombreCompleto}! Has recibido 100 puntos.`, perfil: { id, nombre_completo: nombreCompleto, telefono: tel } };
 }
 
-export async function ingresarUsuario(telefono, password) {
+export async function ingresarUsuario({ telefono, password }) {
   const tel = limpiarTel(telefono);
-  const r = await apiRest(`clientes?telefono=eq.${tel}&select=*`);
-  if (!r?.length) throw new Error('Este número no está registrado');
-  if (r.password !== password) throw new Error('Contraseña incorrecta');
-  return r;
+  const adm = await apiRest(`administradores?telefono=eq.${tel}&password=eq.${encodeURIComponent(password)}&select=*`);
+  if (adm?.length) return { tipo: 'administrador', perfil: adm.at(0) };
+  const cli = await apiRest(`clientes?telefono=eq.${tel}&password=eq.${encodeURIComponent(password)}&select=*`);
+  if (!cli?.length) throw new Error('Teléfono o contraseña incorrectos.');
+  return { tipo: 'cliente', perfil: cli.at(0) };
 }
 
-export async function crearNuevoPedido(pedido, carrito) {
-  const pedCreado = await apiRest('pedidos', 'POST', { ...pedido, estado_rider: pedido.tipo_entrega === 'DELIVERY' ? 'Disponible' : 'No aplica' });
-  const pedId = pedCreado?.[0]?.id;
-  if (pedId && Array.isArray(carrito)) {
-    for (const it of carrito) {
-      await apiRest('pedido_detalles', 'POST', { pedido_id: pedId, producto_id: it.es_promo ? null : it.id, nombre_producto: it.nombre, cantidad: it.cantidad, precio_unitario: Number(it.precio), subtotal: Number(it.precio) * it.cantidad });
-      if (!it.es_promo && it.stock != null) await apiRest(`productos?id=eq.${it.id}`, 'PATCH', { stock: Math.max(0, Number(it.stock) - it.cantidad) });
+export async function crearNuevoPedido(pedidoData, carrito) {
+  const num = pedidoData.numero_pedido || ('PED-' + Math.floor(100000 + Math.random() * 900000));
+  const creados = await apiRest('pedidos', 'POST', { ...pedidoData, numero_pedido: num, estado: pedidoData.estado || 'Pendiente' });
+  const ped = creados.at(0);
+  await apiRest('pedido_detalles', 'POST', carrito.map(p => ({
+    pedido_id: ped.id,
+    producto_id: p.es_promo && String(p.id).includes('-') ? null : p.id,
+    nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre,
+    precio_unitario: Number(p.precio),
+    cantidad: p.cantidad,
+    total_linea: Number(p.precio) * p.cantidad
+  })));
+  for (const p of carrito) {
+    if (p.id && p.stock != null) {
+      const tabla = p.es_promo ? 'promociones' : 'productos';
+      await apiRest(`${tabla}?id=eq.${p.id}`, 'PATCH', { stock: Math.max(0, Number(p.stock) - Number(p.cantidad || 1)) });
     }
   }
-  return pedCreado?.[0];
+  return ped;
 }
 
-export async function confirmarAdminPedido(p, costoDelivery) {
-  const del = Number(costoDelivery || 0);
-  const nuevoTotal = Number(p.subtotal || p.total || 0) + del;
-  await apiRest(`pedidos?id=eq.${p.id}`, 'PATCH', { estado: 'Confirmado por local', costo_delivery: del, total: nuevoTotal, estado_rider: p.tipo_entrega === 'DELIVERY' ? 'Disponible' : 'No aplica' });
+export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
+  const sub = Number(pedido.subtotal || pedido.total || 0), del = Number(costoDelivery || 0);
+  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, costo_delivery: del, total: sub + del, estado: 'Confirmado por local' });
 }
 
-export async function confirmarRecepcionYDarPuntos(p) {
-  if (p.estado === 'Completado') return;
-  await apiRest(`pedidos?id=eq.${p.id}`, 'PATCH', { estado: 'Completado' });
-  const pts = Math.floor(Number(p.subtotal || p.total || 0) * 10);
-  if (pts > 0 && p.cliente_id) {
-    await apiRest('movimientos_puntos', 'POST', { cliente_id: p.cliente_id, tipo: 'COMPRA', cantidad: pts, descripcion: `Compra pedido ${p.numero_pedido}` });
-  }
+export async function confirmarRecepcionYDarPuntos(pedido) {
+  const actual = await apiRest(`pedidos?id=eq.${pedido.id}&select=estado`);
+  if (actual.at(0)?.estado === 'Cancelado') throw new Error('Este pedido fue cancelado.');
+  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, recibido_cliente: true, estado: 'Completado' });
+  const yaDados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.compra&select=cantidad`);
+  if (yaDados?.length) return 0;
+  const puntosGanados = Math.floor(Number(pedido.subtotal || pedido.total || 0) * 10);
+  if (puntosGanados > 0) await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'compra', cantidad: puntosGanados, descripcion: `Compra pedido ${pedido.numero_pedido}` });
+  return puntosGanados;
 }
 
-export async function cancelarPedidoYDescontar(p) {
-  await apiRest(`pedidos?id=eq.${p.id}`, 'PATCH', { estado: 'Cancelado' });
+export async function cancelarPedidoYDescontar(pedido) {
+  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { estado: 'Cancelado' });
 }
 
 export async function subirImagenGaleria() {
@@ -140,7 +150,7 @@ export async function subirImagenGaleria() {
     inp.type = 'file';
     inp.accept = 'image/*';
     inp.onchange = async (e) => {
-      const file = e.target?.files?.[0];
+      const file = e.target?.files?.item(0);
       if (!file) return resolve(null);
       try {
         const nombre = `img_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
