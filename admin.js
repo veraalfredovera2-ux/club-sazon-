@@ -23,7 +23,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [promociones, setPromociones] = useState([]);
   const [solicitudesCanje, setSolicitudesCanje] = useState([]);
   const [riders, setRiders] = useState([]);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '' });
+  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '', local_cerrado: false });
   const [hMananaIni, setHMananaIni] = useState('06:50');
   const [hMananaFin, setHMananaFin] = useState('11:00');
   const [hNocheIni, setHNocheIni] = useState('18:30');
@@ -217,7 +217,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               )}
             </View>
           )}
-                  {riders.map(r => {
+          {riders.map(r => {
             const entRider = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
             const totalDelRider = entRider.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
             const abierto = riderHistId === r.id;
@@ -258,6 +258,22 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <View style={[styles.tarjetaSaldo, { paddingVertical: 10, marginBottom: 10 }]}>
             <Text style={styles.etiquetaSaldo}>HORA PERÚ: {infoPeru.hora} • {infoPeru.turno}</Text>
           </View>
+          <TouchableOpacity
+            onPress={async () => {
+              const nuevoEstado = !cfgPagos.local_cerrado;
+              const payload = { ...cfgPagos, manana_inicio: hMananaIni || '06:50', manana_fin: hMananaFin || '11:00', noche_inicio: hNocheIni || '18:30', noche_fin: hNocheFin || '23:50', local_cerrado: nuevoEstado };
+              try {
+                await guardarConfigPagos(payload);
+                setCfgPagos(payload);
+                mostrarAviso(nuevoEstado ? 'Local Cerrado' : 'Local Abierto', nuevoEstado ? 'Hoy los clientes verán que el local está cerrado.' : 'El local vuelve a estar abierto.');
+              } catch (e) { mostrarAviso('Error', e.message); }
+            }}
+            style={{ backgroundColor: cfgPagos.local_cerrado ? '#B71C1C' : '#2E7D32', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginBottom: 12, borderWidth: 1.5, borderColor: '#FFF' }}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>
+              {cfgPagos.local_cerrado ? 'LOCAL CERRADO HOY (TOCA PARA ABRIR)' : 'LOCAL ABIERTO (TOCA PARA CERRAR HOY)'}
+            </Text>
+          </TouchableOpacity>
           <Text style={styles.titulo}>APERTURA Y CIERRE DEL LOCAL</Text>
           <View style={styles.tarjetaPedido}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -287,7 +303,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
                 {[{ id: 'manana', txt: 'MAÑANA' }, { id: 'noche', txt: 'NOCHE' }, { id: 'ambos', txt: 'AMBOS' }].map(h => (
                   <TouchableOpacity key={h.id} style={[styles.opcionEntrega, (prod.turno || 'ambos') === h.id && styles.opcionEntregaActiva, { flex: 1, paddingVertical: 6 }]} onPress={() => cambiarHorarioRapido(prod, h.id, prod.disponible !== false)}>
-                    <Text style={{ color: (prod.turno || 'ambos') === h.id ? '#111' : '#FFF', fontSize: 10, fontWeight: '800', textAlign: 'center' }}>{h.txt}</Text>
+                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', textAlign: 'center' }}>{h.txt}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -295,7 +311,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-              {tab === 'pedidos' && (
+      {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -374,7 +390,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                  {tab === 'canjes' && (
+      {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -486,4 +502,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-}
+            }
+            
