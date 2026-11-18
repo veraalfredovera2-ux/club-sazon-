@@ -5,8 +5,9 @@ import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
 
 function aMinutos(hhmm, def) {
-  const p = String(hhmm || def).split(':');
-  return p.length === 2 ? Number(p) * 60 + Number(p) : 0;
+  const p = String(hhmm || def).trim().split(':');
+  if (p.length !== 2) return 0;
+  return Number(p.at(0)) * 60 + Number(p.at(1));
 }
 
 function obtenerTurnoPeru(cfg) {
@@ -41,11 +42,13 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const filtrados = catSel === 'Todas' ? todosProds : todosProds.filter(p => p.categoria === catSel);
   const totalItems = (carrito || []).reduce((a, i) => a + i.cantidad, 0);
   const subtotal = (carrito || []).reduce((a, b) => a + Number(b.precio) * b.cantidad, 0);
+  const textoHorario = `Mañana: ${cfgPagos?.manana_inicio || '06:50'} - ${cfgPagos?.manana_fin || '11:00'} • Noche: ${cfgPagos?.noche_inicio || '18:30'} - ${cfgPagos?.noche_fin || '23:50'}`;
+  const turnoActual = obtenerTurnoPeru(cfgPagos);
 
   function agregar(p, esPromo = false) {
     const est = obtenerTurnoPeru(cfgPagos);
     if (est === 'cerrado_hoy') return mostrarAviso('Local cerrado hoy', 'Hoy no estamos atendiendo. ¡Te esperamos pronto!');
-    if (est === 'cerrado') return mostrarAviso('Local cerrado', `Horario: ${cfgPagos?.manana_inicio || '06:50'} - ${cfgPagos?.manana_fin || '11:00'} y ${cfgPagos?.noche_inicio || '18:30'} - ${cfgPagos?.noche_fin || '23:50'}.`);
+    if (est === 'cerrado') return mostrarAviso('Local cerrado', `Horario de atención:\n${textoHorario}`);
     const stockActual = p.stock != null ? Number(p.stock) : 10;
     const ex = (carrito || []).find(i => i.id === p.id);
     if (stockActual <= 0 || (ex ? ex.cantidad : 0) + 1 > stockActual) return mostrarAviso('Sin stock', 'No hay más unidades disponibles.');
@@ -57,7 +60,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   function intentarCanjear(r) {
     const est = obtenerTurnoPeru(cfgPagos);
     if (est === 'cerrado_hoy') return mostrarAviso('Local cerrado hoy', 'Hoy no estamos atendiendo.');
-    if (est === 'cerrado') return mostrarAviso('Local cerrado', 'Solo puedes canjear en horario de atención.');
+    if (est === 'cerrado') return mostrarAviso('Local cerrado', `Horario de atención:\n${textoHorario}`);
     setCanjeConfirmar(r);
   }
   const barraInferior = (
@@ -91,9 +94,16 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       <View style={styles.pantallaCompleta}>
         <ScrollView style={styles.pantallaCompleta} contentContainerStyle={[styles.contenido, { alignItems: 'center', paddingBottom: 24 }]}>
           <Image source={LOGO} style={{ width: 150, height: 150, borderRadius: 75, marginBottom: 12, borderWidth: 2, borderColor: '#F5B041' }} />
-          {cfgPagos?.local_cerrado && (
+          {cfgPagos?.local_cerrado ? (
             <View style={{ backgroundColor: '#B71C1C', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, marginBottom: 10, width: '100%', borderWidth: 1.5, borderColor: '#FFF' }}>
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900', textAlign: 'center' }}>HOY EL LOCAL SE ENCUENTRA CERRADO</Text>
+            </View>
+          ) : (
+            <View style={{ backgroundColor: '#1E1E1E', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginBottom: 10, width: '100%', borderWidth: 1, borderColor: turnoActual === 'cerrado' ? '#E53935' : '#4CAF50' }}>
+              <Text style={{ color: turnoActual === 'cerrado' ? '#EF5350' : '#66BB6A', fontSize: 11, fontWeight: '900', textAlign: 'center' }}>
+                {turnoActual === 'cerrado' ? 'LOCAL CERRADO AHORA' : 'LOCAL ABIERTO AHORA'}
+              </Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', textAlign: 'center', marginTop: 2 }}>{textoHorario}</Text>
             </View>
           )}
           <Text style={{ color: '#F5B041', fontSize: 22, fontWeight: '900', textAlign: 'center' }}>¡Bienvenido, {usuario?.nombre_completo}!</Text>
@@ -120,14 +130,18 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         {barraInferior}
       </View>
     );
-}
-                 return (
+            }
+  return (
     <View style={styles.pantallaCompleta}>
       <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
         <NavegacionSuperior regresar={() => { if (prodDetalle) return setProdDetalle(null); setSubVista('inicio'); }} irAInicio={() => setSubVista('inicio')} />
-        {cfgPagos?.local_cerrado && (
+        {cfgPagos?.local_cerrado ? (
           <View style={{ backgroundColor: '#B71C1C', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, marginBottom: 8 }}>
             <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900', textAlign: 'center' }}>HOY EL LOCAL SE ENCUENTRA CERRADO</Text>
+          </View>
+        ) : (
+          <View style={{ backgroundColor: '#1E1E1E', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: turnoActual === 'cerrado' ? '#E53935' : '#4CAF50' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700', textAlign: 'center' }}>{textoHorario}</Text>
           </View>
         )}
         <View style={styles.filaSaludo}>
@@ -204,7 +218,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                  {subVista === 'pedidos' && (
+                      {subVista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {(datos?.pedidos || []).length === 0 ? (
@@ -251,8 +265,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
               );
             })}
           </View>
-        )}
-                      {subVista === 'carrito' && (
+        )}        {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -309,7 +322,8 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   )}
                   {metodoPago === 'Efectivo' && <Text style={[styles.descripcionPedido, { marginTop: 10, color: '#4CAF50' }]}>Pagarás en efectivo al recibir tu pedido.</Text>}
                 </View>
-                                      <View style={styles.tarjetaPedido}>
+                      
+                                              <View style={styles.tarjetaPedido}>
                   <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {subtotal.toFixed(2)}</Text>
                   {!confirmarPedModal ? (
                     <TouchableOpacity style={styles.boton} onPress={() => {
