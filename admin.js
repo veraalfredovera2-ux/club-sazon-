@@ -7,7 +7,7 @@ import { mostrarAviso } from './avisos';
 import { obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje, subirImagenGaleria, obtenerRidersAdmin, guardarRiderAdmin, eliminarRiderAdmin } from './servicios';
 
 function generarWavDataUri(silencio = false) {
-  const sr = 8000, dur = silencio ? 2 : 1.2, n = Math.floor(sr * dur);
+  const sr = 8000, dur = silencio ? 3 : 1.2, n = Math.floor(sr * dur);
   const buf = new ArrayBuffer(44 + n * 2);
   const v = new DataView(buf);
   const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
@@ -18,7 +18,7 @@ function generarWavDataUri(silencio = false) {
   for (let i = 0; i < n; i++) {
     const t = i / sr;
     const freq = (Math.floor(t * 4) % 2 === 0) ? 980 : 1320;
-    const val = silencio ? 1 : Math.round(Math.sin(2 * Math.PI * freq * t) * 32000);
+    const val = silencio ? 2 : Math.round(Math.sin(2 * Math.PI * freq * t) * 32000);
     v.setInt16(44 + i * 2, val, true);
   }
   let bin = '';
@@ -83,7 +83,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         audioSirenaRef.current = aSirena;
         const aFondo = new window.Audio(generarWavDataUri(true));
         aFondo.loop = true;
-        aFondo.volume = 0.01;
+        aFondo.volume = 0.02;
         audioFondoRef.current = aFondo;
       } catch (e) {}
     }
@@ -100,94 +100,21 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
   useEffect(() => { if (audioListo) { activarWakeLock(); iniciarKeepAliveFondo(); } else { liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); } }, [audioListo]);
 
-  function iniciarKeepAliveFondo() { try { if (audioFondoRef.current && audioFondoRef.current.paused) audioFondoRef.current.play().catch(() => {}); } catch (e) {} }
-  function detenerKeepAliveFondo() { try { if (audioFondoRef.current) { audioFondoRef.current.pause(); audioFondoRef.current.currentTime = 0; } } catch (e) {} }
-  async function activarWakeLock() { try { if (Platform.OS === 'web' && navigator?.wakeLock && !wakeRef.current) wakeRef.current = await navigator.wakeLock.request('screen'); } catch (e) {} }
-  function liberarWakeLock() { try { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } } catch (e) {} }
-
-  async function alternarSonido() {
-    const nuevo = !audioListo; setAudioListo(nuevo);
-    await AsyncStorage.setItem('admin_sonido_activo', nuevo ? '1' : '0');
-    if (nuevo) {
-      iniciarKeepAliveFondo();
-      tocarPitidoPrueba();
-      try {
-        if (Platform.OS === 'web' && 'Notification' in window) {
-          const perm = await Notification.requestPermission();
-          if (perm === 'granted') registrarSwYNotificarAdmin('Sonido en segundo plano activo', 'Recibirás alertas sonoras incluso con la pantalla apagada.');
-        }
-      } catch (e) {}
-    } else detenerAlarma();
-  }
-
-  const esPendiente = (est) => est === 'Pendiente' || est === 'Pendiente de confirmación';
-
-  useEffect(() => {
-    const pendientes = (pedidos || []).filter(p => esPendiente(p.estado));
-    if (conocidosRef.current === null) { conocidosRef.current = pendientes.map(p => p.id); return; }
-    const nuevos = pendientes.filter(p => !conocidosRef.current.includes(p.id));
-    if (nuevos.length > 0 && audioListo) {
-      activarAlarma15Seg();
-      const ult = nuevos.at(0);
-      registrarSwYNotificarAdmin(
-        `¡Nuevo Pedido ${ult?.numero_pedido || ''}!`,
-        `Cliente: ${ult?.clientes?.nombre_completo || 'Cliente'} • Total: S/ ${Number(ult?.total || 0).toFixed(2)}`
-      );
-    }
-    if (pendientes.length === 0) detenerAlarma();
-    conocidosRef.current = pendientes.map(p => p.id);
-  }, [pedidos, audioListo]);
-
-  function tocarPitidoPrueba() {
+  function iniciarKeepAliveFondo() {
     try {
-      if (audioSirenaRef.current) {
-        audioSirenaRef.current.currentTime = 0;
-        audioSirenaRef.current.play().catch(() => {});
-        setTimeout(() => { if (!sonando && audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } }, 700);
+      if (audioFondoRef.current && audioFondoRef.current.paused) audioFondoRef.current.play().catch(() => {});
+      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new window.MediaMetadata({ title: 'Club Sazón • Recepción de Pedidos', artist: 'Alertas Activas en Segundo Plano' });
+        navigator.mediaSession.playbackState = 'playing';
       }
     } catch (e) {}
   }
-
-  function detenerAlarma() {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    try { if (audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } } catch (e) {}
-    setSonando(false);
+  function detenerKeepAliveFondo() {
+    try {
+      if (audioFondoRef.current) { audioFondoRef.current.pause(); audioFondoRef.current.currentTime = 0; }
+      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+    } catch (e) {}
   }
-
-  function activarAlarma15Seg() {
-    detenerAlarma(); setSonando(true);
-    try { Vibration.vibrate(); } catch (e) {}
-    try { if (audioSirenaRef.current) { audioSirenaRef.current.currentTime = 0; audioSirenaRef.current.play().catch(() => {}); } } catch (e) {}
-    timeoutRef.current = setTimeout(detenerAlarma, 15000);
-  }
-    useEffect(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      try {
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-        const aSirena = new window.Audio(generarWavDataUri(false));
-        aSirena.loop = true;
-        audioSirenaRef.current = aSirena;
-        const aFondo = new window.Audio(generarWavDataUri(true));
-        aFondo.loop = true;
-        aFondo.volume = 0.01;
-        audioFondoRef.current = aFondo;
-      } catch (e) {}
-    }
-    AsyncStorage.getItem('admin_sonido_activo').then(v => {
-      const activo = v === null ? true : v === '1';
-      setAudioListo(activo);
-      if (activo) iniciarKeepAliveFondo();
-    });
-    cargarTodoAdmin();
-    try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
-    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 3500);
-    return () => { clearInterval(t); liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); };
-  }, []);
-
-  useEffect(() => { if (audioListo) { activarWakeLock(); iniciarKeepAliveFondo(); } else { liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); } }, [audioListo]);
-
-  function iniciarKeepAliveFondo() { try { if (audioFondoRef.current && audioFondoRef.current.paused) audioFondoRef.current.play().catch(() => {}); } catch (e) {} }
-  function detenerKeepAliveFondo() { try { if (audioFondoRef.current) { audioFondoRef.current.pause(); audioFondoRef.current.currentTime = 0; } } catch (e) {} }
   async function activarWakeLock() { try { if (Platform.OS === 'web' && navigator?.wakeLock && !wakeRef.current) wakeRef.current = await navigator.wakeLock.request('screen'); } catch (e) {} }
   function liberarWakeLock() { try { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } } catch (e) {} }
 
@@ -349,7 +276,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         <View>
           <View style={styles.filaSaludo}>
             <Text style={styles.titulo}>MOTORIZADOS ({riders.length})</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRider({ nombre_completo: '', telefono: '', password: '', placa: '', horario_trabajo: '18:30 - 23:50', dias_libres: 'Lunes', activo: true })}>
+            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRider({ nombre_completo: '', telefono: '', password: '', placa: '', hora_entrada: '18:30', hora_salida: '23:50', dias_libres: 'Lunes', activo: true })}>
               <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
             </TouchableOpacity>
           </View>
@@ -359,7 +286,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Teléfono" placeholderTextColor="#777" keyboardType="phone-pad" value={editRider.telefono} onChangeText={v => setEditRider({ ...editRider, telefono: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Contraseña" placeholderTextColor="#777" value={editRider.password} onChangeText={v => setEditRider({ ...editRider, password: v })} />
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Placa (ej. ABC-123)" placeholderTextColor="#777" value={editRider.placa || ''} onChangeText={v => setEditRider({ ...editRider, placa: v })} />
-              <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Horario (ej. 18:30 - 23:50)" placeholderTextColor="#777" value={editRider.horario_trabajo || ''} onChangeText={v => setEditRider({ ...editRider, horario_trabajo: v })} />
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="Entrada (18:30)" placeholderTextColor="#777" value={editRider.hora_entrada || ''} onChangeText={v => setEditRider({ ...editRider, hora_entrada: v })} />
+                <TextInput style={[styles.campo, { flex: 1, color: '#FFF' }]} placeholder="Salida (23:50)" placeholderTextColor="#777" value={editRider.hora_salida || ''} onChangeText={v => setEditRider({ ...editRider, hora_salida: v })} />
+              </View>
               <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Días libres (ej. Lunes)" placeholderTextColor="#777" value={editRider.dias_libres || ''} onChangeText={v => setEditRider({ ...editRider, dias_libres: v })} />
               <TouchableOpacity style={styles.boton} onPress={guardarRider}><Text style={styles.textoBoton}>GUARDAR RIDER</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditRider(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
@@ -371,8 +301,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             </View>
           )}
                   {riders.map(r => {
-            const entRider = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
-            const totalDelRider = entRider.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
+            const entConfirmadas = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
+            const entPorConfirmarCli = (pedidos || []).filter(p => p.rider_id === r.id && p.estado !== 'Completado' && p.estado !== 'Cancelado' && p.estado_rider === 'Entregado por rider');
+            const gananciaConfirmada = entConfirmadas.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
+            const gananciaPendiente = entPorConfirmarCli.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
             const abierto = riderHistId === r.id;
             return (
               <View key={r.id} style={styles.tarjetaPedido}>
@@ -380,20 +312,23 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   <View style={{ flex: 1 }}>
                     <Text style={styles.nombreProducto}>{r.nombre_completo} {r.placa ? `(${r.placa})` : ''}</Text>
                     <Text style={styles.precioProducto}>Tel: {r.telefono} • Clave: {r.password}</Text>
-                    <Text style={[styles.precioProducto, { color: '#F5B041' }]}>Horario: {r.horario_trabajo || 'Sin asignar'} • Libre: {r.dias_libres || 'Ninguno'}</Text>
-                    <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '800' }]}>Entregas: {entRider.length} • Delivery: S/ {totalDelRider.toFixed(2)}</Text>
+                    <Text style={[styles.precioProducto, { color: '#F5B041' }]}>Horario: {r.hora_entrada || '18:30'} - {r.hora_salida || '23:50'} • Libre: {r.dias_libres || 'Ninguno'}</Text>
+                    <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '900', marginTop: 2 }]}>Entregas confirmadas: {entConfirmadas.length} • Ganancia: S/ {gananciaConfirmada.toFixed(2)}</Text>
+                    {entPorConfirmarCli.length > 0 && (
+                      <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>Por confirmar cliente ({entPorConfirmarCli.length}): S/ {gananciaPendiente.toFixed(2)}</Text>
+                    )}
                   </View>
                   <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRider(r)}>
                     <Text style={styles.textoAgregar}>EDITAR</Text>
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 8, paddingVertical: 8 }]} onPress={() => setRiderHistId(abierto ? null : r.id)}>
-                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `VER HISTORIAL (${entRider.length})`}</Text>
+                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `VER HISTORIAL (${entConfirmadas.length})`}</Text>
                 </TouchableOpacity>
-                {abierto && (entRider.length === 0 ? (
+                {abierto && (entConfirmadas.length === 0 ? (
                   <Text style={[styles.descripcionPedido, { marginTop: 6 }]}>Sin entregas completadas.</Text>
                 ) : (
-                  entRider.map(p => (
+                  entConfirmadas.map(p => (
                     <View key={p.id} style={{ borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingTop: 6, marginTop: 6 }}>
                       <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '700' }]}>{p.numero_pedido} • {(p.creado_en || '').slice(0, 10)}</Text>
                       <Text style={styles.descripcionPedido}>Cliente: {p.clientes?.nombre_completo || 'Cliente'} • {p.distrito || ''} {p.direccion || ''}</Text>
@@ -478,7 +413,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                 <View key={p.id} style={styles.tarjetaPedido}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido} — {p.clientes?.nombre_completo || 'Cliente'} ({p.clientes?.telefono || ''})</Text>
                   <View style={[styles.estadoPedido, col.badge]}>
-                    <Text style={[styles.textoEstado, col.txt]}>{p.estado}</Text>
+                    <Text style={[styles.textoEstado, col.txt]}>
+                      {p.estado_rider === 'Entregado por rider' && p.estado !== 'Completado' ? 'Entregado por rider (Falta cliente)' : p.estado}
+                    </Text>
                   </View>
                   {(p.pedido_detalles || []).map(d => {
                     const montoLinea = Number(d.total_linea ?? d.subtotal ?? (Number(d.precio_unitario || 0) * Number(d.cantidad || 1)));
@@ -505,7 +442,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   )}
                   {p.estado !== 'Cancelado' && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C', marginTop: 6 }]} onPress={() => onCancelar(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>CANCELAR PEDIDO</Text>
+                      <Text style={styles.textoBoton}>CANCELAR PEDIDO Y DESCONTAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -658,4 +595,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-}
+            }
+            
