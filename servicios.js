@@ -129,8 +129,12 @@ export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
 }
 
 export async function confirmarRecepcionYDarPuntos(pedido) {
-  const actual = await apiRest(`pedidos?id=eq.${pedido.id}&select=estado`);
-  if (actual.at(0)?.estado === 'Cancelado') throw new Error('Este pedido fue cancelado.');
+  const actual = await apiRest(`pedidos?id=eq.${pedido.id}&select=estado,tipo_entrega,estado_rider`);
+  const reg = actual.at(0);
+  if (reg?.estado === 'Cancelado') throw new Error('Este pedido fue cancelado.');
+  if (reg?.tipo_entrega === 'DELIVERY' && reg?.estado_rider !== 'Entregado por rider') {
+    throw new Error('Espera a que el repartidor confirme primero la entrega del pedido.');
+  }
   await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, recibido_cliente: true, estado: 'Completado' });
   const yaDados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.compra&select=cantidad`);
   if (yaDados?.length) return 0;
@@ -169,7 +173,10 @@ export async function subirImagenGaleria() {
 
 export const obtenerRidersAdmin = () => apiRest('riders?order=nombre_completo.asc');
 export async function guardarRiderAdmin(r) {
-  const body = { nombre_completo: r.nombre_completo.trim(), telefono: limpiarTel(r.telefono), password: r.password, placa: r.placa || '', horario_trabajo: r.horario_trabajo || '', dias_libres: r.dias_libres || '', activo: r.activo !== false };
+  const tramo = String(r.horario_trabajo || '').split('-');
+  const hEnt = (r.hora_entrada || tramo.at(0) || '18:30').trim();
+  const hSal = (r.hora_salida || tramo.at(1) || '23:50').trim();
+  const body = { nombre_completo: r.nombre_completo.trim(), telefono: limpiarTel(r.telefono), password: r.password, placa: r.placa || '', hora_entrada: hEnt, hora_salida: hSal, dias_libres: r.dias_libres || '', activo: r.activo !== false };
   return r.id ? apiRest(`riders?id=eq.${r.id}`, 'PATCH', body) : apiRest('riders', 'POST', body);
 }
 export const eliminarRiderAdmin = (id) => apiRest(`riders?id=eq.${id}`, 'DELETE');
