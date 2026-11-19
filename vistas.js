@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Platform, Linking } from 'react-native';
 import { styles } from './estilos';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
@@ -31,6 +31,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const [tipoEntrega, setTipoEntrega] = useState('DELIVERY');
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [linkMaps, setLinkMaps] = useState('');
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState('Yape');
   const [buscandoGps, setBuscandoGps] = useState(false);
@@ -48,24 +49,32 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
 
   function usarUbicacionActual() {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
-      return mostrarAviso('GPS no disponible', 'Pega aquí el enlace compartido desde Google Maps o escribe tu dirección.');
+      return mostrarAviso('GPS no disponible', 'Abre Google Maps, copia tu ubicación y pégala abajo.');
     }
     setBuscandoGps(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
-        setDireccion(`https://google.com{lat},${lng}`);
+        const url = `https://google.com{lat},${lng}`;
+        setLinkMaps(url);
+        if (!direccion.trim()) setDireccion(`Ubicación GPS (${lat}, ${lng})`);
         if (!distrito.trim()) setDistrito('Ubicación GPS');
         setBuscandoGps(false);
-        mostrarAviso('Ubicación capturada', 'Tu enlace exacto de Google Maps se ha pegado en la dirección.');
+        mostrarAviso('Ubicación GPS lista', 'Tu ubicación exacta de Google Maps se adjuntó al pedido.');
       },
       () => {
         setBuscandoGps(false);
-        mostrarAviso('Permiso de ubicación', 'Activa el GPS de tu celular o pega el enlace copiado desde Google Maps.');
+        mostrarAviso('Permiso de ubicación', 'Activa el GPS de tu celular o abre Google Maps para copiar tu enlace.');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  }
+
+  function abrirGoogleMapsCliente() {
+    const url = 'https://google.com';
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(url, '_blank');
+    else Linking.openURL(url);
   }
 
   function agregar(p, esPromo = false) {
@@ -153,7 +162,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         {barraInferior}
       </View>
     );
-            }
+}
   return (
     <View style={styles.pantallaCompleta}>
       <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
@@ -241,7 +250,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                  {subVista === 'pedidos' && (
+                      {subVista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {(datos?.pedidos || []).length === 0 ? (
@@ -289,7 +298,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                          {subVista === 'carrito' && (
+                  {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -318,10 +327,17 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   {tipoEntrega === 'DELIVERY' && (
                     <View style={{ marginTop: 8 }}>
                       <TouchableOpacity onPress={usarUbicacionActual} disabled={buscandoGps} style={{ backgroundColor: '#1565C0', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', marginBottom: 6 }}>
-                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 12 }}>{buscandoGps ? 'OBTENIENDO GPS...' : '📍 USAR MI UBICACIÓN ACTUAL (GOOGLE MAPS)'}</Text>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 12 }}>{buscandoGps ? 'OBTENIENDO GPS...' : '📍 CAPTURAR MI UBICACIÓN GPS ACTUAL'}</Text>
                       </TouchableOpacity>
+                      <TouchableOpacity onPress={abrirGoogleMapsCliente} style={{ backgroundColor: '#2E7D32', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 11 }}>🗺️ ABRIR GOOGLE MAPS PARA COPIAR MI LINK</Text>
+                      </TouchableOpacity>
+                      {!!linkMaps && (
+                        <Text style={{ color: '#4CAF50', fontSize: 11, fontWeight: '800', marginBottom: 4 }}>✅ Ubicación GPS adjuntada al pedido</Text>
+                      )}
                       <TextInput style={[styles.campo, { marginTop: 6, color: '#FFF' }]} placeholder="Distrito (ej. San Borja, Surco...)" placeholderTextColor="#777" value={distrito} onChangeText={setDistrito} />
-                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Pega enlace de Google Maps o escribe dirección" placeholderTextColor="#777" value={direccion} onChangeText={setDireccion} />
+                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Dirección escrita y referencia (ej. Av. Aviación 2450)" placeholderTextColor="#777" value={direccion} onChangeText={setDireccion} />
+                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Enlace de Google Maps (opcional si ya usaste GPS)" placeholderTextColor="#777" value={linkMaps} onChangeText={setLinkMaps} />
                     </View>
                   )}
                   <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Notas para cocina o motorizado (opcional)" placeholderTextColor="#777" value={notas} onChangeText={setNotas} />
@@ -349,11 +365,13 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   )}
                   {metodoPago === 'Efectivo' && <Text style={[styles.descripcionPedido, { marginTop: 10, color: '#4CAF50' }]}>Pagarás en efectivo al recibir tu pedido.</Text>}
                 </View>
-                                    <View style={styles.tarjetaPedido}>
+                                                 <View style={styles.tarjetaPedido}>
                   <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {subtotal.toFixed(2)}</Text>
                   {!confirmarPedModal ? (
                     <TouchableOpacity style={styles.boton} onPress={() => {
-                      if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) return mostrarAviso('Falta dirección', 'Ingresa tu distrito y dirección o usa tu ubicación GPS.');
+                      if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || (!direccion.trim() && !linkMaps.trim()))) {
+                        return mostrarAviso('Falta dirección', 'Ingresa tu distrito y dirección o captura tu ubicación GPS.');
+                      }
                       setConfirmarPedModal(true);
                     }}><Text style={styles.textoBoton}>CONTINUAR Y CONFIRMAR PAGO</Text></TouchableOpacity>
                   ) : (
@@ -362,12 +380,13 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                       <Text style={styles.descripcionPedido}>Entrega: {tipoEntrega} • Pago: {metodoPago} • Total: S/ {subtotal.toFixed(2)}</Text>
                       <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} disabled={cargando} onPress={() => {
                         setConfirmarPedModal(false);
+                        const dirFinal = [direccion.trim(), linkMaps.trim()].filter(Boolean).join(' | ');
                         onConfirmarPedido({
                           numero_pedido: 'CS-' + Math.floor(100000 + Math.random() * 900000),
                           cliente_id: usuario.id,
                           tipo_entrega: tipoEntrega,
                           distrito: tipoEntrega === 'DELIVERY' ? distrito.trim() : null,
-                          direccion: tipoEntrega === 'DELIVERY' ? direccion.trim() : null,
+                          direccion: tipoEntrega === 'DELIVERY' ? dirFinal : null,
                           notas: notas.trim() || null,
                           metodo_pago: metodoPago,
                           pago_confirmado: metodoPago !== 'Efectivo',
@@ -389,4 +408,4 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       {barraInferior}
     </View>
   );
-                                                                                                         }
+                    }
