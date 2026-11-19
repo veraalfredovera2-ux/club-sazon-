@@ -145,6 +145,18 @@ export async function confirmarRecepcionYDarPuntos(pedido) {
 
 export async function cancelarPedidoYDescontar(pedido) {
   await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { estado: 'Cancelado' });
+  const acreditados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.compra&select=cantidad`);
+  const totalAcreditado = (acreditados || []).reduce((a, m) => a + Math.max(0, Number(m.cantidad || 0)), 0);
+  const yaDescontados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.anulacion&select=id`);
+  if (totalAcreditado > 0 && (!yaDescontados || yaDescontados.length === 0)) {
+    await apiRest('movimientos_puntos', 'POST', {
+      cliente_id: pedido.cliente_id,
+      pedido_id: pedido.id,
+      tipo: 'anulacion',
+      cantidad: -totalAcreditado,
+      descripcion: `Descuento por cancelación pedido ${pedido.numero_pedido}`
+    });
+  }
 }
 
 export async function subirImagenGaleria() {
