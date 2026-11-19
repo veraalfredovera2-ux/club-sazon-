@@ -31,7 +31,6 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const [tipoEntrega, setTipoEntrega] = useState('DELIVERY');
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [linkMaps, setLinkMaps] = useState('');
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState('Yape');
   const [buscandoGps, setBuscandoGps] = useState(false);
@@ -49,7 +48,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
 
   function usarUbicacionActual() {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
-      return mostrarAviso('GPS no disponible', 'Abre Google Maps, copia tu ubicación y pégala abajo.');
+      return mostrarAviso('GPS no disponible', 'Abre Google Maps, copia tu ubicación y pégala en el cuadro de dirección.');
     }
     setBuscandoGps(true);
     navigator.geolocation.getCurrentPosition(
@@ -57,15 +56,15 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
         const url = `https://google.com{lat},${lng}`;
-        setLinkMaps(url);
-        if (!direccion.trim()) setDireccion(`Ubicación GPS (${lat}, ${lng})`);
+        const prev = direccion.replace(/https?:\/\/[^\s]+/gi, '').trim();
+        setDireccion(prev ? `${prev}\n${url}` : url);
         if (!distrito.trim()) setDistrito('Ubicación GPS');
         setBuscandoGps(false);
-        mostrarAviso('Ubicación GPS lista', 'Tu ubicación exacta de Google Maps se adjuntó al pedido.');
+        mostrarAviso('Ubicación GPS lista', 'Tu enlace exacto de Google Maps se pegó en la dirección.');
       },
       () => {
         setBuscandoGps(false);
-        mostrarAviso('Permiso de ubicación', 'Activa el GPS de tu celular o abre Google Maps para copiar tu enlace.');
+        mostrarAviso('Permiso de ubicación', 'Activa el GPS de tu celular o abre Google Maps y pega el enlace en el cuadro.');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -73,7 +72,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
 
   function abrirGoogleMapsCliente() {
     const url = 'https://google.com';
-    if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(url, '_blank');
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.location.assign(url);
     else Linking.openURL(url);
   }
 
@@ -162,7 +161,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         {barraInferior}
       </View>
     );
-}
+            }
   return (
     <View style={styles.pantallaCompleta}>
       <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
@@ -250,20 +249,43 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                      {subVista === 'pedidos' && (
+                  {subVista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {(datos?.pedidos || []).length === 0 ? (
               <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no tienes pedidos realizados.</Text></View>
-            ) : (datos?.pedidos || []).map(p => (
-              <View key={p.id} style={styles.tarjetaPedido}>
-                <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
-                <View style={styles.estadoPedido}><Text style={styles.textoEstado}>{p.estado}</Text></View>
-                {(p.pedido_detalles || []).map(d => <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>)}
-                <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.tipo_entrega} • {p.metodo_pago})</Text>
-                {p.estado === 'Confirmado por local' && <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => onRecibirPedido(p)}><Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO</Text></TouchableOpacity>}
-              </View>
-            ))}
+            ) : (datos?.pedidos || []).map(p => {
+              const esPend = p.estado === 'Pendiente' || p.estado === 'Pendiente de confirmación';
+              const puedeConfirmarRecibido = (p.tipo_entrega === 'DELIVERY' && p.estado_rider === 'Entregado por rider' && p.estado !== 'Completado' && p.estado !== 'Cancelado')
+                || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Confirmado por local');
+              return (
+                <View key={p.id} style={styles.tarjetaPedido}>
+                  <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
+                  <View style={styles.estadoPedido}>
+                    <Text style={styles.textoEstado}>
+                      {p.estado_rider === 'Entregado por rider' && p.estado !== 'Completado' ? 'Entregado por repartidor — Confirma recepción' : p.estado}
+                    </Text>
+                  </View>
+                  {(p.pedido_detalles || []).map(d => <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>)}
+                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.tipo_entrega} • {p.metodo_pago})</Text>
+                  {p.tipo_entrega === 'DELIVERY' && p.estado === 'Confirmado por local' && p.estado_rider !== 'Entregado por rider' && (
+                    <Text style={[styles.descripcionPedido, { color: '#F5B041', marginTop: 4 }]}>
+                      {p.rider_nombre ? `Repartidor ${p.rider_nombre} en camino. Podrás confirmar recepción cuando te entregue el pedido.` : 'Buscando repartidor disponible...'}
+                    </Text>
+                  )}
+                  {puedeConfirmarRecibido && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => onRecibirPedido(p)}>
+                      <Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO (SUMAR PUNTOS)</Text>
+                    </TouchableOpacity>
+                  )}
+                  {esPend && onCancelarPedido && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C', marginTop: 6 }]} onPress={() => onCancelarPedido(p)}>
+                      <Text style={styles.textoBoton}>CANCELAR PEDIDO</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
         {subVista === 'menu' && (
@@ -298,7 +320,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                  {subVista === 'carrito' && (
+                            {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -330,14 +352,18 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                         <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 12 }}>{buscandoGps ? 'OBTENIENDO GPS...' : '📍 CAPTURAR MI UBICACIÓN GPS ACTUAL'}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={abrirGoogleMapsCliente} style={{ backgroundColor: '#2E7D32', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', marginBottom: 6 }}>
-                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 11 }}>🗺️ ABRIR GOOGLE MAPS PARA COPIAR MI LINK</Text>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 11 }}>🗺️ ABRIR GOOGLE MAPS PARA COPIAR MI DIRECCIÓN</Text>
                       </TouchableOpacity>
-                      {!!linkMaps && (
-                        <Text style={{ color: '#4CAF50', fontSize: 11, fontWeight: '800', marginBottom: 4 }}>✅ Ubicación GPS adjuntada al pedido</Text>
-                      )}
                       <TextInput style={[styles.campo, { marginTop: 6, color: '#FFF' }]} placeholder="Distrito (ej. San Borja, Surco...)" placeholderTextColor="#777" value={distrito} onChangeText={setDistrito} />
-                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Dirección escrita y referencia (ej. Av. Aviación 2450)" placeholderTextColor="#777" value={direccion} onChangeText={setDireccion} />
-                      <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Enlace de Google Maps (opcional si ya usaste GPS)" placeholderTextColor="#777" value={linkMaps} onChangeText={setLinkMaps} />
+                      <TextInput
+                        multiline={true}
+                        numberOfLines={3}
+                        style={[styles.campo, { marginTop: 8, color: '#FFF', minHeight: 74, textAlignVertical: 'top' }]}
+                        placeholder="Pega aquí tu dirección o enlace copiado desde Google Maps y referencia..."
+                        placeholderTextColor="#777"
+                        value={direccion}
+                        onChangeText={setDireccion}
+                      />
                     </View>
                   )}
                   <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Notas para cocina o motorizado (opcional)" placeholderTextColor="#777" value={notas} onChangeText={setNotas} />
@@ -365,12 +391,12 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   )}
                   {metodoPago === 'Efectivo' && <Text style={[styles.descripcionPedido, { marginTop: 10, color: '#4CAF50' }]}>Pagarás en efectivo al recibir tu pedido.</Text>}
                 </View>
-                                                 <View style={styles.tarjetaPedido}>
+                                    <View style={styles.tarjetaPedido}>
                   <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {subtotal.toFixed(2)}</Text>
                   {!confirmarPedModal ? (
                     <TouchableOpacity style={styles.boton} onPress={() => {
-                      if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || (!direccion.trim() && !linkMaps.trim()))) {
-                        return mostrarAviso('Falta dirección', 'Ingresa tu distrito y dirección o captura tu ubicación GPS.');
+                      if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) {
+                        return mostrarAviso('Falta dirección', 'Ingresa tu distrito y pega tu dirección o ubicación de Google Maps.');
                       }
                       setConfirmarPedModal(true);
                     }}><Text style={styles.textoBoton}>CONTINUAR Y CONFIRMAR PAGO</Text></TouchableOpacity>
@@ -380,13 +406,12 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                       <Text style={styles.descripcionPedido}>Entrega: {tipoEntrega} • Pago: {metodoPago} • Total: S/ {subtotal.toFixed(2)}</Text>
                       <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} disabled={cargando} onPress={() => {
                         setConfirmarPedModal(false);
-                        const dirFinal = [direccion.trim(), linkMaps.trim()].filter(Boolean).join(' | ');
                         onConfirmarPedido({
                           numero_pedido: 'CS-' + Math.floor(100000 + Math.random() * 900000),
                           cliente_id: usuario.id,
                           tipo_entrega: tipoEntrega,
                           distrito: tipoEntrega === 'DELIVERY' ? distrito.trim() : null,
-                          direccion: tipoEntrega === 'DELIVERY' ? dirFinal : null,
+                          direccion: tipoEntrega === 'DELIVERY' ? direccion.trim() : null,
                           notas: notas.trim() || null,
                           metodo_pago: metodoPago,
                           pago_confirmado: metodoPago !== 'Efectivo',
@@ -408,4 +433,4 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       {barraInferior}
     </View>
   );
-                    }
+}
