@@ -6,6 +6,27 @@ import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
 import { obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje, subirImagenGaleria, obtenerRidersAdmin, guardarRiderAdmin, eliminarRiderAdmin } from './servicios';
 
+function generarWavDataUri(silencio = false) {
+  const sr = 8000, dur = silencio ? 2 : 1.2, n = Math.floor(sr * dur);
+  const buf = new ArrayBuffer(44 + n * 2);
+  const v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    const freq = (Math.floor(t * 4) % 2 === 0) ? 980 : 1320;
+    const val = silencio ? 1 : Math.round(Math.sin(2 * Math.PI * freq * t) * 32000);
+    v.setInt16(44 + i * 2, val, true);
+  }
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes.at(i));
+  return 'data:audio/wav;base64,' + btoa(bin);
+}
+
 function obtenerInfoHoraPeru() {
   const ahora = new Date();
   const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
@@ -16,13 +37,14 @@ function obtenerInfoHoraPeru() {
   return { hora: `${hh}:${mm}`, turno };
 }
 
-async function lanzarNotificacionNativaAdmin(titulo, cuerpo) {
+async function registrarSwYNotificarAdmin(titulo, cuerpo) {
   try {
     if (Platform.OS !== 'web' || typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
-    const opciones = { body: cuerpo, vibrate:, tag: 'pedido-nuevo-' + Date.now(), renotify: true, requireInteraction: true };
+    const opciones = { body: cuerpo, vibrate:, tag: 'pedido-nuevo-' + Date.now(), renotify: true, requireInteraction: true, silent: false };
     if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
       if (reg && reg.showNotification) { await reg.showNotification(titulo, opciones); return; }
     }
     new Notification(titulo, opciones);
@@ -51,17 +73,35 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [sonando, setSonando] = useState(false);
   const [audioListo, setAudioListo] = useState(true);
   const cfgCargadaRef = useRef(false);
-  const conocidosRef = useRef(null), ctxAudioRef = useRef(null), timerRef = useRef(null), timeoutRef = useRef(null), wakeRef = useRef(null);
+  const conocidosRef = useRef(null), audioSirenaRef = useRef(null), audioFondoRef = useRef(null), timeoutRef = useRef(null), wakeRef = useRef(null);
   useEffect(() => {
-    AsyncStorage.getItem('admin_sonido_activo').then(v => { if (v !== null) setAudioListo(v === '1'); });
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+        const aSirena = new window.Audio(generarWavDataUri(false));
+        aSirena.loop = true;
+        audioSirenaRef.current = aSirena;
+        const aFondo = new window.Audio(generarWavDataUri(true));
+        aFondo.loop = true;
+        aFondo.volume = 0.01;
+        audioFondoRef.current = aFondo;
+      } catch (e) {}
+    }
+    AsyncStorage.getItem('admin_sonido_activo').then(v => {
+      const activo = v === null ? true : v === '1';
+      setAudioListo(activo);
+      if (activo) iniciarKeepAliveFondo();
+    });
     cargarTodoAdmin();
     try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
-    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 4000);
-    return () => { clearInterval(t); liberarWakeLock(); };
+    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 3500);
+    return () => { clearInterval(t); liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); };
   }, []);
 
-  useEffect(() => { if (audioListo) activarWakeLock(); else { liberarWakeLock(); detenerAlarma(); } }, [audioListo]);
+  useEffect(() => { if (audioListo) { activarWakeLock(); iniciarKeepAliveFondo(); } else { liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); } }, [audioListo]);
 
+  function iniciarKeepAliveFondo() { try { if (audioFondoRef.current && audioFondoRef.current.paused) audioFondoRef.current.play().catch(() => {}); } catch (e) {} }
+  function detenerKeepAliveFondo() { try { if (audioFondoRef.current) { audioFondoRef.current.pause(); audioFondoRef.current.currentTime = 0; } } catch (e) {} }
   async function activarWakeLock() { try { if (Platform.OS === 'web' && navigator?.wakeLock && !wakeRef.current) wakeRef.current = await navigator.wakeLock.request('screen'); } catch (e) {} }
   function liberarWakeLock() { try { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } } catch (e) {} }
 
@@ -69,11 +109,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     const nuevo = !audioListo; setAudioListo(nuevo);
     await AsyncStorage.setItem('admin_sonido_activo', nuevo ? '1' : '0');
     if (nuevo) {
-      tocarPitidoWeb();
+      iniciarKeepAliveFondo();
+      tocarPitidoPrueba();
       try {
         if (Platform.OS === 'web' && 'Notification' in window) {
           const perm = await Notification.requestPermission();
-          if (perm === 'granted') lanzarNotificacionNativaAdmin('Notificaciones activadas', 'Recibirás alertas sonoras aunque la app esté en segundo plano.');
+          if (perm === 'granted') registrarSwYNotificarAdmin('Sonido en segundo plano activo', 'Recibirás alertas sonoras incluso con la pantalla apagada.');
         }
       } catch (e) {}
     } else detenerAlarma();
@@ -86,9 +127,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     if (conocidosRef.current === null) { conocidosRef.current = pendientes.map(p => p.id); return; }
     const nuevos = pendientes.filter(p => !conocidosRef.current.includes(p.id));
     if (nuevos.length > 0 && audioListo) {
-      activarAlarma10Seg();
+      activarAlarma15Seg();
       const ult = nuevos.at(0);
-      lanzarNotificacionNativaAdmin(
+      registrarSwYNotificarAdmin(
         `¡Nuevo Pedido ${ult?.numero_pedido || ''}!`,
         `Cliente: ${ult?.clientes?.nombre_completo || 'Cliente'} • Total: S/ ${Number(ult?.total || 0).toFixed(2)}`
       );
@@ -97,34 +138,113 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     conocidosRef.current = pendientes.map(p => p.id);
   }, [pedidos, audioListo]);
 
-  function tocarPitidoWeb() {
+  function tocarPitidoPrueba() {
     try {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!ctxAudioRef.current) ctxAudioRef.current = new Ctx();
-        if (ctxAudioRef.current.state === 'suspended') ctxAudioRef.current.resume();
-        const t0 = ctxAudioRef.current.currentTime;
-        const osc = ctxAudioRef.current.createOscillator(), gain = ctxAudioRef.current.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, t0);
-        osc.frequency.setValueAtTime(1174, t0 + 0.18);
-        gain.gain.setValueAtTime(0.9, t0);
-        osc.connect(gain); gain.connect(ctxAudioRef.current.destination);
-        osc.start(t0); osc.stop(t0 + 0.4);
+      if (audioSirenaRef.current) {
+        audioSirenaRef.current.currentTime = 0;
+        audioSirenaRef.current.play().catch(() => {});
+        setTimeout(() => { if (!sonando && audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } }, 700);
       }
     } catch (e) {}
   }
 
-  function detenerAlarma() { if (timerRef.current) clearInterval(timerRef.current); if (timeoutRef.current) clearTimeout(timeoutRef.current); setSonando(false); }
-  function activarAlarma10Seg() {
+  function detenerAlarma() {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    try { if (audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } } catch (e) {}
+    setSonando(false);
+  }
+
+  function activarAlarma15Seg() {
     detenerAlarma(); setSonando(true);
-    try { Vibration.vibrate([500, 200, 500, 200, 500]); } catch (e) {}
-    tocarPitidoWeb();
-    timerRef.current = setInterval(() => {
-      tocarPitidoWeb();
-      try { Vibration.vibrate(400); } catch (e) {}
-    }, 850);
-    timeoutRef.current = setTimeout(detenerAlarma, 12000);
+    try { Vibration.vibrate(); } catch (e) {}
+    try { if (audioSirenaRef.current) { audioSirenaRef.current.currentTime = 0; audioSirenaRef.current.play().catch(() => {}); } } catch (e) {}
+    timeoutRef.current = setTimeout(detenerAlarma, 15000);
+  }
+    useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+        const aSirena = new window.Audio(generarWavDataUri(false));
+        aSirena.loop = true;
+        audioSirenaRef.current = aSirena;
+        const aFondo = new window.Audio(generarWavDataUri(true));
+        aFondo.loop = true;
+        aFondo.volume = 0.01;
+        audioFondoRef.current = aFondo;
+      } catch (e) {}
+    }
+    AsyncStorage.getItem('admin_sonido_activo').then(v => {
+      const activo = v === null ? true : v === '1';
+      setAudioListo(activo);
+      if (activo) iniciarKeepAliveFondo();
+    });
+    cargarTodoAdmin();
+    try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
+    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 3500);
+    return () => { clearInterval(t); liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); };
+  }, []);
+
+  useEffect(() => { if (audioListo) { activarWakeLock(); iniciarKeepAliveFondo(); } else { liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); } }, [audioListo]);
+
+  function iniciarKeepAliveFondo() { try { if (audioFondoRef.current && audioFondoRef.current.paused) audioFondoRef.current.play().catch(() => {}); } catch (e) {} }
+  function detenerKeepAliveFondo() { try { if (audioFondoRef.current) { audioFondoRef.current.pause(); audioFondoRef.current.currentTime = 0; } } catch (e) {} }
+  async function activarWakeLock() { try { if (Platform.OS === 'web' && navigator?.wakeLock && !wakeRef.current) wakeRef.current = await navigator.wakeLock.request('screen'); } catch (e) {} }
+  function liberarWakeLock() { try { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } } catch (e) {} }
+
+  async function alternarSonido() {
+    const nuevo = !audioListo; setAudioListo(nuevo);
+    await AsyncStorage.setItem('admin_sonido_activo', nuevo ? '1' : '0');
+    if (nuevo) {
+      iniciarKeepAliveFondo();
+      tocarPitidoPrueba();
+      try {
+        if (Platform.OS === 'web' && 'Notification' in window) {
+          const perm = await Notification.requestPermission();
+          if (perm === 'granted') registrarSwYNotificarAdmin('Sonido en segundo plano activo', 'Recibirás alertas sonoras incluso con la pantalla apagada.');
+        }
+      } catch (e) {}
+    } else detenerAlarma();
+  }
+
+  const esPendiente = (est) => est === 'Pendiente' || est === 'Pendiente de confirmación';
+
+  useEffect(() => {
+    const pendientes = (pedidos || []).filter(p => esPendiente(p.estado));
+    if (conocidosRef.current === null) { conocidosRef.current = pendientes.map(p => p.id); return; }
+    const nuevos = pendientes.filter(p => !conocidosRef.current.includes(p.id));
+    if (nuevos.length > 0 && audioListo) {
+      activarAlarma15Seg();
+      const ult = nuevos.at(0);
+      registrarSwYNotificarAdmin(
+        `¡Nuevo Pedido ${ult?.numero_pedido || ''}!`,
+        `Cliente: ${ult?.clientes?.nombre_completo || 'Cliente'} • Total: S/ ${Number(ult?.total || 0).toFixed(2)}`
+      );
+    }
+    if (pendientes.length === 0) detenerAlarma();
+    conocidosRef.current = pendientes.map(p => p.id);
+  }, [pedidos, audioListo]);
+
+  function tocarPitidoPrueba() {
+    try {
+      if (audioSirenaRef.current) {
+        audioSirenaRef.current.currentTime = 0;
+        audioSirenaRef.current.play().catch(() => {});
+        setTimeout(() => { if (!sonando && audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } }, 700);
+      }
+    } catch (e) {}
+  }
+
+  function detenerAlarma() {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    try { if (audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } } catch (e) {}
+    setSonando(false);
+  }
+
+  function activarAlarma15Seg() {
+    detenerAlarma(); setSonando(true);
+    try { Vibration.vibrate(); } catch (e) {}
+    try { if (audioSirenaRef.current) { audioSirenaRef.current.currentTime = 0; audioSirenaRef.current.play().catch(() => {}); } } catch (e) {}
+    timeoutRef.current = setTimeout(detenerAlarma, 15000);
   }
     function estiloEstado(est) {
     if (esPendiente(est)) return { badge: { borderColor: '#F5B041', backgroundColor: '#2A200B' }, txt: { color: '#F5B041' } };
@@ -178,7 +298,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       mostrarAviso('Guardado', 'Horarios y pagos guardados correctamente.');
     } catch (e) { mostrarAviso('Error', e.message); }
   }
-   const infoPeru = obtenerInfoHoraPeru();
+    const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
@@ -250,7 +370,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               )}
             </View>
           )}
-            {riders.map(r => {
+                  {riders.map(r => {
             const entRider = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
             const totalDelRider = entRider.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
             const abierto = riderHistId === r.id;
@@ -344,7 +464,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {tab === 'pedidos' && (
+                        {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -360,9 +480,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   <View style={[styles.estadoPedido, col.badge]}>
                     <Text style={[styles.textoEstado, col.txt]}>{p.estado}</Text>
                   </View>
-                  {(p.pedido_detalles || []).map(d => (
-                    <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {Number(d.subtotal).toFixed(2)})</Text>
-                  ))}
+                  {(p.pedido_detalles || []).map(d => {
+                    const montoLinea = Number(d.total_linea ?? d.subtotal ?? (Number(d.precio_unitario || 0) * Number(d.cantidad || 1)));
+                    return (
+                      <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {montoLinea.toFixed(2)})</Text>
+                    );
+                  })}
                   {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>Distrito: {p.distrito} - {p.direccion}</Text>}
                   {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>Rider: {p.rider_nombre} ({p.estado_rider})</Text>}
                   {!!p.notas && <Text style={[styles.descripcionPedido, { color: '#F5B041' }]}>Nota: {p.notas}</Text>}
@@ -423,7 +546,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                          {tab === 'canjes' && (
+      {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -535,5 +658,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-            }
-            
+}
