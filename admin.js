@@ -41,7 +41,7 @@ async function registrarSwYNotificarAdmin(titulo, cuerpo) {
   try {
     if (Platform.OS !== 'web' || typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
-    const opciones = { body: cuerpo, vibrate:, tag: 'pedido-nuevo-' + Date.now(), renotify: true, requireInteraction: true, silent: false };
+    const opciones = { body: cuerpo, vibrate: Array.of(600, 200, 600, 200, 800), tag: 'pedido-nuevo-' + Date.now(), renotify: true, requireInteraction: true, silent: false };
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
@@ -169,7 +169,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
   function activarAlarma15Seg() {
     detenerAlarma(); setSonando(true);
-    try { Vibration.vibrate(); } catch (e) {}
+    try { Vibration.vibrate(Array.of(600, 200, 600, 200, 800)); } catch (e) {}
     try { if (audioSirenaRef.current) { audioSirenaRef.current.currentTime = 0; audioSirenaRef.current.play().catch(() => {}); } } catch (e) {}
     timeoutRef.current = setTimeout(detenerAlarma, 15000);
   }
@@ -224,7 +224,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       setCfgPagos(payload);
       mostrarAviso('Guardado', 'Horarios y pagos guardados correctamente.');
     } catch (e) { mostrarAviso('Error', e.message); }
-  }
+        }
     const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
@@ -399,7 +399,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                        {tab === 'pedidos' && (
+      {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -483,7 +483,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {tab === 'canjes' && (
+              {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -595,5 +595,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-            }
-            
+}
