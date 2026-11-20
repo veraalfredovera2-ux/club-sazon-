@@ -1,11 +1,51 @@
 const ID_PROYECTO = 'pripxtsriyxhafevokjg';
 export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
+export const VAPID_PUBLIC_KEY = 'BDdITAzUl6okJIKZlfKugOLqEmnwjDeTeCvmBTIEzkzZL0QSqHoT6BVu4Bw1KCaZQ79A2hMiDw22b7SQ0hb0B00';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
 
 const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
 const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const out = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) out[i] = rawData.charCodeAt(i);
+  return out;
+}
+
+export async function suscribirPushDispositivo(rol, usuarioId) {
+  try {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    if (Notification.permission !== 'granted') return false;
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+    }
+    const json = sub.toJSON();
+    await fetch(`${SUPABASE_URL}/rest/v1/push_suscripciones?on_conflict=endpoint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ rol, usuario_id: String(usuarioId || ''), endpoint: json.endpoint, p256dh: json.keys?.p256dh || '', auth: json.keys?.auth || '', actualizado_en: new Date().toISOString() })
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+export async function dispararPushRol(rol, titulo, cuerpo) {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/enviar-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
+      body: JSON.stringify({ rol, titulo, cuerpo })
+    });
+  } catch (e) {}
+}
 
 async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
   const op = { method: metodo, cache: 'no-store', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Prefer: 'return=representation' } };
@@ -24,41 +64,20 @@ export function extraerConfigDelivery(titularRaw) {
   const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50' };
   if (partes.length < 2) return def;
   const nums = partes.at(1).split('|');
-  return {
-    titularLimpio,
-    local_lat: nums.at(0) || def.local_lat,
-    local_lng: nums.at(1) || def.local_lng,
-    tarifa_base: nums.at(2) || def.tarifa_base,
-    tarifa_km: nums.at(3) || def.tarifa_km
-  };
+  return { titularLimpio, local_lat: nums.at(0) || def.local_lat, local_lng: nums.at(1) || def.local_lng, tarifa_base: nums.at(2) || def.tarifa_base, tarifa_km: nums.at(3) || def.tarifa_km };
 }
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
   const raw = (Array.isArray(r) && r.at(0)) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50', local_cerrado: false };
-  const del = extraerConfigDelivery(raw.titular);
-  return { ...raw, ...del };
+  return { ...raw, ...extraerConfigDelivery(raw.titular) };
 }
 
 export async function guardarConfigPagos(cfg) {
   const del = extraerConfigDelivery(cfg.titular);
   const titBase = (cfg.titularLimpio != null ? cfg.titularLimpio : del.titularLimpio) || 'Club Sazón';
-  const lat = String(cfg.local_lat ?? del.local_lat).trim();
-  const lng = String(cfg.local_lng ?? del.local_lng).trim();
-  const base = String(cfg.tarifa_base ?? del.tarifa_base).trim();
-  const km = String(cfg.tarifa_km ?? del.tarifa_km).trim();
-  const titularCodificado = `${titBase}||DEL:${lat}|${lng}|${base}|${km}`;
-  const limpio = {
-    id: cfg.id || 'principal',
-    titular: titularCodificado,
-    qr_yape: cfg.qr_yape || '',
-    qr_plin: cfg.qr_plin || '',
-    manana_inicio: cfg.manana_inicio || '06:50',
-    manana_fin: cfg.manana_fin || '11:00',
-    noche_inicio: cfg.noche_inicio || '18:30',
-    noche_fin: cfg.noche_fin || '23:50',
-    local_cerrado: Boolean(cfg.local_cerrado)
-  };
+  const titularCodificado = `${titBase}||DEL:${String(cfg.local_lat ?? del.local_lat).trim()}|${String(cfg.local_lng ?? del.local_lng).trim()}|${String(cfg.tarifa_base ?? del.tarifa_base).trim()}|${String(cfg.tarifa_km ?? del.tarifa_km).trim()}`;
+  const limpio = { id: cfg.id || 'principal', titular: titularCodificado, qr_yape: cfg.qr_yape || '', qr_plin: cfg.qr_plin || '', manana_inicio: cfg.manana_inicio || '06:50', manana_fin: cfg.manana_fin || '11:00', noche_inicio: cfg.noche_inicio || '18:30', noche_fin: cfg.noche_fin || '23:50', local_cerrado: Boolean(cfg.local_cerrado) };
   const r = await apiRest(`configuracion_pagos?id=eq.${limpio.id}`, 'PATCH', limpio);
   if (!r || r.length === 0) return apiRest('configuracion_pagos', 'POST', limpio);
   return r;
@@ -144,6 +163,7 @@ export async function crearNuevoPedido(pedidoData, carrito) {
       await apiRest(`${tabla}?id=eq.${p.id}`, 'PATCH', { stock: Math.max(0, Number(p.stock) - Number(p.cantidad || 1)) });
     }
   }
+  dispararPushRol('admin', `¡Nuevo Pedido ${num}!`, `Total: S/ ${Number(pedidoData.total || 0).toFixed(2)} • ${pedidoData.tipo_entrega} (${pedidoData.metodo_pago})`);
   return ped;
 }
 
@@ -151,6 +171,9 @@ export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
   const sub = Number(pedido.subtotal || pedido.total || 0);
   const del = costoDelivery !== '' && costoDelivery != null ? Number(costoDelivery) : Number(pedido.costo_delivery || 0);
   await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, costo_delivery: del, total: sub + del, estado: 'Confirmado por local' });
+  if (pedido.tipo_entrega === 'DELIVERY') {
+    dispararPushRol('rider', `¡Nuevo Delivery ${pedido.numero_pedido}!`, `${pedido.distrito || 'Delivery'} • Ganancia: S/ ${del.toFixed(2)}`);
+  }
 }
 
 export async function confirmarRecepcionYDarPuntos(pedido) {
@@ -175,13 +198,7 @@ export async function cancelarPedidoYDescontar(pedido) {
   const totalAcreditado = (acreditados || []).reduce((a, m) => a + Math.max(0, Number(m.cantidad || 0)), 0);
   const yaDescontados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.anulacion&select=id`);
   if (totalAcreditado > 0 && (!yaDescontados || yaDescontados.length === 0)) {
-    await apiRest('movimientos_puntos', 'POST', {
-      cliente_id: pedido.cliente_id,
-      pedido_id: pedido.id,
-      tipo: 'anulacion',
-      cantidad: -totalAcreditado,
-      descripcion: `Descuento por cancelación pedido ${pedido.numero_pedido}`
-    });
+    await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'anulacion', cantidad: -totalAcreditado, descripcion: `Descuento por cancelación pedido ${pedido.numero_pedido}` });
   }
 }
 
