@@ -23,6 +23,33 @@ function obtenerTurnoPeru(cfg) {
   return 'cerrado';
 }
 
+function extraerCoords(texto) {
+  const m = String(texto || '').match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+  if (!m) return null;
+  const lat = Number(m.at(1)), lng = Number(m.at(2));
+  if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
+function calcularTarifaDelivery(cfg, coordsCliente) {
+  const base = Math.max(0, Number(cfg?.tarifa_base ?? 4));
+  const porKm = Math.max(0, Number(cfg?.tarifa_km ?? 1.5));
+  const latLocal = Number(cfg?.local_lat ?? -12.0897);
+  const lngLocal = Number(cfg?.local_lng ?? -77.0031);
+  if (!coordsCliente || isNaN(latLocal) || isNaN(lngLocal)) {
+    return { km: null, costo: Number(base.toFixed(2)) };
+  }
+  const R = 6371;
+  const dLat = (coordsCliente.lat - latLocal) * Math.PI / 180;
+  const dLng = (coordsCliente.lng - lngLocal) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(latLocal * Math.PI / 180) * Math.cos(coordsCliente.lat * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const kmRuta = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1.3;
+  const costo = Math.round((base + kmRuta * porKm) * 2) / 2;
+  return { km: Number(kmRuta.toFixed(1)), costo: Number(costo.toFixed(2)) };
+}
+
 export function VistaInicio({ usuario, datos, productos, recompensas, promociones, cfgPagos, navInfo, irA, carrito, setCarrito, categoriaActiva, setCategoriaActiva, onConfirmarPedido, onCanjear, onRecibirPedido, onCancelarPedido, cerrarSesion, cargando }) {
   const [subVista, setSubVista] = useState(navInfo?.tab || 'inicio');
   const [prodDetalle, setProdDetalle] = useState(null);
@@ -31,6 +58,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const [tipoEntrega, setTipoEntrega] = useState('DELIVERY');
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [coordsCliente, setCoordsCliente] = useState(null);
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState('Yape');
   const [buscandoGps, setBuscandoGps] = useState(false);
@@ -43,6 +71,8 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
   const filtrados = catSel === 'Todas' ? todosProds : todosProds.filter(p => p.categoria === catSel);
   const totalItems = (carrito || []).reduce((a, i) => a + i.cantidad, 0);
   const subtotal = (carrito || []).reduce((a, b) => a + Number(b.precio) * b.cantidad, 0);
+  const infoDelivery = tipoEntrega === 'DELIVERY' ? calcularTarifaDelivery(cfgPagos, coordsCliente || extraerCoords(direccion)) : { km: 0, costo: 0 };
+  const totalConDelivery = subtotal + infoDelivery.costo;
   const textoHorario = `Mañana: ${cfgPagos?.manana_inicio || '06:50'} - ${cfgPagos?.manana_fin || '11:00'} • Noche: ${cfgPagos?.noche_inicio || '18:30'} - ${cfgPagos?.noche_fin || '23:50'}`;
   const turnoActual = obtenerTurnoPeru(cfgPagos);
 
@@ -55,12 +85,13 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       (pos) => {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
+        setCoordsCliente({ lat: Number(lat), lng: Number(lng) });
         const url = `https://google.com{lat},${lng}`;
         const prev = direccion.replace(/https?:\/\/[^\s]+/gi, '').trim();
         setDireccion(prev ? `${prev}\n${url}` : url);
         if (!distrito.trim()) setDistrito('Ubicación GPS');
         setBuscandoGps(false);
-        mostrarAviso('Ubicación GPS lista', 'Tu enlace exacto de Google Maps se pegó en la dirección.');
+        mostrarAviso('Ubicación GPS lista', 'Se calculó la distancia y el costo exacto de tu delivery.');
       },
       () => {
         setBuscandoGps(false);
@@ -99,7 +130,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       {totalItems > 0 && subVista !== 'carrito' && (
         <TouchableOpacity onPress={() => setSubVista('carrito')} style={{ backgroundColor: '#D32F2F', alignSelf: 'center', marginTop: 6, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>CARRITO ({totalItems})</Text>
-          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>S/ {subtotal.toFixed(2)} →</Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>S/ {totalConDelivery.toFixed(2)} →</Text>
         </TouchableOpacity>
       )}
       <View style={{ flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 2, justifyContent: 'space-around' }}>
@@ -161,8 +192,8 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
         {barraInferior}
       </View>
     );
-            }
-  return (
+          }
+                  return (
     <View style={styles.pantallaCompleta}>
       <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
         <NavegacionSuperior regresar={() => { if (prodDetalle) return setProdDetalle(null); setSubVista('inicio'); }} irAInicio={() => setSubVista('inicio')} />
@@ -249,34 +280,43 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                  {subVista === 'pedidos' && (
+        {subVista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {(datos?.pedidos || []).length === 0 ? (
               <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no tienes pedidos realizados.</Text></View>
             ) : (datos?.pedidos || []).map(p => {
               const esPend = p.estado === 'Pendiente' || p.estado === 'Pendiente de confirmación';
-              const puedeConfirmarRecibido = (p.tipo_entrega === 'DELIVERY' && p.estado_rider === 'Entregado por rider' && p.estado !== 'Completado' && p.estado !== 'Cancelado')
-                || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Confirmado por local');
+              const yaConfirmoCli = Boolean(p.recibido_cliente) || p.estado === 'Completado';
+              const puedeConfirmarRecibido = !yaConfirmoCli && p.estado !== 'Cancelado' && (
+                (p.tipo_entrega === 'DELIVERY' && Boolean(p.rider_id))
+                || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Confirmado por local')
+              );
               return (
                 <View key={p.id} style={styles.tarjetaPedido}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
                   <View style={styles.estadoPedido}>
                     <Text style={styles.textoEstado}>
-                      {p.estado_rider === 'Entregado por rider' && p.estado !== 'Completado' ? 'Entregado por repartidor — Confirma recepción' : p.estado}
+                      {yaConfirmoCli && p.estado !== 'Completado' ? 'Recepción confirmada • Puntos acreditados' : p.estado}
                     </Text>
                   </View>
                   {(p.pedido_detalles || []).map(d => <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>)}
+                  {p.tipo_entrega === 'DELIVERY' && (
+                    <Text style={styles.descripcionPedido}>Subtotal: S/ {Number(p.subtotal || p.total).toFixed(2)} • Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)}</Text>
+                  )}
                   <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.tipo_entrega} • {p.metodo_pago})</Text>
-                  {p.tipo_entrega === 'DELIVERY' && p.estado === 'Confirmado por local' && p.estado_rider !== 'Entregado por rider' && (
-                    <Text style={[styles.descripcionPedido, { color: '#F5B041', marginTop: 4 }]}>
-                      {p.rider_nombre ? `Repartidor ${p.rider_nombre} en camino. Podrás confirmar recepción cuando te entregue el pedido.` : 'Buscando repartidor disponible...'}
-                    </Text>
+                  {p.tipo_entrega === 'DELIVERY' && p.estado === 'Confirmado por local' && !p.rider_id && (
+                    <Text style={[styles.descripcionPedido, { color: '#F5B041', marginTop: 4 }]}>Buscando repartidor disponible...</Text>
                   )}
                   {puedeConfirmarRecibido && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => onRecibirPedido(p)}>
-                      <Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO (SUMAR PUNTOS)</Text>
-                    </TouchableOpacity>
+                    <View style={{ marginTop: 6 }}>
+                      <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '800', marginBottom: 4 }]}>
+                        {p.rider_nombre ? `Repartidor ${p.rider_nombre} asignado. Cuando te entregue tu pedido, pulsa abajo:` : 'Cuando recibas tu pedido, pulsa abajo:'}
+                      </Text>
+                      <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} onPress={() => onRecibirPedido(p)}>
+                        <Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO (SUMAR PUNTOS)</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
                   {esPend && onCancelarPedido && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#B71C1C', marginTop: 6 }]} onPress={() => onCancelarPedido(p)}>
@@ -320,7 +360,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
             })}
           </View>
         )}
-                            {subVista === 'carrito' && (
+        {subVista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>MI CARRITO ({totalItems})</Text>
             {totalItems === 0 ? (
@@ -354,6 +394,11 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                       <TouchableOpacity onPress={abrirGoogleMapsCliente} style={{ backgroundColor: '#2E7D32', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignItems: 'center', marginBottom: 6 }}>
                         <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 11 }}>🗺️ ABRIR GOOGLE MAPS PARA COPIAR MI DIRECCIÓN</Text>
                       </TouchableOpacity>
+                      <View style={{ backgroundColor: '#0E2433', borderWidth: 1, borderColor: '#29B6F6', borderRadius: 8, padding: 8, marginBottom: 6 }}>
+                        <Text style={{ color: '#29B6F6', fontSize: 12, fontWeight: '900', textAlign: 'center' }}>
+                          {infoDelivery.km != null ? `🛵 Delivery estimado (${infoDelivery.km} km): S/ ${infoDelivery.costo.toFixed(2)}` : `🛵 Tarifa delivery base: S/ ${infoDelivery.costo.toFixed(2)} (usa GPS para calcular km exactos)`}
+                        </Text>
+                      </View>
                       <TextInput style={[styles.campo, { marginTop: 6, color: '#FFF' }]} placeholder="Distrito (ej. San Borja, Surco...)" placeholderTextColor="#777" value={distrito} onChangeText={setDistrito} />
                       <TextInput
                         multiline={true}
@@ -362,7 +407,7 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                         placeholder="Pega aquí tu dirección o enlace copiado desde Google Maps y referencia..."
                         placeholderTextColor="#777"
                         value={direccion}
-                        onChangeText={setDireccion}
+                        onChangeText={v => { setDireccion(v); const c = extraerCoords(v); if (c) setCoordsCliente(c); }}
                       />
                     </View>
                   )}
@@ -379,20 +424,26 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   </View>
                   {metodoPago === 'Yape' && (
                     <View style={{ alignItems: 'center', marginTop: 12, padding: 10, backgroundColor: '#111', borderRadius: 10 }}>
-                      <Text style={{ color: '#F5B041', fontWeight: '900', marginBottom: 6 }}>ESCANEA NUESTRO QR YAPE ({cfgPagos?.titular || 'Club Sazón'})</Text>
+                      <Text style={{ color: '#F5B041', fontWeight: '900', marginBottom: 6 }}>ESCANEA NUESTRO QR YAPE ({cfgPagos?.titularLimpio || 'Club Sazón'})</Text>
                       {cfgPagos?.qr_yape ? <Image source={{ uri: cfgPagos.qr_yape }} style={{ width: 200, height: 200, borderRadius: 10 }} /> : <Text style={{ color: '#AAA', fontSize: 12 }}>QR Yape disponible al confirmar.</Text>}
                     </View>
                   )}
                   {metodoPago === 'Plin' && (
                     <View style={{ alignItems: 'center', marginTop: 12, padding: 10, backgroundColor: '#111', borderRadius: 10 }}>
-                      <Text style={{ color: '#F5B041', fontWeight: '900', marginBottom: 6 }}>ESCANEA NUESTRO QR PLIN ({cfgPagos?.titular || 'Club Sazón'})</Text>
+                      <Text style={{ color: '#F5B041', fontWeight: '900', marginBottom: 6 }}>ESCANEA NUESTRO QR PLIN ({cfgPagos?.titularLimpio || 'Club Sazón'})</Text>
                       {cfgPagos?.qr_plin ? <Image source={{ uri: cfgPagos.qr_plin }} style={{ width: 200, height: 200, borderRadius: 10 }} /> : <Text style={{ color: '#AAA', fontSize: 12 }}>QR Plin disponible al confirmar.</Text>}
                     </View>
                   )}
                   {metodoPago === 'Efectivo' && <Text style={[styles.descripcionPedido, { marginTop: 10, color: '#4CAF50' }]}>Pagarás en efectivo al recibir tu pedido.</Text>}
                 </View>
-                                    <View style={styles.tarjetaPedido}>
-                  <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {subtotal.toFixed(2)}</Text>
+                         <View style={styles.tarjetaPedido}>
+                  <Text style={styles.descripcionPedido}>Subtotal platos: S/ {subtotal.toFixed(2)}</Text>
+                  {tipoEntrega === 'DELIVERY' && (
+                    <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>
+                      Costo Delivery {infoDelivery.km != null ? `(${infoDelivery.km} km)` : '(tarifa base)'}: S/ {infoDelivery.costo.toFixed(2)}
+                    </Text>
+                  )}
+                  <Text style={styles.totalPedidoTexto}>TOTAL A PAGAR: S/ {totalConDelivery.toFixed(2)}</Text>
                   {!confirmarPedModal ? (
                     <TouchableOpacity style={styles.boton} onPress={() => {
                       if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) {
@@ -403,7 +454,9 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                   ) : (
                     <View style={{ marginTop: 10, padding: 12, backgroundColor: '#111', borderRadius: 10, borderWidth: 1.5, borderColor: '#F5B041' }}>
                       <Text style={{ color: '#F5B041', fontWeight: '900', fontSize: 14, marginBottom: 6 }}>CONFIRMAR PEDIDO AHORA</Text>
-                      <Text style={styles.descripcionPedido}>Entrega: {tipoEntrega} • Pago: {metodoPago} • Total: S/ {subtotal.toFixed(2)}</Text>
+                      <Text style={styles.descripcionPedido}>Entrega: {tipoEntrega} • Pago: {metodoPago}</Text>
+                      <Text style={styles.descripcionPedido}>Platos: S/ {subtotal.toFixed(2)} + Delivery: S/ {infoDelivery.costo.toFixed(2)}</Text>
+                      <Text style={[styles.totalPedidoTexto, { marginTop: 4 }]}>Total Final: S/ {totalConDelivery.toFixed(2)}</Text>
                       <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32' }]} disabled={cargando} onPress={() => {
                         setConfirmarPedModal(false);
                         onConfirmarPedido({
@@ -416,8 +469,8 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
                           metodo_pago: metodoPago,
                           pago_confirmado: metodoPago !== 'Efectivo',
                           subtotal,
-                          costo_delivery: 0,
-                          total: subtotal,
+                          costo_delivery: infoDelivery.costo,
+                          total: totalConDelivery,
                           estado: 'Pendiente de confirmación'
                         }, carrito);
                       }}><Text style={styles.textoBoton}>SI, ENVIAR PEDIDO</Text></TouchableOpacity>
@@ -433,4 +486,4 @@ export function VistaInicio({ usuario, datos, productos, recompensas, promocione
       {barraInferior}
     </View>
   );
-}
+                    }
