@@ -1,94 +1,155 @@
 import { StyleSheet } from 'react-native';
 
+export const ROJO = '#E50914';
+export const ROJO_OSCURO = '#9B060E';
+export const FONDO = '#0B0B0F';
+export const TARJETA = '#16161D';
+export const BORDE = '#262632';
+
 export const styles = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: '#0A0A0A' },
-  pantallaCompleta: { flex: 1, backgroundColor: '#0A0A0A' },
-  contenido: { paddingHorizontal: 18, paddingTop: 22, paddingBottom: 130 },
-  navegacion: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-  botonNavegacion: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1 },
-  botonRegresar: { backgroundColor: '#171717', borderColor: '#333333' },
-  botonInicio: { backgroundColor: '#B81D24', borderColor: '#B81D24' },
-  textoNavegacion: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  bienvenida: { flexGrow: 1, backgroundColor: '#0A0A0A', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  logoBienvenida: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#161616', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#B81D24', marginBottom: 16 },
-  logoGrande: { width: 126, height: 126, borderRadius: 63 },
-  fraseBienvenida: { color: '#FFFFFF', fontSize: 22, fontWeight: '900', letterSpacing: 1, textAlign: 'center' },
-  textoBienvenida: { color: '#BBBBBB', fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
-  barraPuntos: { backgroundColor: '#B81D24', paddingVertical: 8, paddingHorizontal: 22, borderRadius: 20, marginTop: 18 },
-  numeroPuntos: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  deBienvenida: { color: '#CCCCCC', fontSize: 13, marginTop: 6 },
-  espacioGrande: { height: 26 },
-  pieBienvenida: { color: '#666666', fontSize: 11, fontWeight: '700', marginTop: 24, letterSpacing: 1 },
-  titulo: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', marginBottom: 14, letterSpacing: 0.5 },
-  grupoCampo: { marginBottom: 14 },
-  etiqueta: { color: '#CCCCCC', fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  campo: { backgroundColor: '#161616', color: '#FFFFFF', borderWidth: 1, borderColor: '#2E2E2E', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15 },
-  campoMultilinea: { minHeight: 80, textAlignVertical: 'top' },
-  boton: { backgroundColor: '#B81D24', paddingVertical: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-  botonSecundario: { backgroundColor: '#1A1A1A', borderWidth: 1, borderColor: '#3A3A3A' },
-  botonDesactivado: { opacity: 0.5 },
-  botonPequeno: { paddingVertical: 8, paddingHorizontal: 14, marginTop: 0 },
-  textoBoton: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', letterSpacing: 0.5 },
+  pantallaCompleta: { flex: 1, backgroundColor: FONDO },
+  contenido: { padding: 16, paddingBottom: 92 },
+  contenedor: { flex: 1, backgroundColor: FONDO, padding: 20, justifyContent: 'center' },
+
+  logoRedondo: {
+    width: 132, height: 132, borderRadius: 66, alignSelf: 'center',
+    borderWidth: 3, borderColor: ROJO, backgroundColor: '#121218', marginBottom: 14
+  },
+  logoMini: {
+    width: 38, height: 38, borderRadius: 19, borderWidth: 1.5, borderColor: ROJO
+  },
+
+  tituloPrincipal: { color: '#FFFFFF', fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 4 },
+  subtitulo: { color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginBottom: 18 },
+  bannerPuntosBienvenida: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 16,
+    padding: 14, alignItems: 'center', marginVertical: 14
+  },
+  pildoraRoja: {
+    backgroundColor: ROJO, paddingVertical: 8, paddingHorizontal: 22,
+    borderRadius: 12, marginVertical: 6
+  },
+  textoPildoraRoja: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
+
+  cajaInput: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: TARJETA,
+    borderWidth: 1, borderColor: BORDE, borderRadius: 12, paddingHorizontal: 12, marginBottom: 12
+  },
+  campo: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 12,
+    padding: 13, color: '#FFFFFF', fontSize: 14, marginBottom: 12
+  },
+  campoSinBorde: { flex: 1, color: '#FFFFFF', fontSize: 14, paddingVertical: 13 },
+
+  boton: {
+    backgroundColor: ROJO, paddingVertical: 14, paddingHorizontal: 16,
+    borderRadius: 12, alignItems: 'center', marginTop: 6
+  },
+  botonSecundario: { backgroundColor: '#22222C', borderWidth: 1, borderColor: BORDE },
+  botonPequeno: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginTop: 0 },
+  textoBoton: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
   textoBotonPequeno: { fontSize: 12 },
-  enlace: { marginTop: 18, alignItems: 'center' },
-  textoEnlace: { color: '#AAAAAA', fontSize: 14 },
-  rojo: { color: '#E53935', fontWeight: '800' },
-  filaSaludo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  saludo: { color: '#AAAAAA', fontSize: 14 },
+  enlaceRojo: { color: ROJO, fontSize: 13, fontWeight: '800' },
+  textoGrisCentro: { color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 14 },
+
+  cabeceraTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 8, marginBottom: 10
+  },
+  insigniaPuntos: {
+    backgroundColor: ROJO, paddingVertical: 6, paddingHorizontal: 12,
+    borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 5
+  },
+  textoInsigniaPuntos: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
+
+  bannerHero: {
+    width: '100%', height: 145, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: BORDE, marginBottom: 14, backgroundColor: '#121218'
+  },
+  cuadricula3: {
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10
+  },
+  itemCuadricula: {
+    width: '31%', backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    borderRadius: 14, paddingVertical: 14, paddingHorizontal: 6, alignItems: 'center', marginBottom: 4
+  },
+  iconoCuadriculaBox: {
+    width: 44, height: 44, borderRadius: 12, backgroundColor: '#251216',
+    borderWidth: 1, borderColor: '#4A151B', alignItems: 'center', justifyContent: 'center', marginBottom: 8
+  },
+  textoCuadricula: { color: '#F3F4F6', fontSize: 11, fontWeight: '800', textAlign: 'center' },
+  barraInferior: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 64,
+    backgroundColor: '#121218', borderTopWidth: 1, borderTopColor: BORDE,
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingBottom: 4
+  },
+  tabInferior: { alignItems: 'center', justifyContent: 'center', flex: 1, paddingVertical: 4 },
+  textoTabInferior: { color: '#9CA3AF', fontSize: 10, fontWeight: '700', marginTop: 2 },
+  textoTabInferiorAct: { color: ROJO, fontWeight: '900' },
+
+  filaSaludo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  saludo: { color: '#9CA3AF', fontSize: 12, fontWeight: '700' },
   nombreCliente: { color: '#FFFFFF', fontSize: 20, fontWeight: '900' },
-  puntosCliente: { backgroundColor: '#B81D24', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 14, alignItems: 'center' },
-  puntosNumero: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  puntosEtiqueta: { color: '#FFE5E5', fontSize: 10, fontWeight: '800' },
-  encabezado: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#151515', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#292929', marginBottom: 18 },
-  logoPequeno: { width: 64, height: 64, borderRadius: 32, marginRight: 14 },
-  encabezadoTexto: { flex: 1 },
-  nombreNegocio: { color: '#FFFFFF', fontSize: 17, fontWeight: '900' },
-  subtituloNegocio: { color: '#E53935', fontSize: 11, fontWeight: '800', marginTop: 2 },
-  hamburguesa: { fontSize: 18, marginTop: 4 },
-  cuadricula: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  tarjetaAcceso: { width: '48%', backgroundColor: '#151515', borderWidth: 1, borderColor: '#2B2B2B', borderRadius: 16, paddingVertical: 22, alignItems: 'center', marginBottom: 14 },
-  iconoTarjeta: { fontSize: 30, marginBottom: 8 },
-  textoTarjeta: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', textAlign: 'center' },
-  listaCategorias: { marginBottom: 16, maxHeight: 42 },
-  categoria: { backgroundColor: '#161616', borderWidth: 1, borderColor: '#2E2E2E', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, marginRight: 8 },
-  categoriaActiva: { backgroundColor: '#B81D24', borderColor: '#B81D24' },
+  titulo: { color: '#FFFFFF', fontSize: 16, fontWeight: '900', marginVertical: 10, letterSpacing: 0.4 },
+
+  listaCategorias: { marginBottom: 12, flexGrow: 0 },
+  categoria: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, marginRight: 8
+  },
+  categoriaActiva: { backgroundColor: ROJO, borderColor: ROJO },
   textoCategoria: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  producto: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#151515', borderWidth: 1, borderColor: '#292929', borderRadius: 14, padding: 12, marginBottom: 12, gap: 10 },
-  nombreProducto: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  precioProducto: { color: '#E53935', fontSize: 14, fontWeight: '900', marginTop: 4 },
-  botonAgregar: { backgroundColor: '#B81D24', paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10 },
+
+  producto: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: TARJETA,
+    borderWidth: 1, borderColor: BORDE, borderRadius: 14, padding: 10, marginBottom: 10, gap: 10
+  },
+  fotoProducto: { width: 64, height: 64, borderRadius: 12, backgroundColor: '#1F1F28' },
+  nombreProducto: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  descripcionPedido: { color: '#9CA3AF', fontSize: 12, marginTop: 2 },
+  precioProducto: { color: '#F3F4F6', fontSize: 14, fontWeight: '900', marginTop: 4 },
+  botonAgregar: {
+    backgroundColor: ROJO, paddingVertical: 8, paddingHorizontal: 12,
+    borderRadius: 10, alignItems: 'center', justifyContent: 'center'
+  },
   textoAgregar: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
-  productoCarrito: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#151515', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#292929' },
-  controlesCantidad: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  botonCantidad: { backgroundColor: '#262626', width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  textoCantidad: { color: '#FFFFFF', fontSize: 18, fontWeight: '900' },
-  numeroCantidad: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', minWidth: 20, textAlign: 'center' },
-  opcionEntrega: { backgroundColor: '#151515', borderWidth: 1, borderColor: '#2E2E2E', padding: 14, borderRadius: 12, marginTop: 10, alignItems: 'center' },
-  opcionEntregaActiva: { borderColor: '#B81D24', backgroundColor: '#241011' },
-  textoOpcionEntrega: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
-  opcionPago: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#151515', borderWidth: 1, borderColor: '#292929', padding: 14, borderRadius: 12, marginBottom: 8 },
-  textoPago: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  seleccionPago: { color: '#E53935', fontSize: 18, fontWeight: '900' },
-  totalFila: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 18, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#2E2E2E' },
-  textoTotal: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
-  numeroTotal: { color: '#E53935', fontSize: 22, fontWeight: '900' },
-  tarjetaVacia: { backgroundColor: '#151515', padding: 24, borderRadius: 14, alignItems: 'center', borderWidth: 1, borderColor: '#292929' },
-  textoVacio: { color: '#999999', fontSize: 14, textAlign: 'center' },
-  tarjetaPedido: { backgroundColor: '#151515', borderWidth: 1, borderColor: '#2B2B2B', borderRadius: 14, padding: 14, marginBottom: 14 },
-  estadoPedido: { backgroundColor: '#241011', borderWidth: 1, borderColor: '#B81D24', alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, marginVertical: 8 },
-  textoEstado: { color: '#FF6B6B', fontSize: 12, fontWeight: '800' },
-  descripcionPedido: { color: '#CCCCCC', fontSize: 13, marginBottom: 4 },
+
+  tarjetaPromo: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    borderRadius: 16, overflow: 'hidden', marginBottom: 14
+  },
+  etiquetaPromo: {
+    position: 'absolute', top: 10, left: 10, backgroundColor: ROJO,
+    paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8
+  },
+  textoEtiquetaPromo: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
+
+  tarjetaSaldo: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 14
+  },
+  etiquetaSaldo: { color: '#9CA3AF', fontSize: 12, fontWeight: '800' },
+  numeroSaldo: { color: '#FFFFFF', fontSize: 34, fontWeight: '900', marginVertical: 4 },
+
+  tarjetaPedido: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    borderRadius: 14, padding: 14, marginBottom: 12
+  },
+  tarjetaVacia: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    borderRadius: 14, padding: 24, alignItems: 'center', marginTop: 10
+  },
+  textoVacio: { color: '#9CA3AF', fontSize: 13, textAlign: 'center' },
+  estadoPedido: {
+    alignSelf: 'flex-start', borderWidth: 1, borderColor: ROJO,
+    backgroundColor: '#251216', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, marginVertical: 6
+  },
+  textoEstado: { color: ROJO, fontSize: 11, fontWeight: '800' },
   totalPedidoTexto: { color: '#FFFFFF', fontSize: 15, fontWeight: '900', marginTop: 8 },
-  tarjetaSaldo: { backgroundColor: '#B81D24', padding: 20, borderRadius: 16, alignItems: 'center', marginBottom: 18 },
-  etiquetaSaldo: { color: '#FFE5E5', fontSize: 12, fontWeight: '800' },
-  numeroSaldo: { color: '#FFFFFF', fontSize: 38, fontWeight: '900', marginTop: 4 },
-  filaHistorial: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#151515', padding: 14, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#292929' },
-  puntosHistorial: { color: '#4CAF50', fontSize: 15, fontWeight: '900' },
-  tarjetaCuenta: { backgroundColor: '#151515', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: '#292929', marginBottom: 16 },
-  datoCuenta: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginBottom: 12 },
-  barraInferior: { flexDirection: 'row', backgroundColor: '#111111', borderTopWidth: 1, borderTopColor: '#2A2A2A', paddingTop: 10, paddingBottom: 44 },
-  opcionInferior: { flex: 1, alignItems: 'center' },
-  iconoInferior: { fontSize: 18, color: '#888888' },
-  textoInferior: { fontSize: 11, color: '#888888', marginTop: 2, fontWeight: '700' },
-  seleccionado: { color: '#E53935' }
+
+  opcionEntrega: {
+    backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
+    borderRadius: 12, paddingVertical: 11, paddingHorizontal: 14, marginBottom: 8
+  },
+  opcionEntregaActiva: { borderColor: ROJO, backgroundColor: '#251216' }
 });
