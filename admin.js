@@ -58,7 +58,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [promociones, setPromociones] = useState([]);
   const [solicitudesCanje, setSolicitudesCanje] = useState([]);
   const [riders, setRiders] = useState([]);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: '', local_cerrado: false });
+  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: 'Club Sazón', titularLimpio: 'Club Sazón', local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
   const [hMananaIni, setHMananaIni] = useState('06:50');
   const [hMananaFin, setHMananaFin] = useState('11:00');
   const [hNocheIni, setHNocheIni] = useState('18:30');
@@ -209,6 +209,20 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     } catch (e) {}
   }
 
+  function capturarGpsLocal() {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
+      return mostrarAviso('GPS no disponible', 'Ingresa la latitud y longitud del local manualmente.');
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCfgPagos(prev => ({ ...prev, local_lat: pos.coords.latitude.toFixed(6), local_lng: pos.coords.longitude.toFixed(6) }));
+        mostrarAviso('Ubicación del local lista', 'Coordenadas GPS capturadas. Pulsa Guardar Tarifas y Horarios.');
+      },
+      () => mostrarAviso('Permiso GPS', 'Activa la ubicación en tu navegador para capturar las coordenadas del local.'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
   async function guardarProd() { if (editProd?.nombre?.trim()) try { await guardarProductoAdmin(editProd); setEditProd(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Producto actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function borrarProd(id) { try { await eliminarProductoAdmin(id); cargarTodoAdmin(); mostrarAviso('Eliminado', 'Plato eliminado del menú.'); } catch (e) { mostrarAviso('Error', e.message); } }
   async function guardarRider() { if (editRider?.nombre_completo?.trim() && editRider?.telefono?.trim()) try { await guardarRiderAdmin(editRider); setEditRider(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Repartidor guardado.'); } catch (e) { mostrarAviso('Error', e.message); } }
@@ -222,10 +236,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       const payload = { ...cfgPagos, manana_inicio: hMananaIni.trim() || '06:50', manana_fin: hMananaFin.trim() || '11:00', noche_inicio: hNocheIni.trim() || '18:30', noche_fin: hNocheFin.trim() || '23:50' };
       await guardarConfigPagos(payload);
       setCfgPagos(payload);
-      mostrarAviso('Guardado', 'Horarios y pagos guardados correctamente.');
+      mostrarAviso('Guardado', 'Horarios, tarifas delivery y pagos guardados correctamente.');
     } catch (e) { mostrarAviso('Error', e.message); }
-        }
-    const infoPeru = obtenerInfoHoraPeru();
+  }
+  const infoPeru = obtenerInfoHoraPeru();
   const completados = (pedidos || []).filter(p => p.estado === 'Completado');
   const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
@@ -302,20 +316,20 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
                   {riders.map(r => {
             const entConfirmadas = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
-            const entPorConfirmarCli = (pedidos || []).filter(p => p.rider_id === r.id && p.estado !== 'Completado' && p.estado !== 'Cancelado' && p.estado_rider === 'Entregado por rider');
+            const entEnCurso = (pedidos || []).filter(p => p.rider_id === r.id && p.estado !== 'Completado' && p.estado !== 'Cancelado');
             const gananciaConfirmada = entConfirmadas.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-            const gananciaPendiente = entPorConfirmarCli.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
+            const gananciaEnCurso = entEnCurso.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
             const abierto = riderHistId === r.id;
             return (
               <View key={r.id} style={styles.tarjetaPedido}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.nombreProducto}>{r.nombre_completo} {r.placa ? `(${r.placa})` : ''}</Text>
+                    <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
                     <Text style={styles.precioProducto}>Tel: {r.telefono} • Clave: {r.password}</Text>
-                    <Text style={[styles.precioProducto, { color: '#F5B041' }]}>Horario: {r.hora_entrada || '18:30'} - {r.hora_salida || '23:50'} • Libre: {r.dias_libres || 'Ninguno'}</Text>
+                    <Text style={[styles.precioProducto, { color: '#F5B041' }]}>Horario: {r.hora_entrada || '18:30'} - {r.hora_salida || '23:50'} • {r.dias_libres || 'Sin días libres'}</Text>
                     <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '900', marginTop: 2 }]}>Entregas confirmadas: {entConfirmadas.length} • Ganancia: S/ {gananciaConfirmada.toFixed(2)}</Text>
-                    {entPorConfirmarCli.length > 0 && (
-                      <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>Por confirmar cliente ({entPorConfirmarCli.length}): S/ {gananciaPendiente.toFixed(2)}</Text>
+                    {entEnCurso.length > 0 && (
+                      <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>En reparto ahora ({entEnCurso.length}): S/ {gananciaEnCurso.toFixed(2)}</Text>
                     )}
                   </View>
                   <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRider(r)}>
@@ -362,6 +376,35 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               {cfgPagos.local_cerrado ? 'LOCAL CERRADO HOY (TOCA PARA ABRIR)' : 'LOCAL ABIERTO (TOCA PARA CERRAR HOY)'}
             </Text>
           </TouchableOpacity>
+          <Text style={styles.titulo}>TARIFAS AUTOMATICAS DE DELIVERY POR DISTANCIA</Text>
+          <View style={styles.tarjetaPedido}>
+            <TouchableOpacity style={[styles.boton, { backgroundColor: '#1565C0', marginBottom: 8, paddingVertical: 10 }]} onPress={capturarGpsLocal}>
+              <Text style={styles.textoBoton}>📍 CAPTURAR UBICACIÓN GPS DE MI LOCAL</Text>
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#AAA', fontSize: 10, marginBottom: 4 }}>LATITUD LOCAL</Text>
+                <TextInput style={[styles.campo, { color: '#FFF' }]} value={String(cfgPagos.local_lat || '')} onChangeText={v => setCfgPagos({ ...cfgPagos, local_lat: v })} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#AAA', fontSize: 10, marginBottom: 4 }}>LONGITUD LOCAL</Text>
+                <TextInput style={[styles.campo, { color: '#FFF' }]} value={String(cfgPagos.local_lng || '')} onChangeText={v => setCfgPagos({ ...cfgPagos, local_lng: v })} />
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#AAA', fontSize: 10, marginBottom: 4 }}>TARIFA BASE (S/)</Text>
+                <TextInput style={[styles.campo, { color: '#FFF' }]} keyboardType="numeric" value={String(cfgPagos.tarifa_base || '4.00')} onChangeText={v => setCfgPagos({ ...cfgPagos, tarifa_base: v })} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#AAA', fontSize: 10, marginBottom: 4 }}>POR KILÓMETRO (S/ KM)</Text>
+                <TextInput style={[styles.campo, { color: '#FFF' }]} keyboardType="numeric" value={String(cfgPagos.tarifa_km || '1.50')} onChangeText={v => setCfgPagos({ ...cfgPagos, tarifa_km: v })} />
+              </View>
+            </View>
+            <TouchableOpacity style={[styles.boton, { backgroundColor: '#2E7D32', paddingVertical: 10 }]} onPress={guardarPagos}>
+              <Text style={styles.textoBoton}>GUARDAR TARIFAS DELIVERY</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.titulo}>APERTURA Y CIERRE DEL LOCAL</Text>
           <View style={styles.tarjetaPedido}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -399,7 +442,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {tab === 'pedidos' && (
+                    {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -409,12 +452,13 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ) : (
             (pedidos || []).map(p => {
               const col = estiloEstado(p.estado);
+              const delCalculado = Number(p.costo_delivery || 0);
               return (
                 <View key={p.id} style={styles.tarjetaPedido}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido} — {p.clientes?.nombre_completo || 'Cliente'} ({p.clientes?.telefono || ''})</Text>
                   <View style={[styles.estadoPedido, col.badge]}>
                     <Text style={[styles.textoEstado, col.txt]}>
-                      {p.estado_rider === 'Entregado por rider' && p.estado !== 'Completado' ? 'Entregado por rider (Falta cliente)' : p.estado}
+                      {p.recibido_cliente && p.estado !== 'Completado' ? 'Cliente confirmó recepción • Falta cierre Rider' : p.estado}
                     </Text>
                   </View>
                   {(p.pedido_detalles || []).map(d => {
@@ -424,14 +468,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                     );
                   })}
                   {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>Distrito: {p.distrito} - {p.direccion}</Text>}
+                  {p.tipo_entrega === 'DELIVERY' && <Text style={[styles.descripcionPedido, { color: '#29B6F6' }]}>Delivery calculado: S/ {delCalculado.toFixed(2)}</Text>}
                   {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#29B6F6', fontWeight: '800' }]}>Rider: {p.rider_nombre} ({p.estado_rider})</Text>}
                   {!!p.notas && <Text style={[styles.descripcionPedido, { color: '#F5B041' }]}>Nota: {p.notas}</Text>}
                   <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
                   {esPendiente(p.estado) && p.tipo_entrega === 'DELIVERY' && (
-                    <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder="Costo delivery (ej. 5.00)" placeholderTextColor="#777" keyboardType="numeric" value={costosDel[p.id] ?? ''} onChangeText={v => setCostosDel({ ...costosDel, [p.id]: v })} />
+                    <TextInput style={[styles.campo, { marginTop: 8, color: '#FFF' }]} placeholder={`Delivery automático: S/ ${delCalculado.toFixed(2)} (opcional ajustar)`} placeholderTextColor="#777" keyboardType="numeric" value={costosDel[p.id] ?? ''} onChangeText={v => setCostosDel({ ...costosDel, [p.id]: v })} />
                   )}
                   {esPendiente(p.estado) && (
-                    <TouchableOpacity style={styles.boton} onPress={() => onConfirmarAdmin(p, costosDel[p.id] || 0)} disabled={cargando}>
+                    <TouchableOpacity style={styles.boton} onPress={() => onConfirmarAdmin(p, costosDel[p.id] !== undefined && costosDel[p.id] !== '' ? costosDel[p.id] : delCalculado)} disabled={cargando}>
                       <Text style={styles.textoBoton}>CONFIRMAR Y ENVIAR A RIDERS</Text>
                     </TouchableOpacity>
                   )}
@@ -483,7 +528,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-              {tab === 'canjes' && (
+      {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
@@ -568,7 +613,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         <View>
           <Text style={styles.titulo}>QR YAPE Y PLIN</Text>
           <View style={styles.tarjetaPedido}>
-            <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular de cuenta" placeholderTextColor="#777" value={cfgPagos.titular || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titular: v })} />
+            <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="Titular de cuenta" placeholderTextColor="#777" value={cfgPagos.titularLimpio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titularLimpio: v })} />
             <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Yape" placeholderTextColor="#777" value={cfgPagos.qr_yape || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_yape: v })} />
             <TextInput style={[styles.campo, { marginBottom: 10, color: '#FFF' }]} placeholder="URL imagen QR Plin" placeholderTextColor="#777" value={cfgPagos.qr_plin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_plin: v })} />
             <TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR QR</Text></TouchableOpacity>
@@ -595,4 +640,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-}
+            }
+            
