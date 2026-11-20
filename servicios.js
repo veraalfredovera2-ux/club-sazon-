@@ -188,7 +188,9 @@ export async function guardarRiderAdmin(r) {
   const tramo = String(r.horario_trabajo || '').split('-');
   const hEnt = (r.hora_entrada || tramo.at(0) || '18:30').trim();
   const hSal = (r.hora_salida || tramo.at(1) || '23:50').trim();
-  const body = { nombre_completo: r.nombre_completo.trim(), telefono: limpiarTel(r.telefono), password: r.password, placa: r.placa || '', hora_entrada: hEnt, hora_salida: hSal, dias_libres: r.dias_libres || '', activo: r.activo !== false };
+  const libreBase = String(r.dias_libres || '').replace(/\|\s*Placa:.*$/i, '').trim();
+  const libreConPlaca = r.placa?.trim() ? [libreBase, `Placa: ${r.placa.trim()}`].filter(Boolean).join(' | ') : libreBase;
+  const body = { nombre_completo: r.nombre_completo.trim(), telefono: limpiarTel(r.telefono), password: r.password, hora_entrada: hEnt, hora_salida: hSal, dias_libres: libreConPlaca, activo: r.activo !== false };
   return r.id ? apiRest(`riders?id=eq.${r.id}`, 'PATCH', body) : apiRest('riders', 'POST', body);
 }
 export const eliminarRiderAdmin = (id) => apiRest(`riders?id=eq.${id}`, 'DELETE');
