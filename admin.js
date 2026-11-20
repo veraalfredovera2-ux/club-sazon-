@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './estilos';
 import { NavegacionSuperior, LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
-import { obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje, subirImagenGaleria, obtenerRidersAdmin, guardarRiderAdmin, eliminarRiderAdmin } from './servicios';
+import { obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje, subirImagenGaleria, obtenerRidersAdmin, guardarRiderAdmin, eliminarRiderAdmin, suscribirPushDispositivo } from './servicios';
 
 function generarWavDataUri(silencio = false) {
   const sr = 8000, dur = silencio ? 3 : 1.2, n = Math.floor(sr * dur);
@@ -90,7 +90,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     AsyncStorage.getItem('admin_sonido_activo').then(v => {
       const activo = v === null ? true : v === '1';
       setAudioListo(activo);
-      if (activo) iniciarKeepAliveFondo();
+      if (activo) {
+        iniciarKeepAliveFondo();
+        suscribirPushDispositivo('admin', usuario?.id);
+      }
     });
     cargarTodoAdmin();
     try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
@@ -127,7 +130,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       try {
         if (Platform.OS === 'web' && 'Notification' in window) {
           const perm = await Notification.requestPermission();
-          if (perm === 'granted') registrarSwYNotificarAdmin('Sonido en segundo plano activo', 'Recibirás alertas sonoras incluso con la pantalla apagada.');
+          if (perm === 'granted') {
+            await suscribirPushDispositivo('admin', usuario?.id);
+            registrarSwYNotificarAdmin('Sonido en segundo plano activo', 'Recibirás alertas sonoras incluso con la pantalla apagada.');
+          }
         }
       } catch (e) {}
     } else detenerAlarma();
@@ -314,7 +320,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               )}
             </View>
           )}
-                  {riders.map(r => {
+                                                {riders.map(r => {
             const entConfirmadas = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
             const entEnCurso = (pedidos || []).filter(p => p.rider_id === r.id && p.estado !== 'Completado' && p.estado !== 'Cancelado');
             const gananciaConfirmada = entConfirmadas.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
@@ -442,7 +448,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                    {tab === 'pedidos' && (
+                        {tab === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
           {!(pedidos || []).length ? (
@@ -528,7 +534,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {tab === 'canjes' && (
+                          {tab === 'canjes' && (
         <View>
           <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
           {solicitudesCanje.map(sc => (
