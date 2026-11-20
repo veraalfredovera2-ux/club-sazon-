@@ -18,15 +18,39 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
   return datos;
 }
 
+export function extraerConfigDelivery(titularRaw) {
+  const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
+  const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
+  const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50' };
+  if (partes.length < 2) return def;
+  const nums = partes.at(1).split('|');
+  return {
+    titularLimpio,
+    local_lat: nums.at(0) || def.local_lat,
+    local_lng: nums.at(1) || def.local_lng,
+    tarifa_base: nums.at(2) || def.tarifa_base,
+    tarifa_km: nums.at(3) || def.tarifa_km
+  };
+}
+
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  return (Array.isArray(r) && r.at(0)) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50', local_cerrado: false };
+  const raw = (Array.isArray(r) && r.at(0)) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50', local_cerrado: false };
+  const del = extraerConfigDelivery(raw.titular);
+  return { ...raw, ...del };
 }
 
 export async function guardarConfigPagos(cfg) {
+  const del = extraerConfigDelivery(cfg.titular);
+  const titBase = (cfg.titularLimpio != null ? cfg.titularLimpio : del.titularLimpio) || 'Club Sazón';
+  const lat = String(cfg.local_lat ?? del.local_lat).trim();
+  const lng = String(cfg.local_lng ?? del.local_lng).trim();
+  const base = String(cfg.tarifa_base ?? del.tarifa_base).trim();
+  const km = String(cfg.tarifa_km ?? del.tarifa_km).trim();
+  const titularCodificado = `${titBase}||DEL:${lat}|${lng}|${base}|${km}`;
   const limpio = {
     id: cfg.id || 'principal',
-    titular: cfg.titular || 'Club Sazón',
+    titular: titularCodificado,
     qr_yape: cfg.qr_yape || '',
     qr_plin: cfg.qr_plin || '',
     manana_inicio: cfg.manana_inicio || '06:50',
@@ -124,18 +148,20 @@ export async function crearNuevoPedido(pedidoData, carrito) {
 }
 
 export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
-  const sub = Number(pedido.subtotal || pedido.total || 0), del = Number(costoDelivery || 0);
+  const sub = Number(pedido.subtotal || pedido.total || 0);
+  const del = costoDelivery !== '' && costoDelivery != null ? Number(costoDelivery) : Number(pedido.costo_delivery || 0);
   await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, costo_delivery: del, total: sub + del, estado: 'Confirmado por local' });
 }
 
 export async function confirmarRecepcionYDarPuntos(pedido) {
-  const actual = await apiRest(`pedidos?id=eq.${pedido.id}&select=estado,tipo_entrega,estado_rider`);
+  const actual = await apiRest(`pedidos?id=eq.${pedido.id}&select=estado,tipo_entrega,rider_id,estado_rider`);
   const reg = actual.at(0);
   if (reg?.estado === 'Cancelado') throw new Error('Este pedido fue cancelado.');
-  if (reg?.tipo_entrega === 'DELIVERY' && reg?.estado_rider !== 'Entregado por rider') {
-    throw new Error('Espera a que el repartidor confirme primero la entrega del pedido.');
+  if (reg?.tipo_entrega === 'DELIVERY' && !reg?.rider_id) {
+    throw new Error('Espera a que un repartidor retire tu pedido para confirmar recepción.');
   }
-  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, recibido_cliente: true, estado: 'Completado' });
+  const nuevoEstado = reg?.tipo_entrega === 'DELIVERY' ? 'Confirmado por local' : 'Completado';
+  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, recibido_cliente: true, estado: nuevoEstado });
   const yaDados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.compra&select=cantidad`);
   if (yaDados?.length) return 0;
   const puntosGanados = Math.floor(Number(pedido.subtotal || pedido.total || 0) * 10);
