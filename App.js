@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Platform, Linking } from 'react-native';
+import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { styles, ROJO, TARJETA, BORDE } from './estilos';
+import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar, LOGO, BANNER_COMIDA } from './pantallas';
 import { VentanaAviso, mostrarAviso } from './avisos';
 import { VistaAdmin } from './admin';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
   obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario,
-  crearNuevoPedido, confirmarAdminPedido, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar, canjearRecompensaCliente
+  crearNuevoPedido, confirmarAdminPedido, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar, canjearRecompensaCliente, subirImagenGaleria
 } from './servicios';
 
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
@@ -24,6 +24,7 @@ export default function App() {
   const [pantallaAuth, setPantallaAuth] = useState('bienvenida');
   const [usuario, setUsuario] = useState(null);
   const [rol, setRol] = useState(null);
+  const [fotoPerfil, setFotoPerfil] = useState(null);
   const [vista, setVista] = useState('inicio');
   const [catActiva, setCatActiva] = useState('Todas');
   const [catalogo, setCatalogo] = useState([]);
@@ -47,6 +48,9 @@ export default function App() {
         const parsed = JSON.parse(s);
         setUsuario(parsed.perfil);
         setRol(parsed.tipo);
+        if (parsed.perfil?.id) {
+          AsyncStorage.getItem(`foto_perfil_${parsed.perfil.id}`).then(f => { if (f) setFotoPerfil(f); });
+        }
       }
     });
     cargarBase();
@@ -54,10 +58,21 @@ export default function App() {
 
   useEffect(() => {
     if (!usuario?.id) return;
+    AsyncStorage.getItem(`foto_perfil_${usuario.id}`).then(f => { if (f) setFotoPerfil(f); });
     cargarTodoUsuario();
     const t = setInterval(cargarTodoUsuario, 5000);
     return () => clearInterval(t);
   }, [usuario?.id, rol]);
+
+  async function cambiarFotoPerfil() {
+    try {
+      const url = await subirImagenGaleria();
+      if (!url) return;
+      setFotoPerfil(url);
+      if (usuario?.id) await AsyncStorage.setItem(`foto_perfil_${usuario.id}`, url);
+      mostrarAviso('Foto actualizada', 'Tu foto de perfil se guardó correctamente.');
+    } catch (e) { mostrarAviso('Error al subir', e.message); }
+  }
 
   async function cargarBase() {
     try {
@@ -107,6 +122,7 @@ export default function App() {
     await AsyncStorage.removeItem('sesion_club_sazon');
     setUsuario(null);
     setRol(null);
+    setFotoPerfil(null);
     setVista('inicio');
     setPantallaAuth('login');
   }
@@ -245,17 +261,17 @@ export default function App() {
         />
       </SafeAreaView>
     );
-      }
+  }
   const accesosInicio = [
     { id: 'menu', icono: '🍴', titulo: 'Menú' },
     { id: 'promos', icono: '🔥', titulo: 'Promociones' },
     { id: 'ofertas', icono: '🏷️', titulo: 'Ofertas' },
     { id: 'puntos', icono: '★', titulo: 'Puntos' },
     { id: 'canjes', icono: '🎁', titulo: 'Canjes' },
-    { id: 'carrito', icono: '🛒', titulo: `Carrito (${carrito.reduce((a, x) => a + x.cantidad, 0)})` },
+    { id: 'carrito', icono: '🛒', titulo: 'Carrito' },
     { id: 'pedidos', icono: '📋', titulo: 'Pedidos' },
     { id: 'cuenta', icono: '👤', titulo: 'Mi cuenta' },
-    { id: 'salir', icono: '🚪', titulo: 'Cerrar sesión' }
+    { id: 'salir', icono: '↪', titulo: 'Cerrar sesión' }
   ];
 
   const prodFiltrados = catActiva === 'Todas'
@@ -271,6 +287,7 @@ export default function App() {
         <NavegacionSuperior
           regresar={vista !== 'inicio' ? () => setVista('inicio') : null}
           irAInicio={() => setVista('inicio')}
+          abrirMenuLateral={() => setVista('mas')}
           puntos={datosCli.puntos}
           cantidadCarrito={cantTotalCarrito}
           abrirCarrito={() => setVista('carrito')}
@@ -286,19 +303,33 @@ export default function App() {
 
         {vista === 'inicio' && (
           <View>
-            <View style={styles.filaSaludo}>
-              <View>
-                <Text style={styles.saludo}>Hola, {usuario.nombre_completo?.split(' ').at(0) || 'Cliente'} 👋</Text>
-                <Text style={styles.nombreCliente}>¿Qué se te antoja hoy?</Text>
+            <View style={styles.tarjetaPerfilHero}>
+              <TouchableOpacity style={styles.avatarClienteBox} onPress={cambiarFotoPerfil}>
+                {fotoPerfil ? (
+                  <Image source={{ uri: fotoPerfil }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                ) : (
+                  <Text style={{ fontSize: 28, color: '#FFF' }}>👤</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '800' }}>¡Bienvenido(a),</Text>
+                <Text style={styles.nombreDoradoHero} numberOfLines={1}>{usuario.nombre_completo}!</Text>
+                <Text style={{ color: '#E5E7EB', fontSize: 11, marginTop: 2 }}>Gracias por ser parte del Club Sazón</Text>
+                <TouchableOpacity onPress={cambiarFotoPerfil}>
+                  <Text style={{ color: DORADO, fontSize: 10, fontWeight: '800', marginTop: 2 }}>📷 Toca la foto para cambiar</Text>
+                </TouchableOpacity>
               </View>
+
+              <TouchableOpacity style={styles.badgePuntosHero} onPress={() => setVista('puntos')}>
+                <Text style={{ fontSize: 22, color: DORADO }}>★</Text>
+                <Text style={styles.numeroPuntosDorado}>{datosCli.puntos}</Text>
+                <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800' }}>puntos</Text>
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.bannerHero} onPress={() => setVista('promos')}>
+            <TouchableOpacity style={styles.bannerHero} onPress={() => setVista('menu')}>
               <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(11,11,15,0.78)', padding: 10 }}>
-                <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>EL SAZÓN ORIENTAL • Comida rápida y casera</Text>
-                <Text style={{ color: ROJO, fontWeight: '800', fontSize: 11 }}>Toca aquí para ver promociones del día →</Text>
-              </View>
             </TouchableOpacity>
 
             <View style={styles.cuadricula3}>
@@ -312,9 +343,40 @@ export default function App() {
                   }}
                 >
                   <View style={styles.iconoCuadriculaBox}>
-                    <Text style={{ fontSize: 20, color: ROJO }}>{item.icono}</Text>
+                    <Text style={{ fontSize: 24, color: ROJO, fontWeight: '900' }}>{item.icono}</Text>
                   </View>
                   <Text style={styles.textoCuadricula}>{item.titulo}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {vista === 'mas' && (
+          <View>
+            <Text style={styles.titulo}>MÁS OPCIONES</Text>
+            <View style={styles.cuadricula3}>
+              {[
+                { id: 'cuenta', icono: '👤', titulo: 'Mi cuenta' },
+                { id: 'canjes', icono: '🎁', titulo: 'Canjes' },
+                { id: 'ofertas', icono: '🏷️', titulo: 'Ofertas' },
+                { id: 'carrito', icono: '🛒', titulo: `Carrito (${cantTotalCarrito})` },
+                { id: 'foto', icono: '📷', titulo: 'Subir foto' },
+                { id: 'salir', icono: '↪', titulo: 'Cerrar sesión' }
+              ].map(op => (
+                <TouchableOpacity
+                  key={op.id}
+                  style={styles.itemCuadricula}
+                  onPress={() => {
+                    if (op.id === 'salir') return cerrarSesion();
+                    if (op.id === 'foto') return cambiarFotoPerfil();
+                    setVista(op.id);
+                  }}
+                >
+                  <View style={styles.iconoCuadriculaBox}>
+                    <Text style={{ fontSize: 24, color: ROJO, fontWeight: '900' }}>{op.icono}</Text>
+                  </View>
+                  <Text style={styles.textoCuadricula}>{op.titulo}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -371,7 +433,7 @@ export default function App() {
                   <View key={pr.id} style={styles.tarjetaPromo}>
                     <Image
                       source={pr.imagen_url && pr.imagen_url.includes('http') ? { uri: pr.imagen_url } : BANNER_COMIDA}
-                      style={{ width: '100%', height: 140 }}
+                      style={{ width: '100%', height: 145 }}
                       resizeMode="cover"
                     />
                     <View style={styles.etiquetaPromo}>
@@ -392,11 +454,11 @@ export default function App() {
             )}
           </View>
         )}
-                  {(vista === 'puntos' || vista === 'canjes') && (
+                          {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={[styles.tarjetaSaldo, { borderColor: ROJO, backgroundColor: '#1E0D11' }]}>
               <Text style={styles.etiquetaSaldo}>★ TUS PUNTOS ACUMULADOS</Text>
-              <Text style={styles.numeroSaldo}>{datosCli.puntos} pts</Text>
+              <Text style={[styles.numeroSaldo, { color: DORADO }]}>{datosCli.puntos} pts</Text>
               <Text style={{ color: '#F3F4F6', fontSize: 12, fontWeight: '700' }}>¡Sigue acumulando puntos con cada pedido!</Text>
             </View>
 
@@ -417,7 +479,7 @@ export default function App() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.nombreProducto}>{rec.titulo}</Text>
                     {!!rec.descripcion && <Text style={styles.descripcionPedido}>{rec.descripcion}</Text>}
-                    <Text style={[styles.precioProducto, { color: ROJO }]}>{rec.puntos_requeridos} pts • Stock: {rec.stock ?? 5}</Text>
+                    <Text style={[styles.precioProducto, { color: DORADO }]}>{rec.puntos_requeridos} pts • Stock: {rec.stock ?? 5}</Text>
                   </View>
                   <TouchableOpacity
                     style={[styles.botonAgregar, datosCli.puntos < Number(rec.puntos_requeridos) && { backgroundColor: '#2A2A35' }]}
@@ -435,7 +497,7 @@ export default function App() {
               <View key={h.id || i} style={styles.tarjetaPedido}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={[styles.descripcionPedido, { color: '#FFF', flex: 1 }]}>{h.descripcion}</Text>
-                  <Text style={{ color: Number(h.cantidad) >= 0 ? '#4CAF50' : ROJO, fontWeight: '900' }}>
+                  <Text style={{ color: Number(h.cantidad) >= 0 ? DORADO : ROJO, fontWeight: '900' }}>
                     {Number(h.cantidad) >= 0 ? `+${h.cantidad}` : h.cantidad} pts
                   </Text>
                 </View>
@@ -580,10 +642,20 @@ export default function App() {
         {vista === 'cuenta' && (
           <View>
             <Text style={styles.titulo}>MI CUENTA</Text>
-            <View style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{usuario.nombre_completo}</Text>
+            <View style={[styles.tarjetaPedido, { alignItems: 'center' }]}>
+              <TouchableOpacity style={[styles.avatarClienteBox, { width: 84, height: 84, borderRadius: 42, marginBottom: 10 }]} onPress={cambiarFotoPerfil}>
+                {fotoPerfil ? (
+                  <Image source={{ uri: fotoPerfil }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                ) : (
+                  <Text style={{ fontSize: 36, color: '#FFF' }}>👤</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={cambiarFotoPerfil} style={{ marginBottom: 10 }}>
+                <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800' }}>📷 Cambiar foto de perfil</Text>
+              </TouchableOpacity>
+              <Text style={[styles.nombreProducto, { color: DORADO, fontSize: 18 }]}>{usuario.nombre_completo}</Text>
               <Text style={styles.descripcionPedido}>Teléfono: {usuario.telefono}</Text>
-              <Text style={[styles.precioProducto, { color: ROJO, marginTop: 8 }]}>Saldo actual: {datosCli.puntos} puntos</Text>
+              <Text style={[styles.precioProducto, { color: DORADO, marginTop: 8 }]}>Saldo actual: {datosCli.puntos} puntos</Text>
             </View>
             <TouchableOpacity style={[styles.boton, { backgroundColor: '#252530' }]} onPress={cerrarSesion}>
               <Text style={styles.textoBoton}>Cerrar sesión</Text>
@@ -595,3 +667,4 @@ export default function App() {
     </SafeAreaView>
   );
                     }
+                  
