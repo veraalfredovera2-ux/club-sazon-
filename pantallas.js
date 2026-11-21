@@ -3,43 +3,39 @@ import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Linking } f
 import { styles, ROJO, TARJETA, BORDE } from './estilos';
 
 export const LOGO = {
-  uri: [
-    'https://raw.' + '://githubusercontent.com',
-    'veraalfredovera2-ux/club-sazon-/main/',
-    'logo_club_sazon.png'
-  ].join('')
+  uri: 'https://githubusercontent.com'
 };
 
 export const BANNER_COMIDA = {
-  uri: 'https://unsplash.com'
+  uri: 'https://githubusercontent.com'
 };
 
 export function NavegacionSuperior({ regresar, irAInicio, puntos, cantidadCarrito, abrirCarrito }) {
   return (
     <View style={styles.cabeceraTop}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
         {regresar && (
-          <TouchableOpacity onPress={regresar} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: TARJETA, borderRadius: 10, borderWidth: 1, borderColor: BORDE }}>
-            <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '900' }}>←</Text>
+          <TouchableOpacity onPress={regresar} style={{ paddingVertical: 6, paddingHorizontal: 8, backgroundColor: TARJETA, borderRadius: 10, borderWidth: 1, borderColor: BORDE }}>
+            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '900' }}>←</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={irAInicio} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <TouchableOpacity onPress={irAInicio} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
           <Image source={LOGO} style={styles.logoMini} />
-          <View>
-            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>EL SAZÓN ORIENTAL</Text>
+          <View style={{ flexShrink: 1 }}>
+            <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }} numberOfLines={1}>EL SAZÓN ORIENTAL</Text>
             <Text style={{ color: ROJO, fontSize: 9, fontWeight: '800' }}>CLUB SAZÓN</Text>
           </View>
         </TouchableOpacity>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         {typeof puntos === 'number' && (
-          <View style={styles.insigniaPuntos}>
-            <Text style={styles.textoInsigniaPuntos}>★ {puntos} pts</Text>
+          <View style={[styles.insigniaPuntos, { paddingHorizontal: 8, paddingVertical: 5 }]}>
+            <Text style={[styles.textoInsigniaPuntos, { fontSize: 11 }]}>★ {puntos}</Text>
           </View>
         )}
         {abrirCarrito && (
-          <TouchableOpacity onPress={abrirCarrito} style={{ backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 12 }}>
-            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '900' }}>🛒 {cantidadCarrito || 0}</Text>
+          <TouchableOpacity onPress={abrirCarrito} style={{ backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 10 }}>
+            <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>🛒 {cantidadCarrito || 0}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -79,7 +75,7 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
         <Text style={[styles.subtitulo, { fontStyle: 'italic', color: '#E5E7EB', fontSize: 15 }]}>Sabor que te hace volver</Text>
 
         <View style={styles.bannerHero}>
-          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
         </View>
 
         <View style={styles.bannerPuntosBienvenida}>
@@ -298,4 +294,5 @@ export function PantallaRecuperar({ irALogin }) {
       </TouchableOpacity>
     </ScrollView>
   );
-    }
+        }
+            
