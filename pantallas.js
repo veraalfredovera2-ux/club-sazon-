@@ -88,14 +88,14 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
         </Text>
       </View>
 
-      <View style={{ width: '100%', height: 290, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
-        <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+      <View style={{ width: '100%', height: 320, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
+        <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         {Platform.OS === 'web' && (
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(7,7,9,0) 48%, #070709 98%), linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 18%, rgba(7,7,9,0) 80%, #070709 100%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 18%, rgba(7,7,9,0) 78%, #070709 100%)', pointerEvents: 'none' }} />
         )}
         <Text
           style={{
-            position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center',
+            position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center',
             color: '#FFFFFF', fontSize: 22, fontStyle: 'italic', fontWeight: '600',
             fontFamily: fuenteElegante, letterSpacing: 0.6,
             textShadowColor: 'rgba(0,0,0,0.98)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10
@@ -105,7 +105,7 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
         </Text>
       </View>
 
-      <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 14, paddingHorizontal: 20 }}>
+      <View style={{ alignItems: 'center', marginTop: 2, marginBottom: 14, paddingHorizontal: 20 }}>
         <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>¡Regístrate y recibe</Text>
         <View style={[styles.pildoraRoja, { borderRadius: 14, paddingVertical: 6, paddingHorizontal: 26, marginVertical: 4 }]}>
           <Text style={[styles.textoPildoraRoja, { fontSize: 21 }]}>100 puntos</Text>
@@ -321,3 +321,4 @@ export function PantallaRecuperar({ irALogin }) {
     </ScrollView>
   );
             }
+            
