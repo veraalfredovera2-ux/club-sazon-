@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Linking, Platform } from 'react-native';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 
 export const LOGO = require('./20261104_204552_0000.png');
@@ -77,30 +77,44 @@ export function BarraInferiorCliente({ vistaActual, cambiarVista }) {
 }
 
 export function PantallaBienvenida({ irALogin, irARegistro }) {
+  const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
   return (
-    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ padding: 20, paddingTop: 26, justifyContent: 'space-between', minHeight: '100%' }}>
+    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ paddingTop: 22, paddingBottom: 24, justifyContent: 'space-between', minHeight: '100%' }}>
       <View>
-        <Image source={LOGO} style={styles.logoRedondo} />
-        <Text style={styles.tituloPrincipal}>EL SAZÓN ORIENTAL</Text>
-        <Text style={[styles.subtitulo, { fontStyle: 'italic', color: '#E5E7EB', fontSize: 15 }]}>Sabor que te hace volver</Text>
-
-        <View style={styles.bannerHero}>
-          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-          <Text style={styles.textoBannerEnamora}>¡Sabor que enamora!</Text>
+        <View style={{ paddingHorizontal: 20 }}>
+          <Image source={LOGO} style={[styles.logoRedondo, { width: 136, height: 136, borderRadius: 68 }]} />
+          <Text style={styles.tituloPrincipal}>EL SAZÓN ORIENTAL</Text>
+          <Text style={{ color: '#F3F4F6', fontSize: 18, fontStyle: 'italic', fontFamily: fuenteElegante, textAlign: 'center', marginBottom: 10 }}>
+            Sabor que te hace volver
+          </Text>
         </View>
 
-        <View style={styles.bannerPuntosBienvenida}>
-          <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '800' }}>¡Regístrate y recibe</Text>
-          <View style={styles.pildoraRoja}>
-            <Text style={styles.textoPildoraRoja}>100 puntos</Text>
+        <View style={{ width: '100%', height: 225, position: 'relative', marginVertical: 4 }}>
+          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          <Text
+            style={{
+              position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center',
+              color: '#FFFFFF', fontSize: 22, fontStyle: 'italic', fontWeight: '600',
+              fontFamily: fuenteElegante, letterSpacing: 0.6,
+              textShadowColor: 'rgba(0,0,0,0.95)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8
+            }}
+          >
+            ¡Sabor que enamora!
+          </Text>
+        </View>
+
+        <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 14, paddingHorizontal: 20 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>¡Regístrate y recibe</Text>
+          <View style={[styles.pildoraRoja, { borderRadius: 16, paddingVertical: 8, paddingHorizontal: 28, marginVertical: 6 }]}>
+            <Text style={[styles.textoPildoraRoja, { fontSize: 23 }]}>100 puntos</Text>
           </View>
-          <Text style={{ color: '#D1D5DB', fontSize: 13, fontWeight: '700' }}>de bienvenida!</Text>
+          <Text style={{ color: '#E5E7EB', fontSize: 14, fontWeight: '600' }}>de bienvenida!</Text>
         </View>
       </View>
 
-      <View style={{ marginTop: 8 }}>
-        <TouchableOpacity style={styles.boton} onPress={irALogin}>
-          <Text style={styles.textoBoton}>Comenzar</Text>
+      <View style={{ paddingHorizontal: 20 }}>
+        <TouchableOpacity style={[styles.boton, { borderRadius: 14, paddingVertical: 15 }]} onPress={irALogin}>
+          <Text style={[styles.textoBoton, { fontSize: 16 }]}>Comenzar</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={irARegistro} style={{ marginTop: 12, alignItems: 'center' }}>
           <Text style={{ color: '#9CA3AF', fontSize: 13 }}>
