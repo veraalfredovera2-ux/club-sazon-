@@ -1,14 +1,14 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 
-export const ROJO = '#E50914';
-export const DORADO = '#F5B041';
-export const FONDO = '#08080B';
-export const TARJETA = '#14141A';
-export const BORDE = '#2E2E3A';
+export const ROJO = '#FF1717';
+export const DORADO = '#FFD600';
+export const FONDO = '#070709';
+export const TARJETA = '#121217';
+export const BORDE = '#2C2C38';
 
 export const styles = StyleSheet.create({
   pantallaCompleta: { flex: 1, backgroundColor: FONDO },
-  contenido: { padding: 14, paddingBottom: 135 },
+  contenido: { padding: 14, paddingBottom: 110 },
   contenedor: { flex: 1, backgroundColor: FONDO, padding: 20, justifyContent: 'center' },
 
   logoRedondo: {
@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
     borderWidth: 3, borderColor: ROJO, backgroundColor: '#121218', marginBottom: 10
   },
   logoHeaderCentro: {
-    width: 78, height: 78, borderRadius: 39, borderWidth: 2, borderColor: ROJO
+    width: 82, height: 82, borderRadius: 41, borderWidth: 2, borderColor: ROJO
   },
   logoMini: {
     width: 38, height: 38, borderRadius: 19, borderWidth: 1.5, borderColor: ROJO
@@ -36,21 +36,22 @@ export const styles = StyleSheet.create({
 
   tarjetaPerfilHero: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#1F0A0E', borderWidth: 1.8, borderColor: ROJO,
-    borderRadius: 18, paddingVertical: 12, paddingHorizontal: 12, marginBottom: 10, gap: 8
+    backgroundColor: '#1A070A', borderWidth: 2, borderColor: ROJO,
+    borderRadius: 18, paddingVertical: 10, paddingHorizontal: 10, marginBottom: 10, gap: 8
   },
   avatarClienteBox: {
-    width: 60, height: 60, borderRadius: 30, borderWidth: 2.2, borderColor: ROJO,
-    backgroundColor: '#2B0D12', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+    width: 60, height: 60, borderRadius: 30, borderWidth: 2.5, borderColor: ROJO,
+    backgroundColor: '#290A0F', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
   },
   nombreDoradoHero: {
-    color: DORADO, fontSize: 19, fontWeight: '900', lineHeight: 22
+    color: DORADO, fontSize: 20, fontWeight: '900', lineHeight: 23
   },
   badgePuntosHero: {
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6
+    backgroundColor: '#C80815', borderWidth: 1.5, borderColor: ROJO,
+    borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', minWidth: 68
   },
   numeroPuntosDorado: {
-    color: DORADO, fontSize: 21, fontWeight: '900', lineHeight: 23
+    color: '#FFFFFF', fontSize: 20, fontWeight: '900', lineHeight: 22
   },
 
   cajaInput: {
@@ -86,22 +87,28 @@ export const styles = StyleSheet.create({
 
   bannerHero: {
     width: '100%', height: 195, borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: '#2A1215', marginBottom: 12, backgroundColor: '#050507'
+    borderWidth: 1.5, borderColor: '#3A1216', marginBottom: 12, backgroundColor: '#050507', position: 'relative'
+  },
+  textoBannerEnamora: {
+    position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center',
+    color: '#FFFFFF', fontSize: 24, fontWeight: '900', fontStyle: 'italic',
+    textShadowColor: 'rgba(0,0,0,0.95)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6
   },
   cuadricula3: {
     flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8
   },
   itemCuadricula: {
-    width: '31.5%', backgroundColor: '#15151C', borderWidth: 1.5, borderColor: '#343442',
-    borderRadius: 14, paddingVertical: 12, paddingHorizontal: 4, alignItems: 'center', marginBottom: 4
+    width: '31.5%', backgroundColor: '#131319', borderWidth: 1.5, borderColor: '#383846',
+    borderRadius: 14, paddingVertical: 11, paddingHorizontal: 4, alignItems: 'center', marginBottom: 4
   },
   iconoCuadriculaBox: {
-    width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 4
+    width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginBottom: 4
   },
   textoCuadricula: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   barraInferior: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 66,
-    backgroundColor: '#101015', borderTopWidth: 1, borderTopColor: BORDE,
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
+    bottom: 0, left: 0, right: 0, height: 66, zIndex: 999,
+    backgroundColor: '#0E0E13', borderTopWidth: 1, borderTopColor: BORDE,
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingBottom: 4
   },
   tabInferior: { alignItems: 'center', justifyContent: 'center', flex: 1, paddingVertical: 4 },
