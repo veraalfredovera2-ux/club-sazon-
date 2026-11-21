@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Linking } f
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 
 export const LOGO = require('./20261104_204552_0000.png');
-export const BANNER_COMIDA = require('./banner_hamburguesa.png');
+export const BANNER_COMIDA = require('./banner_hamburguesa-1.png');
 
 export function SiluetaBlanca({ size = 34 }) {
   return (
