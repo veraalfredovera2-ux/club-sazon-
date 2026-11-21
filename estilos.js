@@ -1,35 +1,57 @@
 import { StyleSheet } from 'react-native';
 
 export const ROJO = '#E50914';
-export const ROJO_OSCURO = '#9B060E';
-export const FONDO = '#0B0B0F';
-export const TARJETA = '#16161D';
-export const BORDE = '#262632';
+export const DORADO = '#F5B041';
+export const FONDO = '#08080B';
+export const TARJETA = '#14141A';
+export const BORDE = '#2E2E3A';
 
 export const styles = StyleSheet.create({
   pantallaCompleta: { flex: 1, backgroundColor: FONDO },
-  contenido: { padding: 16, paddingBottom: 92 },
+  contenido: { padding: 14, paddingBottom: 135 },
   contenedor: { flex: 1, backgroundColor: FONDO, padding: 20, justifyContent: 'center' },
 
   logoRedondo: {
-    width: 132, height: 132, borderRadius: 66, alignSelf: 'center',
-    borderWidth: 3, borderColor: ROJO, backgroundColor: '#121218', marginBottom: 14
+    width: 120, height: 120, borderRadius: 60, alignSelf: 'center',
+    borderWidth: 3, borderColor: ROJO, backgroundColor: '#121218', marginBottom: 10
+  },
+  logoHeaderCentro: {
+    width: 78, height: 78, borderRadius: 39, borderWidth: 2, borderColor: ROJO
   },
   logoMini: {
     width: 38, height: 38, borderRadius: 19, borderWidth: 1.5, borderColor: ROJO
   },
 
-  tituloPrincipal: { color: '#FFFFFF', fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 4 },
-  subtitulo: { color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginBottom: 18 },
+  tituloPrincipal: { color: '#FFFFFF', fontSize: 25, fontWeight: '900', textAlign: 'center', marginBottom: 4 },
+  subtitulo: { color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginBottom: 14 },
   bannerPuntosBienvenida: {
     backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 16,
-    padding: 14, alignItems: 'center', marginVertical: 14
+    padding: 14, alignItems: 'center', marginVertical: 12
   },
   pildoraRoja: {
     backgroundColor: ROJO, paddingVertical: 8, paddingHorizontal: 22,
     borderRadius: 12, marginVertical: 6
   },
   textoPildoraRoja: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
+
+  tarjetaPerfilHero: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#1F0A0E', borderWidth: 1.8, borderColor: ROJO,
+    borderRadius: 18, paddingVertical: 12, paddingHorizontal: 12, marginBottom: 10, gap: 8
+  },
+  avatarClienteBox: {
+    width: 60, height: 60, borderRadius: 30, borderWidth: 2.2, borderColor: ROJO,
+    backgroundColor: '#2B0D12', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+  },
+  nombreDoradoHero: {
+    color: DORADO, fontSize: 19, fontWeight: '900', lineHeight: 22
+  },
+  badgePuntosHero: {
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6
+  },
+  numeroPuntosDorado: {
+    color: DORADO, fontSize: 21, fontWeight: '900', lineHeight: 23
+  },
 
   cajaInput: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: TARJETA,
@@ -54,7 +76,7 @@ export const styles = StyleSheet.create({
 
   cabeceraTop: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 8, marginBottom: 10
+    paddingVertical: 4, marginBottom: 8
   },
   insigniaPuntos: {
     backgroundColor: ROJO, paddingVertical: 6, paddingHorizontal: 12,
@@ -63,24 +85,23 @@ export const styles = StyleSheet.create({
   textoInsigniaPuntos: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
 
   bannerHero: {
-    width: '100%', height: 145, borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: BORDE, marginBottom: 14, backgroundColor: '#121218'
+    width: '100%', height: 195, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: '#2A1215', marginBottom: 12, backgroundColor: '#050507'
   },
   cuadricula3: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8
   },
   itemCuadricula: {
-    width: '31%', backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE,
-    borderRadius: 14, paddingVertical: 14, paddingHorizontal: 6, alignItems: 'center', marginBottom: 4
+    width: '31.5%', backgroundColor: '#15151C', borderWidth: 1.5, borderColor: '#343442',
+    borderRadius: 14, paddingVertical: 12, paddingHorizontal: 4, alignItems: 'center', marginBottom: 4
   },
   iconoCuadriculaBox: {
-    width: 44, height: 44, borderRadius: 12, backgroundColor: '#251216',
-    borderWidth: 1, borderColor: '#4A151B', alignItems: 'center', justifyContent: 'center', marginBottom: 8
+    width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 4
   },
-  textoCuadricula: { color: '#F3F4F6', fontSize: 11, fontWeight: '800', textAlign: 'center' },
+  textoCuadricula: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   barraInferior: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 64,
-    backgroundColor: '#121218', borderTopWidth: 1, borderTopColor: BORDE,
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 66,
+    backgroundColor: '#101015', borderTopWidth: 1, borderTopColor: BORDE,
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingBottom: 4
   },
   tabInferior: { alignItems: 'center', justifyContent: 'center', flex: 1, paddingVertical: 4 },
