@@ -1,36 +1,36 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Linking } from 'react-native';
-import { styles, ROJO, TARJETA, BORDE } from './estilos';
+import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 
 export const LOGO = require('./20261104_204552_0000.png');
-export const BANNER_COMIDA = require('./20261104_204552_0000.png');
+export const BANNER_COMIDA = require('./banner_hamburguesa.png');
 
-export function NavegacionSuperior({ regresar, irAInicio, puntos, cantidadCarrito, abrirCarrito }) {
+export function NavegacionSuperior({ regresar, irAInicio, puntos, cantidadCarrito, abrirCarrito, abrirMenuLateral }) {
   return (
     <View style={styles.cabeceraTop}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-        {regresar && (
-          <TouchableOpacity onPress={regresar} style={{ paddingVertical: 6, paddingHorizontal: 8, backgroundColor: TARJETA, borderRadius: 10, borderWidth: 1, borderColor: BORDE }}>
-            <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '900' }}>←</Text>
+      <View style={{ width: 70, alignItems: 'flex-start' }}>
+        {regresar ? (
+          <TouchableOpacity onPress={regresar} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: TARJETA, borderRadius: 10, borderWidth: 1, borderColor: BORDE }}>
+            <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '900' }}>←</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={abrirMenuLateral || irAInicio} style={{ padding: 6 }}>
+            <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>≡</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={irAInicio} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-          <Image source={LOGO} style={styles.logoMini} />
-          <View style={{ flexShrink: 1 }}>
-            <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }} numberOfLines={1}>EL SAZÓN ORIENTAL</Text>
-            <Text style={{ color: ROJO, fontSize: 9, fontWeight: '800' }}>CLUB SAZÓN</Text>
-          </View>
-        </TouchableOpacity>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        {typeof puntos === 'number' && (
-          <View style={[styles.insigniaPuntos, { paddingHorizontal: 8, paddingVertical: 5 }]}>
-            <Text style={[styles.textoInsigniaPuntos, { fontSize: 11 }]}>★ {puntos}</Text>
-          </View>
-        )}
+
+      <TouchableOpacity onPress={irAInicio} style={{ alignItems: 'center' }}>
+        <Image source={LOGO} style={styles.logoHeaderCentro} />
+      </TouchableOpacity>
+
+      <View style={{ width: 70, alignItems: 'flex-end' }}>
         {abrirCarrito && (
-          <TouchableOpacity onPress={abrirCarrito} style={{ backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 10 }}>
-            <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>🛒 {cantidadCarrito || 0}</Text>
+          <TouchableOpacity onPress={abrirCarrito} style={{ padding: 6, position: 'relative' }}>
+            <Text style={{ color: '#FFF', fontSize: 22 }}>🔔</Text>
+            <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: ROJO, borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+              <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '900' }}>{cantidadCarrito || 0}</Text>
+            </View>
           </TouchableOpacity>
         )}
       </View>
@@ -44,15 +44,15 @@ export function BarraInferiorCliente({ vistaActual, cambiarVista }) {
     { id: 'pedidos', icono: '📋', label: 'Pedidos' },
     { id: 'puntos', icono: '★', label: 'Puntos' },
     { id: 'promos', icono: '🏷️', label: 'Promociones' },
-    { id: 'menu', icono: '🍔', label: 'Menú' }
+    { id: 'mas', icono: '•••', label: 'Más' }
   ];
   return (
     <View style={styles.barraInferior}>
       {tabs.map(t => {
-        const activo = vistaActual === t.id;
+        const activo = vistaActual === t.id || (t.id === 'mas' && ['cuenta', 'canjes', 'ofertas', 'carrito', 'mas'].includes(vistaActual));
         return (
           <TouchableOpacity key={t.id} style={styles.tabInferior} onPress={() => cambiarVista(t.id)}>
-            <Text style={{ fontSize: 16, color: activo ? ROJO : '#9CA3AF' }}>{t.icono}</Text>
+            <Text style={{ fontSize: 16, color: activo ? ROJO : '#9CA3AF', fontWeight: '900' }}>{t.icono}</Text>
             <Text style={[styles.textoTabInferior, activo && styles.textoTabInferiorAct]}>{t.label}</Text>
           </TouchableOpacity>
         );
@@ -63,14 +63,14 @@ export function BarraInferiorCliente({ vistaActual, cambiarVista }) {
 
 export function PantallaBienvenida({ irALogin, irARegistro }) {
   return (
-    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ padding: 22, paddingTop: 38, justifyContent: 'space-between', minHeight: '100%' }}>
+    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ padding: 20, paddingTop: 26, justifyContent: 'space-between', minHeight: '100%' }}>
       <View>
         <Image source={LOGO} style={styles.logoRedondo} />
         <Text style={styles.tituloPrincipal}>EL SAZÓN ORIENTAL</Text>
         <Text style={[styles.subtitulo, { fontStyle: 'italic', color: '#E5E7EB', fontSize: 15 }]}>Sabor que te hace volver</Text>
 
         <View style={styles.bannerHero}>
-          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
 
         <View style={styles.bannerPuntosBienvenida}>
@@ -82,7 +82,7 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
         </View>
       </View>
 
-      <View style={{ marginTop: 10 }}>
+      <View style={{ marginTop: 8 }}>
         <TouchableOpacity style={styles.boton} onPress={irALogin}>
           <Text style={styles.textoBoton}>Comenzar</Text>
         </TouchableOpacity>
@@ -289,5 +289,4 @@ export function PantallaRecuperar({ irALogin }) {
       </TouchableOpacity>
     </ScrollView>
   );
-            }
-            
+}
