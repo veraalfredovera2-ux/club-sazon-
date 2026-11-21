@@ -91,9 +91,12 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
 
         <View style={{ width: '100%', height: 245, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
           <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          {Platform.OS === 'web' && (
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 20%, rgba(7,7,9,0) 75%, #070709 100%)', pointerEvents: 'none' }} />
+          )}
           <Text
             style={{
-              position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center',
+              position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center',
               color: '#FFFFFF', fontSize: 22, fontStyle: 'italic', fontWeight: '600',
               fontFamily: fuenteElegante, letterSpacing: 0.6,
               textShadowColor: 'rgba(0,0,0,0.98)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10
@@ -319,4 +322,5 @@ export function PantallaRecuperar({ irALogin }) {
       </TouchableOpacity>
     </ScrollView>
   );
-            }
+        }
+            
