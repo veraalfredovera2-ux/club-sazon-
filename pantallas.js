@@ -2,13 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Linking } from 'react-native';
 import { styles, ROJO, TARJETA, BORDE } from './estilos';
 
-export const LOGO = {
-  uri: 'https://githubusercontent.com'
-};
-
-export const BANNER_COMIDA = {
-  uri: 'https://githubusercontent.com'
-};
+export const LOGO = require('./20261104_204552_0000.png');
+export const BANNER_COMIDA = require('./20261104_204552_0000.png');
 
 export function NavegacionSuperior({ regresar, irAInicio, puntos, cantidadCarrito, abrirCarrito }) {
   return (
@@ -294,5 +289,5 @@ export function PantallaRecuperar({ irALogin }) {
       </TouchableOpacity>
     </ScrollView>
   );
-        }
+            }
             
