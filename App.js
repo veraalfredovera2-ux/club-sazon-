@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Platform } from 'react-native';
+import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar, SiluetaBlanca, LOGO, BANNER_COMIDA } from './pantallas';
@@ -84,18 +84,19 @@ export default function App() {
   const [catalogo, setCatalogo] = useState([]);
   const [promos, setPromos] = useState([]);
   const [recompensas, setRecompensas] = useState([]);
+  const [promoDetalle, setPromoDetalle] = useState(null);
+  const [verHistorialPts, setVerHistorialPts] = useState(false);
   const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titularLimpio: 'Club Sazón', local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
   const [datosCli, setDatosCli] = useState({ puntos: 0, historial: [], pedidos: [], canjes: [] });
   const [pedidosAdmin, setPedidosAdmin] = useState([]);
   const [carrito, setCarrito] = useState([]);
-  const [tipoEntrega, setTipoEntrega] = useState('RECOJO EN LOCAL');
+  const [tipoEntrega, setTipoEntrega] = useState('DELIVERY');
   const [metodoPago, setMetodoPago] = useState('Yape');
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
   const [gpsCliente, setGpsCliente] = useState(null);
   const [notas, setNotas] = useState('');
   const [cargando, setCargando] = useState(false);
-
   useEffect(() => {
     AsyncStorage.getItem('sesion_club_sazon').then(s => {
       if (s) {
@@ -127,6 +128,7 @@ export default function App() {
       mostrarAviso('Foto actualizada', 'Tu foto de perfil se guardó correctamente.');
     } catch (e) { mostrarAviso('Error al subir', 'Intenta con otra imagen más ligera.'); }
   }
+
   async function cargarBase() {
     try {
       const [cat, pr, rec, cfg] = await Promise.all([obtenerCatalogo(true), obtenerPromociones(true), obtenerRecompensas(true), obtenerConfigPagos()]);
@@ -204,21 +206,27 @@ export default function App() {
     });
   }
 
+  function eliminarDelCarrito(idx) {
+    setCarrito(prev => prev.filter((_, i) => i !== idx));
+  }
+
   function obtenerUbicacionCliente() {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
       return mostrarAviso('GPS no disponible', 'Ingresa tu distrito y dirección manualmente.');
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setGpsCliente({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        mostrarAviso('Ubicación lista', 'Calculamos el costo exacto de tu delivery.');
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setGpsCliente({ lat, lng });
+        if (!direccion.trim()) setDireccion(`Ubicación GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+        mostrarAviso('Ubicación actual capturada', 'Tu dirección GPS se usará para calcular el delivery y guiar al repartidor.');
       },
-      () => mostrarAviso('Permiso GPS', 'Activa la ubicación en tu navegador para calcular el delivery.'),
+      () => mostrarAviso('Permiso GPS', 'Activa la ubicación en tu navegador para detectar tu dirección actual.'),
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
-
-  const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
+    const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), gpsCliente.lat, gpsCliente.lng)
     : 0;
@@ -229,18 +237,18 @@ export default function App() {
 
   async function enviarPedido() {
     if (!carrito.length) return mostrarAviso('Carrito vacío', 'Agrega productos antes de pedir.');
-    if (tipoEntrega === 'DELIVERY' && (!distrito.trim() || !direccion.trim())) {
-      return mostrarAviso('Falta dirección', 'Ingresa tu distrito y dirección de entrega.');
+    if (tipoEntrega === 'DELIVERY' && !direccion.trim() && !gpsCliente) {
+      return mostrarAviso('Falta dirección', 'Usa tu ubicación GPS actual o escribe tu dirección de entrega.');
     }
     setCargando(true);
     try {
       const linkMaps = gpsCliente ? ` | https://google.com{gpsCliente.lat},${gpsCliente.lng}` : '';
-      const dirCompleta = tipoEntrega === 'DELIVERY' ? `${direccion.trim()}${linkMaps}` : 'Recojo en local';
+      const dirCompleta = tipoEntrega === 'DELIVERY' ? `${direccion.trim() || 'Ubicación GPS'}${linkMaps}` : 'Recojo en local';
       await crearNuevoPedido({
         cliente_id: usuario.id,
         tipo_entrega: tipoEntrega,
         metodo_pago: metodoPago,
-        distrito: tipoEntrega === 'DELIVERY' ? distrito.trim() : 'Local',
+        distrito: tipoEntrega === 'DELIVERY' ? (distrito.trim() || 'Delivery GPS') : 'Local',
         direccion: dirCompleta,
         subtotal,
         costo_delivery: costoDelivery,
@@ -260,7 +268,7 @@ export default function App() {
     try {
       const pts = await confirmarRecepcionYDarPuntos(ped);
       await cargarTodoUsuario();
-      mostrarAviso('¡Gracias por confirmar!', pts > 0 ? `Sumaste +${pts} puntos a tu cuenta.` : 'Recepción confirmada.');
+      mostrarAviso('¡Pedido recibido!', pts > 0 ? `Sumaste +${pts} puntos. Ya se habilitó el cierre al repartidor.` : 'Recepción confirmada.');
     } catch (e) { mostrarAviso('Aviso', e.message); } finally { setCargando(false); }
   }
 
@@ -272,7 +280,8 @@ export default function App() {
       mostrarAviso('¡Canje solicitado!', `Has canjeado: ${rec.titulo}`);
     } catch (e) { mostrarAviso('No disponible', e.message); } finally { setCargando(false); }
   }
-    if (!usuario) {
+
+  if (!usuario) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -334,10 +343,35 @@ export default function App() {
 
   const cantTotalCarrito = carrito.reduce((a, x) => a + x.cantidad, 0);
   const pedidosActivos = (datosCli.pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
+  const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
 
   return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <VentanaAviso />
+      <Modal transparent animationType="fade" visible={Boolean(promoDetalle)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          {promoDetalle && (
+            <View style={{ width: '100%', maxWidth: 380, backgroundColor: TARJETA, borderWidth: 1.5, borderColor: ROJO, borderRadius: 18, overflow: 'hidden' }}>
+              <Image
+                source={promoDetalle.imagen_url && promoDetalle.imagen_url.includes('http') ? { uri: promoDetalle.imagen_url } : BANNER_COMIDA}
+                style={{ width: '100%', height: 190 }}
+                resizeMode="cover"
+              />
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: '#FFF', fontSize: 19, fontWeight: '900', marginBottom: 6 }}>{promoDetalle.titulo}</Text>
+                <Text style={{ color: '#D1D5DB', fontSize: 13, marginBottom: 12 }}>{promoDetalle.descripcion || 'Especialidad preparada al momento en El Sazón Oriental.'}</Text>
+                <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900', marginBottom: 14 }}>S/ {Number(promoDetalle.precio).toFixed(2)}</Text>
+                <TouchableOpacity style={styles.boton} onPress={() => { agregarAlCarrito(promoDetalle, true); setPromoDetalle(null); }}>
+                  <Text style={styles.textoBoton}>Agregar al carrito</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setPromoDetalle(null)}>
+                  <Text style={styles.textoBoton}>Cerrar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </Modal>
       <ScrollView contentContainerStyle={styles.contenido}>
         <NavegacionSuperior
           regresar={vista !== 'inicio' ? () => setVista('inicio') : null}
@@ -383,9 +417,14 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.bannerHero} onPress={() => setVista('menu')}>
+            <TouchableOpacity style={{ width: '100%', height: 195, position: 'relative', marginBottom: 10, overflow: 'hidden' }} onPress={() => setVista('menu')}>
               <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              <Text style={styles.textoBannerEnamora}>¡Sabor que enamora!</Text>
+              {Platform.OS === 'web' && (
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 18%, rgba(7,7,9,0) 78%, #070709 100%)', pointerEvents: 'none' }} />
+              )}
+              <Text style={{ position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center', color: '#FFFFFF', fontSize: 21, fontStyle: 'italic', fontWeight: '600', fontFamily: fuenteElegante }}>
+                ¡Sabor que enamora!
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.cuadricula3}>
@@ -408,56 +447,7 @@ export default function App() {
           </View>
         )}
 
-        {vista === 'notificaciones' && (
-          <View>
-            <Text style={styles.titulo}>NOTIFICACIONES DE PEDIDOS</Text>
-            {!(datosCli.pedidos || []).length ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>No tienes notificaciones recientes.</Text>
-              </View>
-            ) : (
-              (datosCli.pedidos || []).slice(0, 10).map(p => (
-                <TouchableOpacity key={p.id} style={styles.tarjetaPedido} onPress={() => setVista('pedidos')}>
-                  <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
-                  <Text style={[styles.descripcionPedido, { color: DORADO, fontWeight: '800', marginTop: 4 }]}>Estado: {p.estado}</Text>
-                  {p.rider_nombre && <Text style={styles.descripcionPedido}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-        )}
-
-        {vista === 'mas' && (
-          <View>
-            <Text style={styles.titulo}>MÁS OPCIONES</Text>
-            <View style={styles.cuadricula3}>
-              {[
-                { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' },
-                { id: 'canjes', tipo: 'canjes', titulo: 'Canjes' },
-                { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas' },
-                { id: 'carrito', tipo: 'carrito', titulo: `Carrito (${cantTotalCarrito})` },
-                { id: 'foto', tipo: 'foto', titulo: 'Subir foto' },
-                { id: 'salir', tipo: 'salir', titulo: 'Cerrar sesión' }
-              ].map(op => (
-                <TouchableOpacity
-                  key={op.id}
-                  style={styles.itemCuadricula}
-                  onPress={() => {
-                    if (op.id === 'salir') return cerrarSesion();
-                    if (op.id === 'foto') return cambiarFotoPerfil();
-                    setVista(op.id);
-                  }}
-                >
-                  <View style={styles.iconoCuadriculaBox}>
-                    <IconoRojo tipo={op.tipo} />
-                  </View>
-                  <Text style={styles.textoCuadricula}>{op.titulo}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-                    {vista === 'menu' && (
+        {vista === 'menu' && (
           <View>
             <Text style={styles.titulo}>MENÚ DE PRODUCTOS</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
@@ -495,32 +485,44 @@ export default function App() {
 
         {(vista === 'promos' || vista === 'ofertas') && (
           <View>
-            <Text style={styles.titulo}>{vista === 'promos' ? 'PROMOCIONES ESPECIALES' : 'OFERTAS DEL DÍA'}</Text>
+            <Text style={[styles.titulo, { fontSize: 20 }]}>{vista === 'promos' ? 'Promociones' : 'Ofertas'}</Text>
             {promos.filter(pr => vista === 'promos' ? pr.tipo !== 'oferta' : pr.tipo === 'oferta').length === 0 ? (
               <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>Pronto publicaremos nuevas promociones aquí.</Text>
+                <Text style={styles.textoVacio}>
+                  {vista === 'promos' ? 'Pronto publicaremos nuevas promociones aquí.' : 'Pronto publicaremos nuevas ofertas del día aquí.'}
+                </Text>
               </View>
             ) : (
               promos
                 .filter(pr => vista === 'promos' ? pr.tipo !== 'oferta' : pr.tipo === 'oferta')
                 .map(pr => (
-                  <View key={pr.id} style={styles.tarjetaPromo}>
+                  <View key={pr.id} style={[styles.tarjetaPromo, { height: 215, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
                     <Image
                       source={pr.imagen_url && pr.imagen_url.includes('http') ? { uri: pr.imagen_url } : BANNER_COMIDA}
-                      style={{ width: '100%', height: 145 }}
+                      style={{ width: '100%', height: '100%' }}
                       resizeMode="cover"
                     />
-                    <View style={styles.etiquetaPromo}>
-                      <Text style={styles.textoEtiquetaPromo}>{pr.tipo === 'oferta' ? 'OFERTA' : 'PROMOCIÓN'}</Text>
+                    {Platform.OS === 'web' && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(7,7,9,0.5) 48%, rgba(7,7,9,0.96) 100%)', pointerEvents: 'none' }} />
+                    )}
+                    <View style={[styles.etiquetaPromo, { top: 12, left: 12, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12 }]}>
+                      <Text style={[styles.textoEtiquetaPromo, { fontSize: 11 }]}>{vista === 'promos' ? 'PROMOCIÓN' : 'OFERTA'}</Text>
                     </View>
-                    <View style={{ padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ position: 'absolute', bottom: 12, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={styles.nombreProducto}>{pr.titulo}</Text>
-                        {!!pr.descripcion && <Text style={styles.descripcionPedido}>{pr.descripcion}</Text>}
-                        <Text style={[styles.precioProducto, { color: ROJO, fontSize: 16 }]}>S/ {Number(pr.precio).toFixed(2)}</Text>
+                        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginBottom: 2 }} numberOfLines={1}>{pr.titulo}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                          <Text style={{ color: ROJO, fontSize: 21, fontWeight: '900' }}>S/ {Number(pr.precio).toFixed(2)}</Text>
+                          {!!pr.precio_anterior && (
+                            <Text style={{ color: '#9CA3AF', fontSize: 13, textDecorationLine: 'line-through' }}>S/ {Number(pr.precio_anterior).toFixed(2)}</Text>
+                          )}
+                        </View>
                       </View>
-                      <TouchableOpacity style={styles.botonAgregar} onPress={() => agregarAlCarrito(pr, true)}>
-                        <Text style={styles.textoAgregar}>Agregar +</Text>
+                      <TouchableOpacity
+                        style={{ backgroundColor: ROJO, paddingVertical: 9, paddingHorizontal: 18, borderRadius: 20 }}
+                        onPress={() => setPromoDetalle(pr)}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>Ver más</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -528,61 +530,96 @@ export default function App() {
             )}
           </View>
         )}
-
         {(vista === 'puntos' || vista === 'canjes') && (
           <View>
-            <View style={[styles.tarjetaSaldo, { borderColor: ROJO, backgroundColor: '#1E0D11' }]}>
-              <Text style={styles.etiquetaSaldo}>★ TUS PUNTOS ACUMULADOS</Text>
-              <Text style={[styles.numeroSaldo, { color: DORADO }]}>{datosCli.puntos} pts</Text>
-              <Text style={{ color: '#F3F4F6', fontSize: 12, fontWeight: '700' }}>¡Sigue acumulando puntos con cada pedido!</Text>
+            <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
+              {Platform.OS === 'web' && (
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #E50914 0%, #7A030B 60%, #2B0407 100%)', pointerEvents: 'none' }} />
+              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={{ fontSize: 34, color: DORADO }}>★</Text>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ color: '#F3F4F6', fontSize: 13, fontWeight: '800' }}>Tus puntos</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', lineHeight: 40 }}>{datosCli.puntos} pts</Text>
+                </View>
+              </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginTop: 8 }}>¡Sigue acumulando puntos!</Text>
             </View>
 
             <View style={styles.tarjetaPedido}>
-              <Text style={[styles.nombreProducto, { marginBottom: 6 }]}>¿Cómo ganar puntos?</Text>
-              <Text style={styles.descripcionPedido}>• 10 puntos por cada S/ 1.00 en compras confirmadas.</Text>
-              <Text style={styles.descripcionPedido}>• 100 puntos de bienvenida al registrarte.</Text>
+              <Text style={[styles.nombreProducto, { fontSize: 15, marginBottom: 8 }]}>Cómo ganar puntos</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 4 }]}>🔴 10 puntos por cada S/ 1 en compras elegibles.</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 12 }]}>🔴 100 puntos de bienvenida (una sola vez).</Text>
+              <TouchableOpacity style={[styles.boton, { marginTop: 0, paddingVertical: 11 }]} onPress={() => setVerHistorialPts(!verHistorialPts)}>
+                <Text style={styles.textoBoton}>{verHistorialPts ? 'Ocultar historial de puntos' : 'Ver historial de puntos'}</Text>
+              </TouchableOpacity>
+              {verHistorialPts && (
+                <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: BORDE, paddingTop: 8 }}>
+                  {(datosCli.historial || []).length === 0 ? (
+                    <Text style={styles.descripcionPedido}>Aún no tienes movimientos registrados.</Text>
+                  ) : (
+                    (datosCli.historial || []).slice(0, 10).map((h, i) => (
+                      <View key={h.id || i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1E1E28' }}>
+                        <Text style={[styles.descripcionPedido, { color: '#FFF', flex: 1 }]}>{h.descripcion}</Text>
+                        <Text style={{ color: Number(h.cantidad) >= 0 ? '#22C55E' : ROJO, fontWeight: '900' }}>
+                          {Number(h.cantidad) >= 0 ? `+${h.cantidad}` : h.cantidad} pts
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
             </View>
 
-            <Text style={styles.titulo}>CANJEA TUS PUNTOS</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 }}>
+              <Text style={[styles.titulo, { marginVertical: 0 }]}>Canjea tus puntos</Text>
+              <Text style={{ color: ROJO, fontSize: 12, fontWeight: '800' }}>{recompensas.length} premios</Text>
+            </View>
+
             {recompensas.length === 0 ? (
               <View style={styles.tarjetaVacia}>
                 <Text style={styles.textoVacio}>No hay premios disponibles por ahora.</Text>
               </View>
             ) : (
-              recompensas.map(rec => (
-                <View key={rec.id} style={styles.producto}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.nombreProducto}>{rec.titulo}</Text>
-                    {!!rec.descripcion && <Text style={styles.descripcionPedido}>{rec.descripcion}</Text>}
-                    <Text style={[styles.precioProducto, { color: DORADO }]}>{rec.puntos_requeridos} pts • Stock: {rec.stock ?? 5}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.botonAgregar, datosCli.puntos < Number(rec.puntos_requeridos) && { backgroundColor: '#2A2A35' }]}
-                    onPress={() => clienteCanjea(rec)}
-                    disabled={cargando}
-                  >
-                    <Text style={styles.textoAgregar}>Canjear</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
-            )}
-
-            <Text style={styles.titulo}>HISTORIAL DE PUNTOS</Text>
-            {(datosCli.historial || []).slice(0, 10).map((h, i) => (
-              <View key={h.id || i} style={styles.tarjetaPedido}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={[styles.descripcionPedido, { color: '#FFF', flex: 1 }]}>{h.descripcion}</Text>
-                  <Text style={{ color: Number(h.cantidad) >= 0 ? DORADO : ROJO, fontWeight: '900' }}>
-                    {Number(h.cantidad) >= 0 ? `+${h.cantidad}` : h.cantidad} pts
-                  </Text>
-                </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
+                {recompensas.map(rec => {
+                  const req = Number(rec.puntos_requeridos || 0);
+                  const alcanza = Number(datosCli.puntos || 0) >= req;
+                  const faltan = Math.max(0, req - Number(datosCli.puntos || 0));
+                  return (
+                    <View key={rec.id} style={{ width: '48%', backgroundColor: TARJETA, borderWidth: 1.5, borderColor: alcanza ? '#16A34A' : BORDE, borderRadius: 16, overflow: 'hidden', marginBottom: 4 }}>
+                      <Image
+                        source={rec.imagen_url && rec.imagen_url.includes('http') ? { uri: rec.imagen_url } : LOGO}
+                        style={{ width: '100%', height: 105, backgroundColor: '#0A0A0E' }}
+                        resizeMode="cover"
+                      />
+                      <View style={{ padding: 10 }}>
+                        <Text style={[styles.nombreProducto, { fontSize: 14 }]} numberOfLines={1}>{rec.titulo}</Text>
+                        <Text style={{ color: DORADO, fontSize: 13, fontWeight: '900', marginTop: 2 }}>{req} pts</Text>
+                        {alcanza ? (
+                          <TouchableOpacity
+                            style={{ backgroundColor: '#16A34A', paddingVertical: 8, borderRadius: 10, alignItems: 'center', marginTop: 8 }}
+                            onPress={() => clienteCanjea(rec)}
+                            disabled={cargando}
+                          >
+                            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>✅ Canjear ahora</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={{ backgroundColor: '#2A0D11', borderWidth: 1, borderColor: ROJO, paddingVertical: 7, paddingHorizontal: 6, borderRadius: 10, alignItems: 'center', marginTop: 8 }}>
+                            <Text style={{ color: ROJO, fontSize: 11, fontWeight: '900', textAlign: 'center' }}>Te faltan {faltan} pts</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
-            ))}
+            )}
           </View>
         )}
-                      {vista === 'carrito' && (
+                                      {vista === 'carrito' && (
           <View>
-            <Text style={styles.titulo}>TU CARRITO Y PAGO</Text>
+            <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
               <View style={styles.tarjetaVacia}>
                 <Text style={styles.textoVacio}>Tu carrito está vacío. Agrega platos desde el Menú.</Text>
@@ -593,26 +630,33 @@ export default function App() {
             ) : (
               <View>
                 {carrito.map((item, idx) => (
-                  <View key={`${item.id}-${idx}`} style={styles.producto}>
+                  <View key={`${item.id}-${idx}`} style={[styles.producto, { padding: 12 }]}>
+                    <Image
+                      source={item.imagen_url && item.imagen_url.includes('http') ? { uri: item.imagen_url } : LOGO}
+                      style={{ width: 66, height: 66, borderRadius: 12, backgroundColor: '#1F1F28' }}
+                    />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.nombreProducto}>{item.nombre}</Text>
-                      <Text style={styles.precioProducto}>S/ {(Number(item.precio) * item.cantidad).toFixed(2)}</Text>
+                      <Text style={[styles.precioProducto, { color: '#D1D5DB', marginBottom: 6 }]}>S/ {(Number(item.precio) * item.cantidad).toFixed(2)}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, -1)}>
+                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>{item.cantidad}</Text>
+                        <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, 1)}>
+                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>+</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#252530', paddingHorizontal: 10 }]} onPress={() => cambiarCantidad(idx, -1)}>
-                        <Text style={styles.textoAgregar}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>{item.cantidad}</Text>
-                      <TouchableOpacity style={[styles.botonAgregar, { paddingHorizontal: 10 }]} onPress={() => cambiarCantidad(idx, 1)}>
-                        <Text style={styles.textoAgregar}>+</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity onPress={() => eliminarDelCarrito(idx)} style={{ padding: 8 }}>
+                      <Text style={{ fontSize: 18, color: ROJO }}>🗑️</Text>
+                    </TouchableOpacity>
                   </View>
                 ))}
 
-                <Text style={styles.titulo}>TIPO DE ENTREGA</Text>
+                <Text style={styles.titulo}>Entrega y ubicación</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                  {['RECOJO EN LOCAL', 'DELIVERY'].map(tipo => (
+                  {['DELIVERY', 'RECOJO EN LOCAL'].map(tipo => (
                     <TouchableOpacity
                       key={tipo}
                       style={[styles.opcionEntrega, tipoEntrega === tipo && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]}
@@ -625,57 +669,66 @@ export default function App() {
 
                 {tipoEntrega === 'DELIVERY' && (
                   <View style={styles.tarjetaPedido}>
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 10, paddingVertical: 10 }]} onPress={obtenerUbicacionCliente}>
-                      <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN GPS (CALCULAR ENVÍO)</Text>
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginBottom: 10, paddingVertical: 11 }]} onPress={obtenerUbicacionCliente}>
+                      <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL (GPS)</Text>
                     </TouchableOpacity>
                     <TextInput style={styles.campo} placeholder="Distrito (ej. San Borja, Surquillo...)" placeholderTextColor="#6B7280" value={distrito} onChangeText={setDistrito} />
-                    <TextInput style={styles.campo} placeholder="Dirección exacta y referencia" placeholderTextColor="#6B7280" value={direccion} onChangeText={setDireccion} />
-                    <Text style={{ color: ROJO, fontWeight: '800', fontSize: 12 }}>
+                    <TextInput style={styles.campo} placeholder="Dirección exacta o referencia" placeholderTextColor="#6B7280" value={direccion} onChangeText={setDireccion} />
+                    <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>
                       Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}
                     </Text>
                   </View>
                 )}
 
-                <Text style={styles.titulo}>MÉTODO DE PAGO</Text>
-                {['Yape', 'Plin', 'Efectivo'].map(mp => (
-                  <TouchableOpacity
-                    key={mp}
-                    style={[styles.opcionEntrega, metodoPago === mp && styles.opcionEntregaActiva, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
-                    onPress={() => setMetodoPago(mp)}
-                  >
-                    <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 14 }}>{mp === 'Yape' ? '🟣 Yape' : mp === 'Plin' ? '🔵 Plin' : '💵 Efectivo'}</Text>
-                    <Text style={{ color: metodoPago === mp ? ROJO : '#6B7280', fontWeight: '900' }}>{metodoPago === mp ? '●' : '○'}</Text>
-                  </TouchableOpacity>
-                ))}
+                <Text style={styles.titulo}>Método de pago</Text>
+                <View style={styles.tarjetaPedido}>
+                  {[
+                    { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
+                    { id: 'Plin', bg: '#00B2E3', tag: 'plin', label: 'Plin' },
+                    { id: 'Efectivo', bg: '#0D9488', tag: '💵', label: 'Efectivo' }
+                  ].map(mp => {
+                    const sel = metodoPago === mp.id;
+                    return (
+                      <TouchableOpacity
+                        key={mp.id}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#22222C', gap: 12 }}
+                        onPress={() => setMetodoPago(mp.id)}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: sel ? ROJO : '#6B7280', alignItems: 'center', justifyContent: 'center' }}>
+                          {sel && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: ROJO }} />}
+                        </View>
+                        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: mp.bg, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{mp.tag}</Text>
+                        </View>
+                        <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>{mp.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
 
-                {(metodoPago === 'Yape' || metodoPago === 'Plin') && (
-                  <View style={styles.tarjetaPedido}>
-                    <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12, marginBottom: 4 }}>Titular: {cfgPagos.titularLimpio || 'Club Sazón'}</Text>
-                    {!!(metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin) && (
-                      <Image source={{ uri: metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin }} style={{ width: 150, height: 150, alignSelf: 'center', borderRadius: 10, marginVertical: 6 }} />
-                    )}
-                    <Text style={styles.descripcionPedido}>Realiza el pago y envía tu pedido para confirmarlo al instante.</Text>
-                  </View>
-                )}
+                  {(metodoPago === 'Yape' || metodoPago === 'Plin') && (
+                    <View style={{ marginTop: 10, alignItems: 'center' }}>
+                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12, marginBottom: 4 }}>Titular: {cfgPagos.titularLimpio || 'Club Sazón'}</Text>
+                      {!!(metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin) && (
+                        <Image source={{ uri: metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin }} style={{ width: 150, height: 150, borderRadius: 10, marginVertical: 6 }} />
+                      )}
+                    </View>
+                  )}
+                </View>
 
                 <TextInput style={styles.campo} placeholder="Notas adicionales (sin ají, cubiertos, etc.)" placeholderTextColor="#6B7280" value={notas} onChangeText={setNotas} />
 
                 <View style={styles.tarjetaPedido}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={styles.descripcionPedido}>Subtotal</Text>
-                    <Text style={{ color: '#FFF', fontWeight: '800' }}>S/ {subtotal.toFixed(2)}</Text>
-                  </View>
                   {tipoEntrega === 'DELIVERY' && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={styles.descripcionPedido}>Delivery</Text>
-                      <Text style={{ color: '#FFF', fontWeight: '800' }}>S/ {costoDelivery.toFixed(2)}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <Text style={styles.descripcionPedido}>Subtotal + Delivery</Text>
+                      <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>S/ {subtotal.toFixed(2)} + S/ {costoDelivery.toFixed(2)}</Text>
                     </View>
                   )}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: BORDE, paddingTop: 8, marginTop: 4 }}>
-                    <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '900' }}>Total</Text>
-                    <Text style={{ color: ROJO, fontSize: 18, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900' }}>Total</Text>
+                    <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
                   </View>
-                  <TouchableOpacity style={[styles.boton, { marginTop: 12 }]} onPress={enviarPedido} disabled={cargando}>
+                  <TouchableOpacity style={[styles.boton, { marginTop: 0 }]} onPress={enviarPedido} disabled={cargando}>
                     <Text style={styles.textoBoton}>{cargando ? 'Enviando pedido...' : 'Realizar pedido'}</Text>
                   </TouchableOpacity>
                 </View>
@@ -683,7 +736,7 @@ export default function App() {
             )}
           </View>
         )}
-                          {vista === 'pedidos' && (
+                                {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -695,7 +748,9 @@ export default function App() {
                 <View key={p.id} style={styles.tarjetaPedido}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
                   <View style={styles.estadoPedido}>
-                    <Text style={styles.textoEstado}>{p.estado}</Text>
+                    <Text style={styles.textoEstado}>
+                      {p.recibido_cliente && p.estado !== 'Completado' ? 'Recibido por ti • Esperando cierre del repartidor' : p.estado}
+                    </Text>
                   </View>
                   {(p.pedido_detalles || []).map(d => (
                     <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>
@@ -704,12 +759,61 @@ export default function App() {
                   <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
                   {p.estado === 'Confirmado por local' && !p.recibido_cliente && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>YA RECIBÍ MI PEDIDO (SUMAR PUNTOS)</Text>
+                      <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
                     </TouchableOpacity>
                   )}
                 </View>
               ))
             )}
+          </View>
+        )}
+
+        {vista === 'notificaciones' && (
+          <View>
+            <Text style={styles.titulo}>NOTIFICACIONES</Text>
+            {!(datosCli.pedidos || []).length ? (
+              <View style={styles.tarjetaVacia}>
+                <Text style={styles.textoVacio}>No tienes notificaciones recientes.</Text>
+              </View>
+            ) : (
+              (datosCli.pedidos || []).slice(0, 10).map(p => (
+                <TouchableOpacity key={p.id} style={styles.tarjetaPedido} onPress={() => setVista('pedidos')}>
+                  <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
+                  <Text style={[styles.descripcionPedido, { color: DORADO, fontWeight: '800', marginTop: 4 }]}>Estado: {p.estado}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
+
+        {vista === 'mas' && (
+          <View>
+            <Text style={styles.titulo}>MÁS OPCIONES</Text>
+            <View style={styles.cuadricula3}>
+              {[
+                { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' },
+                { id: 'canjes', tipo: 'canjes', titulo: 'Canjes' },
+                { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas' },
+                { id: 'carrito', tipo: 'carrito', titulo: `Carrito (${cantTotalCarrito})` },
+                { id: 'foto', tipo: 'foto', titulo: 'Subir foto' },
+                { id: 'salir', tipo: 'salir', titulo: 'Cerrar sesión' }
+              ].map(op => (
+                <TouchableOpacity
+                  key={op.id}
+                  style={styles.itemCuadricula}
+                  onPress={() => {
+                    if (op.id === 'salir') return cerrarSesion();
+                    if (op.id === 'foto') return cambiarFotoPerfil();
+                    setVista(op.id);
+                  }}
+                >
+                  <View style={styles.iconoCuadriculaBox}>
+                    <IconoRojo tipo={op.tipo} />
+                  </View>
+                  <Text style={styles.textoCuadricula}>{op.titulo}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
 
@@ -740,4 +844,5 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-        }
+                                           }
+          
