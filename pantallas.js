@@ -79,44 +79,42 @@ export function BarraInferiorCliente({ vistaActual, cambiarVista }) {
 export function PantallaBienvenida({ irALogin, irARegistro }) {
   const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
   return (
-    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ paddingTop: 12, paddingBottom: 18, justifyContent: 'space-between', minHeight: '100%' }}>
-      <View>
-        <View style={{ paddingHorizontal: 20 }}>
-          <Image source={LOGO} style={[styles.logoRedondo, { width: 112, height: 112, borderRadius: 56, marginBottom: 6 }]} />
-          <Text style={[styles.tituloPrincipal, { fontSize: 23 }]}>EL SAZÓN ORIENTAL</Text>
-          <Text style={{ color: '#F3F4F6', fontSize: 16, fontStyle: 'italic', fontFamily: fuenteElegante, textAlign: 'center', marginBottom: 2 }}>
-            Sabor que te hace volver
-          </Text>
-        </View>
+    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ paddingTop: 12, paddingBottom: 22 }}>
+      <View style={{ paddingHorizontal: 20 }}>
+        <Image source={LOGO} style={[styles.logoRedondo, { width: 108, height: 108, borderRadius: 54, marginBottom: 6 }]} />
+        <Text style={[styles.tituloPrincipal, { fontSize: 22 }]}>EL SAZÓN ORIENTAL</Text>
+        <Text style={{ color: '#F3F4F6', fontSize: 16, fontStyle: 'italic', fontFamily: fuenteElegante, textAlign: 'center', marginBottom: 4 }}>
+          Sabor que te hace volver
+        </Text>
+      </View>
 
-        <View style={{ width: '100%', height: 245, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
-          <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-          {Platform.OS === 'web' && (
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 20%, rgba(7,7,9,0) 75%, #070709 100%)', pointerEvents: 'none' }} />
-          )}
-          <Text
-            style={{
-              position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center',
-              color: '#FFFFFF', fontSize: 22, fontStyle: 'italic', fontWeight: '600',
-              fontFamily: fuenteElegante, letterSpacing: 0.6,
-              textShadowColor: 'rgba(0,0,0,0.98)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10
-            }}
-          >
-            ¡Sabor que enamora!
-          </Text>
-        </View>
+      <View style={{ width: '100%', height: 290, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
+        <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+        {Platform.OS === 'web' && (
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(7,7,9,0) 48%, #070709 98%), linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 18%, rgba(7,7,9,0) 80%, #070709 100%)', pointerEvents: 'none' }} />
+        )}
+        <Text
+          style={{
+            position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center',
+            color: '#FFFFFF', fontSize: 22, fontStyle: 'italic', fontWeight: '600',
+            fontFamily: fuenteElegante, letterSpacing: 0.6,
+            textShadowColor: 'rgba(0,0,0,0.98)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10
+          }}
+        >
+          ¡Sabor que enamora!
+        </Text>
+      </View>
 
-        <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 10, paddingHorizontal: 20 }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>¡Regístrate y recibe</Text>
-          <View style={[styles.pildoraRoja, { borderRadius: 14, paddingVertical: 6, paddingHorizontal: 26, marginVertical: 4 }]}>
-            <Text style={[styles.textoPildoraRoja, { fontSize: 21 }]}>100 puntos</Text>
-          </View>
-          <Text style={{ color: '#E5E7EB', fontSize: 13, fontWeight: '600' }}>de bienvenida!</Text>
+      <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 14, paddingHorizontal: 20 }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>¡Regístrate y recibe</Text>
+        <View style={[styles.pildoraRoja, { borderRadius: 14, paddingVertical: 6, paddingHorizontal: 26, marginVertical: 4 }]}>
+          <Text style={[styles.textoPildoraRoja, { fontSize: 21 }]}>100 puntos</Text>
         </View>
+        <Text style={{ color: '#E5E7EB', fontSize: 13, fontWeight: '600' }}>de bienvenida!</Text>
       </View>
 
       <View style={{ paddingHorizontal: 20 }}>
-        <TouchableOpacity style={[styles.boton, { borderRadius: 14, paddingVertical: 13, marginTop: 0 }]} onPress={irALogin}>
+        <TouchableOpacity style={[styles.boton, { borderRadius: 14, paddingVertical: 14, marginTop: 0 }]} onPress={irALogin}>
           <Text style={[styles.textoBoton, { fontSize: 16 }]}>Comenzar</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={irARegistro} style={{ marginTop: 10, alignItems: 'center' }}>
@@ -322,5 +320,4 @@ export function PantallaRecuperar({ irALogin }) {
       </TouchableOpacity>
     </ScrollView>
   );
-        }
-            
+            }
