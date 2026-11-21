@@ -1,669 +1,601 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Vibration, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { styles, ROJO, TARJETA, BORDE } from './estilos';
-import { NavegacionSuperior, LOGO } from './pantallas';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Linking, Modal, Platform } from 'react-native';
+import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
+import { LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
-import { obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin, obtenerRecompensas, guardarRecompensaAdmin, obtenerPromociones, guardarPromocionAdmin, obtenerConfigPagos, guardarConfigPagos, obtenerSolicitudesCanje, confirmarEntregaCanje, subirImagenGaleria, obtenerRidersAdmin, guardarRiderAdmin, eliminarRiderAdmin, suscribirPushDispositivo } from './servicios';
+import {
+  categorias, obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin,
+  obtenerPromociones, guardarPromocionAdmin, eliminarPromocionAdmin,
+  obtenerRecompensas, guardarRecompensaAdmin, eliminarRecompensaAdmin,
+  obtenerConfigPagos, guardarConfigPagos,
+  obtenerMotorizados, crearMotorizadoAdmin, eliminarMotorizadoAdmin,
+  subirImagenGaleria, supabase
+} from './servicios';
 
-function generarWavDataUri(silencio = false) {
-  const sr = 8000, dur = silencio ? 3 : 1.2, n = Math.floor(sr * dur);
-  const buf = new ArrayBuffer(44 + n * 2);
-  const v = new DataView(buf);
-  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  w(36, 'data'); v.setUint32(40, n * 2, true);
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    const freq = (Math.floor(t * 4) % 2 === 0) ? 980 : 1320;
-    const val = silencio ? 2 : Math.round(Math.sin(2 * Math.PI * freq * t) * 32000);
-    v.setInt16(44 + i * 2, val, true);
+function IconoAdmin({ tipo }) {
+  if (Platform.OS === 'web') {
+    const paths = {
+      pedidos: 'M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+      productos: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
+      promos: 'M12 2l2.39 1.65 2.89-.39.84 2.79 2.53 1.44-.88 2.78 1.24 2.63-2.29 1.81-.29 2.9-2.88.45-1.69 2.36-2.76-.94-2.76.94-1.69-2.36-2.88-.45-.29-2.9-2.29-1.81 1.24-2.63-.88-2.78 2.53-1.44.84-2.79 2.89.39L12 2z',
+      ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
+      premios: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 00-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
+      riders: 'M19 7c0-1.1-.9-2-2-2h-3v2h3v2.65L13.52 14H10V9H6c-2.21 0-4 1.79-4 4v3h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4.48L19 10.35V7zM7 17c-.55 0-1-.45-1-1h2c0 .55-.45 1-1 1zm12-1c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z',
+      pagos: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
+      config: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+      historial: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z',
+      clientes: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'
+    };
+    return (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill={ROJO}>
+        <path d={paths[tipo] || paths.pedidos} />
+      </svg>
+    );
   }
-  let bin = '';
-  const bytes = new Uint8Array(buf);
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes.at(i));
-  return 'data:audio/wav;base64,' + btoa(bin);
-}
-
-function obtenerInfoHoraPeru() {
-  const ahora = new Date();
-  const utc = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
-  const peru = new Date(utc - 5 * 3600000);
-  const hh = String(peru.getHours()).padStart(2, '0'), mm = String(peru.getMinutes()).padStart(2, '0');
-  const min = peru.getHours() * 60 + peru.getMinutes();
-  const turno = (min >= 410 && min <= 660) ? 'TURNO MAÑANA' : (min >= 1110 && min <= 1430) ? 'TURNO NOCHE' : 'LOCAL CERRADO';
-  return { hora: `${hh}:${mm}`, turno };
-}
-
-async function registrarSwYNotificarAdmin(titulo, cuerpo) {
-  try {
-    if (Platform.OS !== 'web' || typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    const opciones = { body: cuerpo, vibrate: Array.of(600, 200, 600, 200, 800), tag: 'pedido-nuevo-' + Date.now(), renotify: true, requireInteraction: true, silent: false };
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
-      if (reg && reg.showNotification) { await reg.showNotification(titulo, opciones); return; }
-    }
-    new Notification(titulo, opciones);
-  } catch (e) {}
+  return <Text style={{ fontSize: 22, color: ROJO, fontWeight: '900' }}>★</Text>;
 }
 
 export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCompletar, onCancelar, cerrarSesion, cargando }) {
-  const [tab, setTab] = useState('panel');
-  const [productos, setProductos] = useState([]);
+  const [sec, setSec] = useState('inicio');
+  const [horaActual, setHoraActual] = useState('');
+  const [comprobanteModal, setComprobanteModal] = useState(null);
+  const [catalogo, setCatalogo] = useState([]);
+  const [promos, setPromos] = useState([]);
   const [recompensas, setRecompensas] = useState([]);
-  const [promociones, setPromociones] = useState([]);
-  const [solicitudesCanje, setSolicitudesCanje] = useState([]);
   const [riders, setRiders] = useState([]);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titular: 'Club Sazón', titularLimpio: 'Club Sazón', local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
-  const [hMananaIni, setHMananaIni] = useState('06:50');
-  const [hMananaFin, setHMananaFin] = useState('11:00');
-  const [hNocheIni, setHNocheIni] = useState('18:30');
-  const [hNocheFin, setHNocheFin] = useState('23:50');
-  const [costosDel, setCostosDel] = useState({});
-  const [editProd, setEditProd] = useState(null);
-  const [editRec, setEditRec] = useState(null);
-  const [editPromo, setEditPromo] = useState(null);
-  const [editRider, setEditRider] = useState(null);
-  const [riderHistId, setRiderHistId] = useState(null);
-  const [subiendoImg, setSubiendoImg] = useState(false);
-  const [sonando, setSonando] = useState(false);
-  const [audioListo, setAudioListo] = useState(true);
-  const cfgCargadaRef = useRef(false);
-  const conocidosRef = useRef(null), audioSirenaRef = useRef(null), audioFondoRef = useRef(null), timeoutRef = useRef(null), wakeRef = useRef(null);
+  const [clientesList, setClientesList] = useState([]);
+  const [busquedaCli, setBusquedaCli] = useState('');
+  const [nuevaClaveCli, setNuevaClaveCli] = useState({});
+  const [subiendo, setSubiendo] = useState(false);
+
+  const [editId, setEditId] = useState(null);
+  const [nombre, setNombre] = useState('');
+  const [precio, setPrecio] = useState('');
+  const [stock, setStock] = useState('20');
+  const [cat, setCat] = useState('Hamburguesas');
+  const [turno, setTurno] = useState('Ambos');
+  const [ing, setIng] = useState('');
+  const [img, setImg] = useState('');
+  const [disponible, setDisponible] = useState(true);
+
+  const [editPromoId, setEditPromoId] = useState(null);
+  const [tituloP, setTituloP] = useState('');
+  const [descP, setDescP] = useState('');
+  const [precioP, setPrecioP] = useState('');
+  const [imgP, setImgP] = useState('');
+  const [activaP, setActivaP] = useState(true);
+
+  const [editRecId, setEditRecId] = useState(null);
+  const [tituloR, setTituloR] = useState('');
+  const [descR, setDescR] = useState('');
+  const [ptsR, setPtsR] = useState('');
+  const [stockR, setStockR] = useState('10');
+  const [imgR, setImgR] = useState('');
+  const [activaR, setActivaR] = useState(true);
+
+  const [nomRider, setNomRider] = useState('');
+  const [telRider, setTelRider] = useState('');
+  const [passRider, setPassRider] = useState('');
+  const [riderSeleccionado, setRiderSeleccionado] = useState({});
+
+  const [titular, setTitular] = useState('');
+  const [qrYape, setQrYape] = useState('');
+  const [qrPlin, setQrPlin] = useState('');
+  const [latLocal, setLatLocal] = useState('-12.089700');
+  const [lngLocal, setLngLocal] = useState('-77.003100');
+  const [tarifaBase, setTarifaBase] = useState('4.00');
+  const [tarifaKm, setTarifaKm] = useState('1.50');
+  const [localCerrado, setLocalCerrado] = useState(false);
+  const [notifActivas, setNotifActivas] = useState(true);
+  const [filtroMes, setFiltroMes] = useState(() => new Date().toISOString().slice(0, 7));
   useEffect(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      try {
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-        const aSirena = new window.Audio(generarWavDataUri(false));
-        aSirena.loop = true;
-        audioSirenaRef.current = aSirena;
-        const aFondo = new window.Audio(generarWavDataUri(true));
-        aFondo.loop = true;
-        aFondo.volume = 0.02;
-        audioFondoRef.current = aFondo;
-      } catch (e) {}
-    }
-    AsyncStorage.getItem('admin_sonido_activo').then(v => {
-      const activo = v === null ? true : v === '1';
-      setAudioListo(activo);
-      if (activo) {
-        iniciarKeepAliveFondo();
-        suscribirPushDispositivo('admin', usuario?.id);
-      }
-    });
-    cargarTodoAdmin();
-    try { if (Platform.OS === 'web' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) {}
-    const t = setInterval(() => { recargar(); cargarTodoAdmin(); }, 3500);
-    return () => { clearInterval(t); liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); };
+    const actualizarHora = () => {
+      const ahora = new Date();
+      setHoraActual(ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+    };
+    actualizarHora();
+    const timer = setInterval(actualizarHora, 15000);
+    return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => { if (audioListo) { activarWakeLock(); iniciarKeepAliveFondo(); } else { liberarWakeLock(); detenerKeepAliveFondo(); detenerAlarma(); } }, [audioListo]);
+  useEffect(() => { cargarTodo(); }, []);
 
-  function iniciarKeepAliveFondo() {
+  async function cargarTodo() {
     try {
-      if (audioFondoRef.current && audioFondoRef.current.paused) audioFondoRef.current.play().catch(() => {});
-      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new window.MediaMetadata({ title: 'Club Sazón • Recepción de Pedidos', artist: 'Alertas Activas en Segundo Plano' });
-        navigator.mediaSession.playbackState = 'playing';
-      }
-    } catch (e) {}
-  }
-  function detenerKeepAliveFondo() {
-    try {
-      if (audioFondoRef.current) { audioFondoRef.current.pause(); audioFondoRef.current.currentTime = 0; }
-      if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
-    } catch (e) {}
-  }
-  async function activarWakeLock() { try { if (Platform.OS === 'web' && navigator?.wakeLock && !wakeRef.current) wakeRef.current = await navigator.wakeLock.request('screen'); } catch (e) {} }
-  function liberarWakeLock() { try { if (wakeRef.current) { wakeRef.current.release(); wakeRef.current = null; } } catch (e) {} }
-
-  async function alternarSonido() {
-    const nuevo = !audioListo; setAudioListo(nuevo);
-    await AsyncStorage.setItem('admin_sonido_activo', nuevo ? '1' : '0');
-    if (nuevo) {
-      iniciarKeepAliveFondo();
-      tocarPitidoPrueba();
-      try {
-        if (Platform.OS === 'web' && 'Notification' in window) {
-          const perm = await Notification.requestPermission();
-          if (perm === 'granted') {
-            await suscribirPushDispositivo('admin', usuario?.id);
-            registrarSwYNotificarAdmin('Sonido en segundo plano activo', 'Recibirás alertas sonoras incluso con la pantalla apagada.');
-          }
-        }
-      } catch (e) {}
-    } else detenerAlarma();
-  }
-
-  const esPendiente = (est) => est === 'Pendiente' || est === 'Pendiente de confirmación';
-
-  useEffect(() => {
-    const pendientes = (pedidos || []).filter(p => esPendiente(p.estado));
-    if (conocidosRef.current === null) { conocidosRef.current = pendientes.map(p => p.id); return; }
-    const nuevos = pendientes.filter(p => !conocidosRef.current.includes(p.id));
-    if (nuevos.length > 0 && audioListo) {
-      activarAlarma15Seg();
-      const ult = nuevos.at(0);
-      registrarSwYNotificarAdmin(
-        `¡Nuevo Pedido ${ult?.numero_pedido || ''}!`,
-        `Cliente: ${ult?.clientes?.nombre_completo || 'Cliente'} • Total: S/ ${Number(ult?.total || 0).toFixed(2)}`
-      );
-    }
-    if (pendientes.length === 0) detenerAlarma();
-    conocidosRef.current = pendientes.map(p => p.id);
-  }, [pedidos, audioListo]);
-
-  function tocarPitidoPrueba() {
-    try {
-      if (audioSirenaRef.current) {
-        audioSirenaRef.current.currentTime = 0;
-        audioSirenaRef.current.play().catch(() => {});
-        setTimeout(() => { if (!sonando && audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } }, 700);
-      }
-    } catch (e) {}
-  }
-
-  function detenerAlarma() {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    try { if (audioSirenaRef.current) { audioSirenaRef.current.pause(); audioSirenaRef.current.currentTime = 0; } } catch (e) {}
-    setSonando(false);
-  }
-
-  function activarAlarma15Seg() {
-    detenerAlarma(); setSonando(true);
-    try { Vibration.vibrate(Array.of(600, 200, 600, 200, 800)); } catch (e) {}
-    try { if (audioSirenaRef.current) { audioSirenaRef.current.currentTime = 0; audioSirenaRef.current.play().catch(() => {}); } } catch (e) {}
-    timeoutRef.current = setTimeout(detenerAlarma, 15000);
-  }
-    function estiloEstado(est) {
-    if (esPendiente(est)) return { badge: { borderColor: ROJO, backgroundColor: '#251216' }, txt: { color: ROJO } };
-    if (est === 'Completado') return { badge: { borderColor: '#4CAF50', backgroundColor: '#0E2612' }, txt: { color: '#4CAF50' } };
-    if (est === 'Cancelado') return { badge: { borderColor: '#6B7280', backgroundColor: '#1F1F28' }, txt: { color: '#9CA3AF' } };
-    return { badge: { borderColor: '#38BDF8', backgroundColor: '#0E2433' }, txt: { color: '#38BDF8' } };
-  }
-
-  async function elegirFoto(destino) {
-    try {
-      setSubiendoImg(true);
-      const url = await subirImagenGaleria();
-      if (!url) return;
-      if (destino === 'prod') setEditProd(prev => ({ ...prev, imagen_url: url }));
-      if (destino === 'promo') setEditPromo(prev => ({ ...prev, imagen_url: url }));
-      mostrarAviso('Foto cargada', 'La imagen se subió correctamente.');
-    } catch (e) { mostrarAviso('Error al subir', e.message); } finally { setSubiendoImg(false); }
-  }
-
-  async function cargarTodoAdmin(forzarCfg = false) {
-    try {
-      const [p, r, pr, c, sc, rd] = await Promise.all([
-        obtenerCatalogo(false), obtenerRecompensas(false), obtenerPromociones(false), obtenerConfigPagos(), obtenerSolicitudesCanje(), obtenerRidersAdmin()
+      const [c, p, r, cfg, mds] = await Promise.all([
+        obtenerCatalogo(false), obtenerPromociones(false), obtenerRecompensas(false), obtenerConfigPagos(), obtenerMotorizados()
       ]);
-      setProductos(p || []); setRecompensas(r || []); setPromociones(pr || []); setSolicitudesCanje(sc || []); setRiders(rd || []);
-      if (!cfgCargadaRef.current || forzarCfg) {
-        const cfg = c || {};
-        setCfgPagos(prev => ({ ...prev, ...cfg }));
-        if (cfg.manana_inicio) setHMananaIni(cfg.manana_inicio);
-        if (cfg.manana_fin) setHMananaFin(cfg.manana_fin);
-        if (cfg.noche_inicio) setHNocheIni(cfg.noche_inicio);
-        if (cfg.noche_fin) setHNocheFin(cfg.noche_fin);
-        cfgCargadaRef.current = true;
+      setCatalogo(c || []); setPromos(p || []); setRecompensas(r || []); setRiders(mds || []);
+      if (cfg) {
+        setTitular(cfg.titularLimpio || ''); setQrYape(cfg.qr_yape || ''); setQrPlin(cfg.qr_plin || '');
+        setLatLocal(cfg.local_lat || '-12.089700'); setLngLocal(cfg.local_lng || '-77.003100');
+        setTarifaBase(cfg.tarifa_base || '4.00'); setTarifaKm(cfg.tarifa_km || '1.50');
+        setLocalCerrado(Boolean(cfg.local_cerrado));
       }
+      const { data: clis } = await supabase.from('perfiles').select('id, nombre_completo, telefono, puntos').eq('rol', 'cliente').order('nombre_completo');
+      setClientesList(clis || []);
     } catch (e) {}
   }
 
-  function capturarGpsLocal() {
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
-      return mostrarAviso('GPS no disponible', 'Ingresa la latitud y longitud del local manualmente.');
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCfgPagos(prev => ({ ...prev, local_lat: pos.coords.latitude.toFixed(6), local_lng: pos.coords.longitude.toFixed(6) }));
-        mostrarAviso('Ubicación del local lista', 'Coordenadas GPS capturadas. Pulsa Guardar Tarifas.');
-      },
-      () => mostrarAviso('Permiso GPS', 'Activa la ubicación en tu navegador para capturar las coordenadas del local.'),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }
-
-  async function guardarProd() { if (editProd?.nombre?.trim()) try { await guardarProductoAdmin(editProd); setEditProd(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Producto actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function borrarProd(id) { try { await eliminarProductoAdmin(id); cargarTodoAdmin(); mostrarAviso('Eliminado', 'Plato eliminado del menú.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function guardarRider() { if (editRider?.nombre_completo?.trim() && editRider?.telefono?.trim()) try { await guardarRiderAdmin(editRider); setEditRider(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Repartidor guardado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function borrarRider(id) { try { await eliminarRiderAdmin(id); cargarTodoAdmin(); mostrarAviso('Eliminado', 'Repartidor eliminado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function cambiarHorarioRapido(prod, nuevoTurno, nuevaDisp) { try { await guardarProductoAdmin({ ...prod, turno: nuevoTurno, disponible: nuevaDisp }); cargarTodoAdmin(); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function guardarRec() { if (editRec?.titulo?.trim() && Number(editRec.puntos_requeridos) > 0) try { await guardarRecompensaAdmin(editRec); setEditRec(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Premio actualizado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function guardarPromo() { if (editPromo?.titulo?.trim()) try { await guardarPromocionAdmin(editPromo); setEditPromo(null); cargarTodoAdmin(); mostrarAviso('Guardado', 'Publicado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function entregarCanje(id) { try { await confirmarEntregaCanje(id); cargarTodoAdmin(); mostrarAviso('Entregado', 'Canje confirmado.'); } catch (e) { mostrarAviso('Error', e.message); } }
-  async function guardarPagos() {
+  async function restablecerClaveCliente(cli) {
+    const nueva = (nuevaClaveCli[cli.id] || '').trim();
+    if (nueva.length < 4) return mostrarAviso('Clave corta', 'Escribe una contraseña de al menos 4 caracteres.');
     try {
-      const payload = { ...cfgPagos, manana_inicio: hMananaIni.trim() || '06:50', manana_fin: hMananaFin.trim() || '11:00', noche_inicio: hNocheIni.trim() || '18:30', noche_fin: hNocheFin.trim() || '23:50' };
-      await guardarConfigPagos(payload);
-      setCfgPagos(payload);
-      mostrarAviso('Guardado', 'Horarios, tarifas delivery y pagos guardados correctamente.');
+      const { error } = await supabase.from('perfiles').update({ password_hash: nueva }).eq('id', cli.id);
+      if (error) throw error;
+      setNuevaClaveCli(prev => ({ ...prev, [cli.id]: '' }));
+      mostrarAviso('Clave actualizada', `La nueva contraseña de ${cli.nombre_completo} es: ${nueva}`);
     } catch (e) { mostrarAviso('Error', e.message); }
   }
-    const infoPeru = obtenerInfoHoraPeru();
-  const completados = (pedidos || []).filter(p => p.estado === 'Completado');
-  const pendientesCount = (pedidos || []).filter(p => esPendiente(p.estado)).length;
-  const totalVentas = completados.reduce((acc, p) => acc + Number(p.total || 0), 0);
-  const ventasPorDia = Object.values((pedidos || []).reduce((acc, p) => {
-    const fecha = (p.creado_en || '').slice(0, 10) || 'Sin fecha';
-    if (!acc[fecha]) acc[fecha] = { fecha, ventas: 0, devoluciones: 0, cantComp: 0, cantCanc: 0 };
-    if (p.estado === 'Completado') { acc[fecha].ventas += Number(p.total || 0); acc[fecha].cantComp += 1; }
-    if (p.estado === 'Cancelado') { acc[fecha].devoluciones += Number(p.total || 0); acc[fecha].cantCanc += 1; }
-    return acc;
-  }, {}));
 
-  const modulosAdmin = [
-    { id: 'pedidos', icono: '📦', titulo: `Pedidos (${pendientesCount})` },
-    { id: 'menu', icono: '🍔', titulo: 'Productos' },
-    { id: 'promos', icono: '🔥', titulo: 'Promociones' },
-    { id: 'ofertas', icono: '🏷️', titulo: 'Ofertas' },
-    { id: 'canjes', icono: '🎁', titulo: 'Premios y canjes' },
-    { id: 'riders', icono: '🛵', titulo: `Motorizados (${riders.length})` },
-    { id: 'qr pagos', icono: '💳', titulo: 'Métodos de pago' },
-    { id: 'horarios', icono: '⚙️', titulo: 'Config. negocio' },
-    { id: 'ventas', icono: '📊', titulo: 'Historial ventas' }
+  async function subirFoto(destino) {
+    setSubiendo(true);
+    try {
+      const url = await subirImagenGaleria();
+      if (url) {
+        if (destino === 'producto') setImg(url);
+        if (destino === 'promo') setImgP(url);
+        if (destino === 'premio') setImgR(url);
+        if (destino === 'yape') setQrYape(url);
+        if (destino === 'plin') setQrPlin(url);
+        mostrarAviso('Foto subida', 'Imagen guardada correctamente.');
+      }
+    } catch (e) { mostrarAviso('Error al subir', e.message); } finally { setSubiendo(false); }
+  }
+
+  async function guardarProd() {
+    try {
+      await guardarProductoAdmin({ id: editId, nombre, precio, stock, categoria: cat, turno, ingredientes: ing, imagen_url: img, disponible });
+      setEditId(null); setNombre(''); setPrecio(''); setStock('20'); setTurno('Ambos'); setIng(''); setImg(''); setDisponible(true);
+      await cargarTodo(); await recargar(); mostrarAviso('Listo', 'Producto guardado.');
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
+
+  async function guardarPromo(tipo = 'promocion') {
+    try {
+      await guardarPromocionAdmin({ id: editPromoId, titulo: tituloP, descripcion: descP, precio: precioP, imagen_url: imgP, activa: activaP, tipo });
+      setEditPromoId(null); setTituloP(''); setDescP(''); setPrecioP(''); setImgP(''); setActivaP(true);
+      await cargarTodo(); await recargar(); mostrarAviso('Listo', tipo === 'oferta' ? 'Oferta guardada.' : 'Promoción guardada.');
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
+
+  async function guardarRec() {
+    try {
+      await guardarRecompensaAdmin({ id: editRecId, titulo: tituloR, descripcion: descR, puntos_requeridos: ptsR, stock: stockR, imagen_url: imgR, activa: activaR });
+      setEditRecId(null); setTituloR(''); setDescR(''); setPtsR(''); setStockR('10'); setImgR(''); setActivaR(true);
+      await cargarTodo(); await recargar(); mostrarAviso('Listo', 'Premio guardado.');
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
+
+  async function guardarPagos(cerradoOverride) {
+    const estadoCierre = typeof cerradoOverride === 'boolean' ? cerradoOverride : localCerrado;
+    try {
+      await guardarConfigPagos({ titular, qr_yape: qrYape, qr_plin: qrPlin, local_lat: latLocal, local_lng: lngLocal, tarifa_base: tarifaBase, tarifa_km: tarifaKm, local_cerrado: estadoCierre });
+      setLocalCerrado(estadoCierre);
+      await recargar();
+      mostrarAviso('Guardado', estadoCierre ? 'El local ahora figura como CERRADO.' : 'Configuración actualizada.');
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
+
+  async function asignarYConfirmarPedido(p) {
+    const rId = riderSeleccionado[p.id];
+    if (!rId) return mostrarAviso('Elige motorizado', 'Selecciona un repartidor antes de confirmar este delivery.');
+    const rObj = riders.find(x => x.id === rId);
+    try {
+      await supabase.from('pedidos').update({ rider_id: rObj.id, rider_nombre: rObj.nombre_completo, estado_rider: 'En camino' }).eq('id', p.id);
+      await onConfirmarAdmin(p, true);
+      mostrarAviso('Pedido asignado', `Asignado a ${rObj.nombre_completo} y confirmado.`);
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
+
+  function extraerComprobante(notasStr) {
+    if (!notasStr || !notasStr.includes('COMPROBANTE:')) return null;
+    const parte = notasStr.split('COMPROBANTE:')[1] || '';
+    return parte.split('|')[0].trim();
+  }
+
+  const activos = (pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
+  const completados = (pedidos || []).filter(p => p.estado === 'Completado');
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const ventasHoy = completados.filter(p => (p.creado_en || '').startsWith(hoyStr)).reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const pedidosHoyCount = (pedidos || []).filter(p => (p.creado_en || '').startsWith(hoyStr) && p.estado !== 'Cancelado').length;
+  const historialFiltrado = completados.filter(p => (p.creado_en || '').startsWith(filtroMes));
+  const totalMes = historialFiltrado.reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const totalDeliveryMes = historialFiltrado.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
+    const tarjetasMenuAdmin = [
+    { id: 'pedidos', tipo: 'pedidos', titulo: 'Pedidos', badge: activos.length },
+    { id: 'productos', tipo: 'productos', titulo: 'Productos', badge: 0 },
+    { id: 'promos', tipo: 'promos', titulo: 'Promociones', badge: 0 },
+    { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas', badge: 0 },
+    { id: 'premios', tipo: 'premios', titulo: 'Premios y canjes', badge: 0 },
+    { id: 'riders', tipo: 'riders', titulo: 'Motorizados', badge: riders.length },
+    { id: 'clientes', tipo: 'clientes', titulo: 'Clientes / Claves', badge: clientesList.length },
+    { id: 'pagos', tipo: 'pagos', titulo: 'Métodos de pago', badge: 0 },
+    { id: 'config', tipo: 'config', titulo: 'Config. negocio', badge: 0 },
+    { id: 'historial', tipo: 'historial', titulo: 'Historial ventas', badge: 0 }
   ];
 
-  const estiloHoraAzul = { width: 85, height: 34, backgroundColor: '#16161D', borderColor: ROJO, borderWidth: 1.5, borderRadius: 8, color: '#FFFFFF', fontSize: 13, fontWeight: '900', textAlign: 'center', paddingHorizontal: 6 };
-
   return (
-    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={styles.contenido}>
-      <NavegacionSuperior
-        regresar={tab !== 'panel' ? () => { setEditProd(null); setEditRec(null); setEditPromo(null); setEditRider(null); setTab('panel'); } : null}
-        irAInicio={() => setTab('panel')}
-      />
-
-      {sonando && (
-        <TouchableOpacity onPress={detenerAlarma} style={{ backgroundColor: ROJO, padding: 14, borderRadius: 12, marginBottom: 10, alignItems: 'center' }}>
-          <Text style={{ color: '#FFF', fontWeight: '900' }}>🚨 NUEVO PEDIDO - TOCA PARA SILENCIAR</Text>
-        </TouchableOpacity>
-      )}
-
-      <View style={styles.filaSaludo}>
-        <View>
-          <Text style={styles.saludo}>Panel de administración ({infoPeru.hora})</Text>
-          <Text style={styles.nombreCliente}>{usuario?.nombre_completo}</Text>
+    <ScrollView contentContainerStyle={styles.contenido}>
+      <Modal transparent animationType="fade" visible={Boolean(comprobanteModal)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 380, backgroundColor: TARJETA, borderWidth: 1.5, borderColor: ROJO, borderRadius: 18, padding: 14 }}>
+            <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '900', textAlign: 'center', marginBottom: 10 }}>COMPROBANTE DE PAGO</Text>
+            {comprobanteModal && (
+              <Image source={{ uri: comprobanteModal }} style={{ width: '100%', height: 340, borderRadius: 12, backgroundColor: '#000' }} resizeMode="contain" />
+            )}
+            <TouchableOpacity style={[styles.boton, { marginTop: 12 }]} onPress={() => setComprobanteModal(null)}>
+              <Text style={styles.textoBoton}>Cerrar comprobante</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: audioListo ? '#16A34A' : '#2A2A35' }]} onPress={alternarSonido}>
-            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>{audioListo ? '🔔 ON' : '🔕 OFF'}</Text>
+      </Modal>
+
+      <View style={styles.cabeceraTop}>
+        <View style={{ width: 82, alignItems: 'flex-start' }}>
+          {sec !== 'inicio' && (
+            <TouchableOpacity onPress={() => setSec('inicio')} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: TARJETA, borderRadius: 10, borderWidth: 1, borderColor: BORDE }}>
+              <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '900' }}>←</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity onPress={() => setSec('inicio')} style={{ alignItems: 'center' }}>
+          <Image source={LOGO} style={styles.logoHeaderCentro} />
+        </TouchableOpacity>
+        <View style={{ width: 82, flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }}>
+          <TouchableOpacity onPress={() => setNotifActivas(!notifActivas)} style={{ backgroundColor: notifActivas ? '#16A34A' : '#374151', paddingVertical: 6, paddingHorizontal: 9, borderRadius: 10 }}>
+            <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{notifActivas ? '🔔 ON' : '🔕'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE }]} onPress={() => { recargar(); cargarTodoAdmin(); }}>
-            <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>↻</Text>
+          <TouchableOpacity onPress={() => { recargar(); cargarTodo(); }} style={{ backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, paddingVertical: 6, paddingHorizontal: 9, borderRadius: 10 }}>
+            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '900' }}>↻</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {tab === 'panel' && (
+      {sec === 'inicio' && (
         <View>
+          <View style={styles.tarjetaPerfilHero}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#F3F4F6', fontSize: 12, fontWeight: '800' }}>PANEL DE ADMINISTRACIÓN • {horaActual}</Text>
+              <Text style={styles.nombreDoradoHero}>{usuario?.nombre_completo || 'Alfredo Vera'}</Text>
+              <Text style={{ color: localCerrado ? ROJO : '#22C55E', fontSize: 11, fontWeight: '900', marginTop: 3 }}>
+                {localCerrado ? '🔒 LOCAL CERRADO' : '🟢 LOCAL ABIERTO Y RECIBIENDO PEDIDOS'}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.badgePuntosHero} onPress={() => setSec('pedidos')}>
+              <Text style={{ color: DORADO, fontSize: 18, fontWeight: '900' }}>{activos.length}</Text>
+              <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '800' }}>Activos</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+            <View style={{ flex: 1, backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 14, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '800' }}>PEDIDOS HOY</Text>
+              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', marginTop: 2 }}>{pedidosHoyCount}</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 14, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '800' }}>PENDIENTES</Text>
+              <Text style={{ color: ROJO, fontSize: 18, fontWeight: '900', marginTop: 2 }}>{activos.length}</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 14, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 10, fontWeight: '800' }}>VENTAS HOY</Text>
+              <Text style={{ color: DORADO, fontSize: 17, fontWeight: '900', marginTop: 2 }}>S/ {ventasHoy.toFixed(0)}</Text>
+            </View>
+          </View>
+
           <View style={styles.cuadricula3}>
-            {modulosAdmin.map(m => (
-              <TouchableOpacity key={m.id} style={styles.itemCuadricula} onPress={() => setTab(m.id)}>
+            {tarjetasMenuAdmin.map(t => (
+              <TouchableOpacity key={t.id} style={[styles.itemCuadricula, { position: 'relative' }]} onPress={() => setSec(t.id)}>
+                {t.badge > 0 && (
+                  <View style={{ position: 'absolute', top: 6, right: 6, backgroundColor: ROJO, borderRadius: 10, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 }}>
+                    <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '900' }}>{t.badge}</Text>
+                  </View>
+                )}
                 <View style={styles.iconoCuadriculaBox}>
-                  <Text style={{ fontSize: 20, color: ROJO }}>{m.icono}</Text>
+                  <IconoAdmin tipo={t.tipo} />
                 </View>
-                <Text style={styles.textoCuadricula}>{m.titulo}</Text>
+                <Text style={styles.textoCuadricula}>{t.titulo}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={[styles.boton, { backgroundColor: '#252530', marginTop: 18 }]} onPress={cerrarSesion}>
-            <Text style={styles.textoBoton}>🚪 Cerrar sesión</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
-      {tab === 'riders' && (
-        <View>
-          <View style={styles.filaSaludo}>
-            <Text style={styles.titulo}>MOTORIZADOS ({riders.length})</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRider({ nombre_completo: '', telefono: '', password: '', placa: '', hora_entrada: '18:30', hora_salida: '23:50', dias_libres: 'Lunes', activo: true })}>
-              <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
-            </TouchableOpacity>
-          </View>
-          {editRider && (
-            <View style={styles.tarjetaPedido}>
-              <TextInput style={styles.campo} placeholder="Nombre del motorizado" placeholderTextColor="#6B7280" value={editRider.nombre_completo} onChangeText={v => setEditRider({ ...editRider, nombre_completo: v })} />
-              <TextInput style={styles.campo} placeholder="Teléfono" placeholderTextColor="#6B7280" keyboardType="phone-pad" value={editRider.telefono} onChangeText={v => setEditRider({ ...editRider, telefono: v })} />
-              <TextInput style={styles.campo} placeholder="Contraseña" placeholderTextColor="#6B7280" value={editRider.password} onChangeText={v => setEditRider({ ...editRider, password: v })} />
-              <TextInput style={styles.campo} placeholder="Placa (ej. ABC-123)" placeholderTextColor="#6B7280" value={editRider.placa || ''} onChangeText={v => setEditRider({ ...editRider, placa: v })} />
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TextInput style={[styles.campo, { flex: 1 }]} placeholder="Entrada (18:30)" placeholderTextColor="#6B7280" value={editRider.hora_entrada || ''} onChangeText={v => setEditRider({ ...editRider, hora_entrada: v })} />
-                <TextInput style={[styles.campo, { flex: 1 }]} placeholder="Salida (23:50)" placeholderTextColor="#6B7280" value={editRider.hora_salida || ''} onChangeText={v => setEditRider({ ...editRider, hora_salida: v })} />
-              </View>
-              <TextInput style={styles.campo} placeholder="Días libres (ej. Lunes)" placeholderTextColor="#6B7280" value={editRider.dias_libres || ''} onChangeText={v => setEditRider({ ...editRider, dias_libres: v })} />
-              <TouchableOpacity style={styles.boton} onPress={guardarRider}><Text style={styles.textoBoton}>GUARDAR RIDER</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditRider(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
-              {editRider.id && (
-                <TouchableOpacity style={[styles.boton, { backgroundColor: '#7F1D1D', marginTop: 8 }]} onPress={() => { borrarRider(editRider.id); setEditRider(null); }}>
-                  <Text style={styles.textoBoton}>ELIMINAR RIDER</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-          {riders.map(r => {
-            const entConfirmadas = (pedidos || []).filter(p => p.rider_id === r.id && p.estado === 'Completado');
-            const gananciaConfirmada = entConfirmadas.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-            const abierto = riderHistId === r.id;
-            return (
-              <View key={r.id} style={styles.tarjetaPedido}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
-                    <Text style={styles.descripcionPedido}>Tel: {r.telefono} • Clave: {r.password}</Text>
-                    <Text style={[styles.descripcionPedido, { color: ROJO }]}>Horario: {r.hora_entrada || '18:30'} - {r.hora_salida || '23:50'} • {r.dias_libres || 'Sin días libres'}</Text>
-                    <Text style={[styles.descripcionPedido, { color: '#4CAF50', fontWeight: '900', marginTop: 2 }]}>Entregas: {entConfirmadas.length} • Ganancia: S/ {gananciaConfirmada.toFixed(2)}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRider(r)}>
-                    <Text style={styles.textoAgregar}>EDITAR</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity style={[styles.boton, styles.botonSecundario, { marginTop: 8, paddingVertical: 8 }]} onPress={() => setRiderHistId(abierto ? null : r.id)}>
-                  <Text style={[styles.textoBoton, { fontSize: 11 }]}>{abierto ? '▲ OCULTAR HISTORIAL' : `VER HISTORIAL (${entConfirmadas.length})`}</Text>
-                </TouchableOpacity>
-                {abierto && entConfirmadas.map(p => (
-                  <View key={p.id} style={{ borderTopWidth: 1, borderTopColor: BORDE, paddingTop: 6, marginTop: 6 }}>
-                    <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '700' }]}>{p.numero_pedido} • {(p.creado_en || '').slice(0, 10)}</Text>
-                    <Text style={styles.descripcionPedido}>Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)}</Text>
-                  </View>
-                ))}
-              </View>
-            );
-          })}
-        </View>
-      )}
-              {tab === 'horarios' && (
-        <View>
-          <View style={[styles.tarjetaSaldo, { paddingVertical: 10, marginBottom: 10 }]}>
-            <Text style={styles.etiquetaSaldo}>HORA PERÚ: {infoPeru.hora} • {infoPeru.turno}</Text>
-          </View>
-          <TouchableOpacity
-            onPress={async () => {
-              const nuevoEstado = !cfgPagos.local_cerrado;
-              const payload = { ...cfgPagos, manana_inicio: hMananaIni || '06:50', manana_fin: hMananaFin || '11:00', noche_inicio: hNocheIni || '18:30', noche_fin: hNocheFin || '23:50', local_cerrado: nuevoEstado };
-              try {
-                await guardarConfigPagos(payload);
-                setCfgPagos(payload);
-                mostrarAviso(nuevoEstado ? 'Local Cerrado' : 'Local Abierto', nuevoEstado ? 'Hoy los clientes verán que el local está cerrado.' : 'El local vuelve a estar abierto.');
-              } catch (e) { mostrarAviso('Error', e.message); }
-            }}
-            style={{ backgroundColor: cfgPagos.local_cerrado ? ROJO : '#16A34A', paddingVertical: 12, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>
-              {cfgPagos.local_cerrado ? '🔒 LOCAL CERRADO HOY (TOCA PARA ABRIR)' : '🟢 LOCAL ABIERTO (TOCA PARA CERRAR HOY)'}
-            </Text>
+          <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E1E28', borderWidth: 1, borderColor: BORDE, marginTop: 14 }]} onPress={cerrarSesion}>
+            <Text style={styles.textoBoton}>↪ Cerrar sesión</Text>
           </TouchableOpacity>
-          <Text style={styles.titulo}>TARIFAS DE DELIVERY POR DISTANCIA</Text>
-          <View style={styles.tarjetaPedido}>
-            <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 8, paddingVertical: 10 }]} onPress={capturarGpsLocal}>
-              <Text style={styles.textoBoton}>📍 CAPTURAR UBICACIÓN GPS DEL LOCAL</Text>
-            </TouchableOpacity>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#9CA3AF', fontSize: 10, marginBottom: 4 }}>LATITUD LOCAL</Text>
-                <TextInput style={styles.campo} value={String(cfgPagos.local_lat || '')} onChangeText={v => setCfgPagos({ ...cfgPagos, local_lat: v })} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#9CA3AF', fontSize: 10, marginBottom: 4 }}>LONGITUD LOCAL</Text>
-                <TextInput style={styles.campo} value={String(cfgPagos.local_lng || '')} onChangeText={v => setCfgPagos({ ...cfgPagos, local_lng: v })} />
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#9CA3AF', fontSize: 10, marginBottom: 4 }}>TARIFA BASE (S/)</Text>
-                <TextInput style={styles.campo} keyboardType="numeric" value={String(cfgPagos.tarifa_base || '4.00')} onChangeText={v => setCfgPagos({ ...cfgPagos, tarifa_base: v })} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#9CA3AF', fontSize: 10, marginBottom: 4 }}>POR KM (S/ KM)</Text>
-                <TextInput style={styles.campo} keyboardType="numeric" value={String(cfgPagos.tarifa_km || '1.50')} onChangeText={v => setCfgPagos({ ...cfgPagos, tarifa_km: v })} />
-              </View>
-            </View>
-            <TouchableOpacity style={styles.boton} onPress={guardarPagos}>
-              <Text style={styles.textoBoton}>GUARDAR TARIFAS DELIVERY</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.titulo}>APERTURA Y CIERRE DEL LOCAL</Text>
-          <View style={styles.tarjetaPedido}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>MAÑANA:</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TextInput style={estiloHoraAzul} placeholder="06:50" placeholderTextColor="#6B7280" value={hMananaIni} onChangeText={setHMananaIni} />
-                <Text style={{ color: '#FFF', fontWeight: '900' }}>a</Text>
-                <TextInput style={estiloHoraAzul} placeholder="11:00" placeholderTextColor="#6B7280" value={hMananaFin} onChangeText={setHMananaFin} />
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>NOCHE:</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TextInput style={estiloHoraAzul} placeholder="18:30" placeholderTextColor="#6B7280" value={hNocheIni} onChangeText={setHNocheIni} />
-                <Text style={{ color: '#FFF', fontWeight: '900' }}>a</Text>
-                <TextInput style={estiloHoraAzul} placeholder="23:50" placeholderTextColor="#6B7280" value={hNocheFin} onChangeText={setHNocheFin} />
-              </View>
-            </View>
-            <TouchableOpacity style={styles.boton} onPress={guardarPagos}>
-              <Text style={styles.textoBoton}>GUARDAR HORARIOS</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.titulo}>TURNOS POR PRODUCTO</Text>
-          {productos.map(prod => (
-            <View key={prod.id} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{prod.nombre} ({prod.categoria})</Text>
-              <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
-                {[{ id: 'manana', txt: 'MAÑANA' }, { id: 'noche', txt: 'NOCHE' }, { id: 'ambos', txt: 'AMBOS' }].map(h => (
-                  <TouchableOpacity key={h.id} style={[styles.opcionEntrega, (prod.turno || 'ambos') === h.id && styles.opcionEntregaActiva, { flex: 1, paddingVertical: 6 }]} onPress={() => cambiarHorarioRapido(prod, h.id, prod.disponible !== false)}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', textAlign: 'center' }}>{h.txt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          ))}
         </View>
       )}
-                    {tab === 'pedidos' && (
+      {sec === 'pedidos' && (
         <View>
-          <Text style={styles.titulo}>GESTIÓN DE PEDIDOS</Text>
-          {!(pedidos || []).length ? (
-            <View style={styles.tarjetaVacia}>
-              <Text style={styles.textoVacio}>Aún no hay pedidos registrados.</Text>
-            </View>
+          <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
+          {activos.length === 0 ? (
+            <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>No hay pedidos pendientes.</Text></View>
           ) : (
-            (pedidos || []).map(p => {
-              const col = estiloEstado(p.estado);
-              const delCalculado = Number(p.costo_delivery || 0);
+            activos.map(p => {
+              const compUrl = extraerComprobante(p.notas);
+              const notasLimpias = (p.notas || '').split('| COMPROBANTE:').trim();
               return (
                 <View key={p.id} style={styles.tarjetaPedido}>
-                  <Text style={styles.nombreProducto}>Pedido {p.numero_pedido} — {p.clientes?.nombre_completo || 'Cliente'} ({p.clientes?.telefono || ''})</Text>
-                  <View style={[styles.estadoPedido, col.badge]}>
-                    <Text style={[styles.textoEstado, col.txt]}>
-                      {p.recibido_cliente && p.estado !== 'Completado' ? 'Cliente confirmó • Falta cierre Rider' : p.estado}
-                    </Text>
-                  </View>
-                  {(p.pedido_detalles || []).map(d => {
-                    const montoLinea = Number(d.total_linea ?? d.subtotal ?? (Number(d.precio_unitario || 0) * Number(d.cantidad || 1)));
-                    return (
-                      <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {montoLinea.toFixed(2)})</Text>
-                    );
-                  })}
-                  {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>Distrito: {p.distrito} - {p.direccion}</Text>}
-                  {p.tipo_entrega === 'DELIVERY' && <Text style={[styles.descripcionPedido, { color: '#38BDF8' }]}>Delivery: S/ {delCalculado.toFixed(2)}</Text>}
-                  {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#38BDF8', fontWeight: '800' }]}>Rider: {p.rider_nombre} ({p.estado_rider})</Text>}
-                  {!!p.notas && <Text style={[styles.descripcionPedido, { color: ROJO }]}>Nota: {p.notas}</Text>}
-                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
-                  {esPendiente(p.estado) && p.tipo_entrega === 'DELIVERY' && (
-                    <TextInput style={[styles.campo, { marginTop: 8 }]} placeholder={`Delivery: S/ ${delCalculado.toFixed(2)} (opcional ajustar)`} placeholderTextColor="#6B7280" keyboardType="numeric" value={costosDel[p.id] ?? ''} onChangeText={v => setCostosDel({ ...costosDel, [p.id]: v })} />
-                  )}
-                  {esPendiente(p.estado) && (
-                    <TouchableOpacity style={styles.boton} onPress={() => onConfirmarAdmin(p, costosDel[p.id] !== undefined && costosDel[p.id] !== '' ? costosDel[p.id] : delCalculado)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>CONFIRMAR Y ENVIAR A RIDERS</Text>
+                  <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'} ({p.perfiles?.telefono || ''})</Text>
+                  <View style={styles.estadoPedido}><Text style={styles.textoEstado}>{p.estado}</Text></View>
+                  <Text style={styles.descripcionPedido}>Entrega: {p.tipo_entrega} | Pago: {p.metodo_pago}</Text>
+                  {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>Destino: {p.distrito} - {p.direccion}</Text>}
+                  {!!notasLimpias && <Text style={[styles.descripcionPedido, { color: DORADO }]}>Nota: {notasLimpias}</Text>}
+                  {(p.pedido_detalles || []).map(d => (
+                    <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {Number(d.subtotal).toFixed(2)})</Text>
+                  ))}
+                  {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#38BDF8', fontWeight: '800' }]}>Motorizado: {p.rider_nombre} ({p.estado_rider})</Text>}
+                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} (Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)})</Text>
+
+                  {compUrl && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#742284', marginTop: 8 }]} onPress={() => setComprobanteModal(compUrl)}>
+                      <Text style={styles.textoBoton}>🧾 VER CAPTURA DE PAGO {p.metodo_pago.toUpperCase()}</Text>
                     </TouchableOpacity>
                   )}
+
+                  {p.estado === 'Pendiente' && p.tipo_entrega === 'DELIVERY' && (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '800', marginBottom: 6 }]}>Asignar motorizado:</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                        {riders.map(r => (
+                          <TouchableOpacity
+                            key={r.id}
+                            style={[styles.categoria, riderSeleccionado[p.id] === r.id && styles.categoriaActiva]}
+                            onPress={() => setRiderSeleccionado(prev => ({ ...prev, [p.id]: r.id }))}
+                          >
+                            <Text style={styles.textoCategoria}>🛵 {r.nombre_completo}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                      <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A' }]} onPress={() => asignarYConfirmarPedido(p)} disabled={cargando}>
+                        <Text style={styles.textoBoton}>ASIGNAR Y CONFIRMAR PEDIDO</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {p.estado === 'Pendiente' && p.tipo_entrega !== 'DELIVERY' && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => onConfirmarAdmin(p, false)} disabled={cargando}>
+                      <Text style={styles.textoBoton}>CONFIRMAR PEDIDO EN LOCAL</Text>
+                    </TouchableOpacity>
+                  )}
+
                   {p.estado === 'Confirmado por local' && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A' }]} onPress={() => onCompletar(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>MARCAR ENTREGADO Y DAR PUNTOS</Text>
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 10 }]} onPress={() => onCompletar(p)} disabled={cargando}>
+                      <Text style={styles.textoBoton}>COMPLETAR Y ACREDITAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
-                  {p.estado !== 'Cancelado' && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#252530', marginTop: 6 }]} onPress={() => onCancelar(p)} disabled={cargando}>
-                      <Text style={[styles.textoBoton, { color: ROJO }]}>CANCELAR PEDIDO Y DESCONTAR PUNTOS</Text>
-                    </TouchableOpacity>
-                  )}
+
+                  <TouchableOpacity style={[styles.boton, { backgroundColor: '#7F1D1D', marginTop: 8 }]} onPress={() => onCancelar(p)} disabled={cargando}>
+                    <Text style={styles.textoBoton}>CANCELAR PEDIDO</Text>
+                  </TouchableOpacity>
                 </View>
               );
             })
           )}
         </View>
       )}
-
-      {(tab === 'promos' || tab === 'ofertas') && (
+                                                       {sec === 'productos' && (
         <View>
-          <View style={styles.filaSaludo}>
-            <Text style={styles.titulo}>{tab === 'promos' ? 'PROMOCIONES' : 'OFERTAS DEL DÍA'}</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditPromo({ titulo: '', descripcion: '', precio: '', stock: '10', tipo: tab === 'promos' ? 'promocion' : 'oferta', imagen_url: '', activa: true })}>
-              <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
-            </TouchableOpacity>
-          </View>
-          {editPromo && (
-            <View style={styles.tarjetaPedido}>
-              <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={editPromo.titulo} onChangeText={v => setEditPromo({ ...editPromo, titulo: v })} />
-              <TextInput style={styles.campo} placeholder="Descripción" placeholderTextColor="#6B7280" value={editPromo.descripcion || ''} onChangeText={v => setEditPromo({ ...editPromo, descripcion: v })} />
-              <TextInput style={styles.campo} placeholder="Precio (S/)" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(editPromo.precio)} onChangeText={v => setEditPromo({ ...editPromo, precio: v })} />
-              <TextInput style={styles.campo} placeholder="Stock disponible" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(editPromo.stock ?? 10)} onChangeText={v => setEditPromo({ ...editPromo, stock: v })} />
-              <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B' }]} onPress={() => elegirFoto('promo')} disabled={subiendoImg}>
-                <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : 'SUBIR FOTO'}</Text>
+          <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
+          <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
+          <TextInput style={styles.campo} placeholder="Precio (ej. 18.00)" placeholderTextColor="#6B7280" keyboardType="numeric" value={precio} onChangeText={setPrecio} />
+          <TextInput style={styles.campo} placeholder="Stock disponible" placeholderTextColor="#6B7280" keyboardType="numeric" value={stock} onChangeText={setStock} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
+            {categorias.filter(x => x !== 'Todas').map(c => (
+              <TouchableOpacity key={c} style={[styles.categoria, cat === c && styles.categoriaActiva]} onPress={() => setCat(c)}>
+                <Text style={styles.textoCategoria}>{c}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.boton} onPress={guardarPromo}><Text style={styles.textoBoton}>GUARDAR</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditPromo(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
-            </View>
-          )}
-          {promociones.filter(x => x.tipo === (tab === 'promos' ? 'promocion' : 'oferta')).map(pr => (
-            <View key={pr.id} style={styles.producto}>
+            ))}
+          </ScrollView>
+          <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '800', marginBottom: 6 }]}>Turno:</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+            {['Mañana', 'Tarde/Noche', 'Ambos'].map(t => (
+              <TouchableOpacity key={t} style={[styles.opcionEntrega, turno === t && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]} onPress={() => setTurno(t)}>
+                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 11 }}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TextInput style={styles.campo} placeholder="Ingredientes o descripción" placeholderTextColor="#6B7280" value={ing} onChangeText={setIng} />
+          <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 10 }]} onPress={() => subirFoto('producto')} disabled={subiendo}>
+            <Text style={styles.textoBoton}>{subiendo ? 'SUBIENDO...' : '📸 SUBIR FOTO DEL PLATO'}</Text>
+          </TouchableOpacity>
+          <TextInput style={styles.campo} placeholder="URL de imagen" placeholderTextColor="#6B7280" value={img} onChangeText={setImg} />
+          <TouchableOpacity style={[styles.opcionEntrega, disponible && styles.opcionEntregaActiva]} onPress={() => setDisponible(!disponible)}>
+            <Text style={{ color: '#FFF', fontWeight: '800' }}>{disponible ? '✅ Disponible en carta' : '⛔ Agotado'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR PRODUCTO</Text></TouchableOpacity>
+
+          <Text style={styles.titulo}>PRODUCTOS REGISTRADOS ({catalogo.length})</Text>
+          {catalogo.map(p => (
+            <View key={p.id} style={styles.producto}>
+              <Image source={p.imagen_url && p.imagen_url.includes('http') ? { uri: p.imagen_url } : LOGO} style={styles.fotoProducto} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.nombreProducto}>{pr.titulo} (Stock: {pr.stock ?? 10})</Text>
-                <Text style={styles.precioProducto}>S/ {Number(pr.precio).toFixed(2)}</Text>
+                <Text style={styles.nombreProducto}>{p.nombre} ({p.categoria})</Text>
+                <Text style={styles.precioProducto}>S/ {Number(p.precio).toFixed(2)} • Stock: {p.stock}</Text>
               </View>
-              <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditPromo(pr)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
+              <View style={{ gap: 6 }}>
+                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#1E293B' }]} onPress={() => { setEditId(p.id); setNombre(p.nombre); setPrecio(String(p.precio)); setStock(String(p.stock ?? 20)); setCat(p.categoria || 'Hamburguesas'); setTurno(p.turno || 'Ambos'); setIng(p.ingredientes || ''); setImg(p.imagen_url || ''); setDisponible(Boolean(p.disponible)); }}>
+                  <Text style={styles.textoAgregar}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#7F1D1D' }]} onPress={async () => { await eliminarProductoAdmin(p.id); await cargarTodo(); await recargar(); }}>
+                  <Text style={styles.textoAgregar}>Borrar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
       )}
-      {tab === 'canjes' && (
+
+      {(sec === 'promos' || sec === 'ofertas') && (
         <View>
-          <Text style={styles.titulo}>SOLICITUDES DE CANJES</Text>
-          {solicitudesCanje.map(sc => (
-            <View key={sc.id} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{sc.recompensa_titulo} ({sc.puntos_usados} pts)</Text>
-              <View style={[styles.estadoPedido, sc.estado === 'Entregado' && { borderColor: '#4CAF50' }]}>
-                <Text style={[styles.textoEstado, sc.estado === 'Entregado' && { color: '#4CAF50' }]}>{sc.estado}</Text>
-              </View>
-              {sc.estado === 'Pendiente de entrega' && (
-                <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A' }]} onPress={() => entregarCanje(sc.id)}>
-                  <Text style={styles.textoBoton}>CONFIRMAR ENTREGA</Text>
+          <Text style={styles.titulo}>{sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
+          <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={tituloP} onChangeText={setTituloP} />
+          <TextInput style={styles.campo} placeholder="Descripción" placeholderTextColor="#6B7280" value={descP} onChangeText={setDescP} />
+          <TextInput style={styles.campo} placeholder="Precio (S/)" placeholderTextColor="#6B7280" keyboardType="numeric" value={precioP} onChangeText={setPrecioP} />
+          <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 10 }]} onPress={() => subirFoto('promo')} disabled={subiendo}>
+            <Text style={styles.textoBoton}>{subiendo ? 'SUBIENDO...' : '📸 SUBIR BANNER'}</Text>
+          </TouchableOpacity>
+          <TextInput style={styles.campo} placeholder="URL de banner" placeholderTextColor="#6B7280" value={imgP} onChangeText={setImgP} />
+          <TouchableOpacity style={[styles.opcionEntrega, activaP && styles.opcionEntregaActiva]} onPress={() => setActivaP(!activaP)}>
+            <Text style={{ color: '#FFF', fontWeight: '800' }}>{activaP ? '✅ Visible al cliente' : '⛔ Oculta'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.boton} onPress={() => guardarPromo(sec === 'ofertas' ? 'oferta' : 'promocion')}>
+            <Text style={styles.textoBoton}>GUARDAR</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.titulo}>PUBLICADAS</Text>
+          {promos.filter(pr => sec === 'ofertas' ? pr.tipo === 'oferta' : pr.tipo !== 'oferta').map(pr => (
+            <View key={pr.id} style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>{pr.titulo} • S/ {Number(pr.precio).toFixed(2)}</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => { setEditPromoId(pr.id); setTituloP(pr.titulo); setDescP(pr.descripcion || ''); setPrecioP(String(pr.precio)); setImgP(pr.imagen_url || ''); setActivaP(Boolean(pr.activa)); }}>
+                  <Text style={styles.textoBoton}>Editar</Text>
                 </TouchableOpacity>
-              )}
+                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#7F1D1D', flex: 1 }]} onPress={async () => { await eliminarPromocionAdmin(pr.id); await cargarTodo(); await recargar(); }}>
+                  <Text style={styles.textoBoton}>Borrar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
-          <View style={[styles.filaSaludo, { marginTop: 14 }]}>
-            <Text style={styles.titulo}>PREMIOS Y STOCK</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditRec({ titulo: '', descripcion: '', puntos_requeridos: '', stock: '5', activa: true })}>
-              <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
-            </TouchableOpacity>
-          </View>
-          {editRec && (
-            <View style={styles.tarjetaPedido}>
-              <TextInput style={styles.campo} placeholder="Título del premio" placeholderTextColor="#6B7280" value={editRec.titulo} onChangeText={v => setEditRec({ ...editRec, titulo: v })} />
-              <TextInput style={styles.campo} placeholder="Descripción" placeholderTextColor="#6B7280" value={editRec.descripcion || ''} onChangeText={v => setEditRec({ ...editRec, descripcion: v })} />
-              <TextInput style={styles.campo} placeholder="Puntos requeridos" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(editRec.puntos_requeridos)} onChangeText={v => setEditRec({ ...editRec, puntos_requeridos: v })} />
-              <TextInput style={styles.campo} placeholder="Stock" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(editRec.stock ?? 5)} onChangeText={v => setEditRec({ ...editRec, stock: v })} />
-              <TouchableOpacity style={styles.boton} onPress={guardarRec}><Text style={styles.textoBoton}>GUARDAR PREMIO</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditRec(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
-            </View>
-          )}
+        </View>
+      )}
+
+      {sec === 'premios' && (
+        <View>
+          <Text style={styles.titulo}>PREMIOS Y CANJES</Text>
+          <TextInput style={styles.campo} placeholder="Nombre del premio" placeholderTextColor="#6B7280" value={tituloR} onChangeText={setTituloR} />
+          <TextInput style={styles.campo} placeholder="Descripción" placeholderTextColor="#6B7280" value={descR} onChangeText={setDescR} />
+          <TextInput style={styles.campo} placeholder="Puntos requeridos (ej. 500)" placeholderTextColor="#6B7280" keyboardType="numeric" value={ptsR} onChangeText={setPtsR} />
+          <TextInput style={styles.campo} placeholder="Stock disponible" placeholderTextColor="#6B7280" keyboardType="numeric" value={stockR} onChangeText={setStockR} />
+          <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 10 }]} onPress={() => subirFoto('premio')} disabled={subiendo}>
+            <Text style={styles.textoBoton}>{subiendo ? 'SUBIENDO...' : '📸 SUBIR FOTO DEL PREMIO'}</Text>
+          </TouchableOpacity>
+          <TextInput style={styles.campo} placeholder="URL imagen" placeholderTextColor="#6B7280" value={imgR} onChangeText={setImgR} />
+          <TouchableOpacity style={styles.boton} onPress={guardarRec}><Text style={styles.textoBoton}>GUARDAR PREMIO</Text></TouchableOpacity>
+
+          <Text style={styles.titulo}>PREMIOS ACTIVOS ({recompensas.length})</Text>
           {recompensas.map(r => (
+            <View key={r.id} style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>{r.titulo} • {r.puntos_requeridos} pts (Stock: {r.stock})</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => { setEditRecId(r.id); setTituloR(r.titulo); setDescR(r.descripcion || ''); setPtsR(String(r.puntos_requeridos)); setStockR(String(r.stock ?? 10)); setImgR(r.imagen_url || ''); setActivaR(Boolean(r.activa)); }}>
+                  <Text style={styles.textoBoton}>Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#7F1D1D', flex: 1 }]} onPress={async () => { await eliminarRecompensaAdmin(r.id); await cargarTodo(); await recargar(); }}>
+                  <Text style={styles.textoBoton}>Borrar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+                                                               {sec === 'riders' && (
+        <View>
+          <Text style={styles.titulo}>REGISTRAR MOTORIZADO</Text>
+          <TextInput style={styles.campo} placeholder="Nombre completo" placeholderTextColor="#6B7280" value={nomRider} onChangeText={setNomRider} />
+          <TextInput style={styles.campo} placeholder="Teléfono" placeholderTextColor="#6B7280" keyboardType="phone-pad" value={telRider} onChangeText={setTelRider} />
+          <TextInput style={styles.campo} placeholder="Contraseña" placeholderTextColor="#6B7280" value={passRider} onChangeText={setPassRider} />
+          <TouchableOpacity style={styles.boton} onPress={async () => { try { await crearMotorizadoAdmin({ nombre_completo: nomRider, telefono: telRider, password: passRider }); setNomRider(''); setTelRider(''); setPassRider(''); await cargarTodo(); mostrarAviso('Listo', 'Motorizado registrado.'); } catch (e) { mostrarAviso('Error', e.message); } }}>
+            <Text style={styles.textoBoton}>GUARDAR MOTORIZADO</Text>
+          </TouchableOpacity>
+          <Text style={styles.titulo}>EQUIPO DE REPARTO ({riders.length})</Text>
+          {riders.map(r => (
             <View key={r.id} style={styles.producto}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.nombreProducto}>{r.titulo}</Text>
-                <Text style={styles.precioProducto}>{r.puntos_requeridos} PTS • Stock: {r.stock ?? 5}</Text>
+                <Text style={styles.nombreProducto}>🛵 {r.nombre_completo}</Text>
+                <Text style={styles.descripcionPedido}>Tel: {r.telefono}</Text>
               </View>
-              <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditRec(r)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#7F1D1D' }]} onPress={async () => { await eliminarMotorizadoAdmin(r.id); await cargarTodo(); }}>
+                <Text style={styles.textoAgregar}>Eliminar</Text>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
       )}
 
-      {tab === 'menu' && (
+      {sec === 'clientes' && (
         <View>
-          <View style={styles.filaSaludo}>
-            <Text style={styles.titulo}>PRODUCTOS Y STOCK</Text>
-            <TouchableOpacity style={[styles.boton, styles.botonPequeno]} onPress={() => setEditProd({ nombre: '', ingredientes: '', categoria: 'Hamburguesas', precio: '', stock: '10', imagen_url: '', turno: 'ambos', disponible: true })}>
-              <Text style={[styles.textoBoton, styles.textoBotonPequeno]}>+ NUEVO</Text>
+          <Text style={styles.titulo}>CLIENTES Y RESTABLECER CLAVES ({clientesList.length})</Text>
+          <TextInput
+            style={styles.campo}
+            placeholder="🔍 Buscar cliente por nombre o teléfono..."
+            placeholderTextColor="#6B7280"
+            value={busquedaCli}
+            onChangeText={setBusquedaCli}
+          />
+          {clientesList
+            .filter(c => !busquedaCli.trim() || (c.nombre_completo || '').toLowerCase().includes(busquedaCli.toLowerCase()) || (c.telefono || '').includes(busquedaCli))
+            .map(c => (
+              <View key={c.id} style={styles.tarjetaPedido}>
+                <Text style={[styles.nombreProducto, { color: DORADO }]}>{c.nombre_completo}</Text>
+                <Text style={styles.descripcionPedido}>📱 Teléfono: {c.telefono} • ★ {c.puntos || 0} pts</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TextInput
+                    style={[styles.campo, { flex: 1, marginBottom: 0, paddingVertical: 9 }]}
+                    placeholder="Nueva contraseña..."
+                    placeholderTextColor="#6B7280"
+                    value={nuevaClaveCli[c.id] || ''}
+                    onChangeText={(txt) => setNuevaClaveCli(prev => ({ ...prev, [c.id]: txt }))}
+                  />
+                  <TouchableOpacity style={[styles.boton, { marginTop: 0, paddingVertical: 10 }]} onPress={() => restablecerClaveCliente(c)}>
+                    <Text style={styles.textoBoton}>Cambiar clave</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+        </View>
+      )}
+
+      {sec === 'pagos' && (
+        <View>
+          <Text style={styles.titulo}>MÉTODOS DE PAGO (YAPE / PLIN)</Text>
+          <TextInput style={styles.campo} placeholder="Nombre del titular" placeholderTextColor="#6B7280" value={titular} onChangeText={setTitular} />
+          <TouchableOpacity style={[styles.boton, { backgroundColor: '#742284', marginBottom: 8 }]} onPress={() => subirFoto('yape')} disabled={subiendo}>
+            <Text style={styles.textoBoton}>🟣 SUBIR QR YAPE</Text>
+          </TouchableOpacity>
+          {!!qrYape && <Image source={{ uri: qrYape }} style={{ width: 140, height: 140, alignSelf: 'center', marginBottom: 10, borderRadius: 10 }} />}
+          <TouchableOpacity style={[styles.boton, { backgroundColor: '#00B2E3', marginBottom: 8 }]} onPress={() => subirFoto('plin')} disabled={subiendo}>
+            <Text style={styles.textoBoton}>🔵 SUBIR QR PLIN</Text>
+          </TouchableOpacity>
+          {!!qrPlin && <Image source={{ uri: qrPlin }} style={{ width: 140, height: 140, alignSelf: 'center', marginBottom: 10, borderRadius: 10 }} />}
+          <TouchableOpacity style={styles.boton} onPress={() => guardarPagos()}><Text style={styles.textoBoton}>GUARDAR MÉTODOS DE PAGO</Text></TouchableOpacity>
+        </View>
+      )}
+
+      {sec === 'config' && (
+        <View>
+          <Text style={styles.titulo}>ESTADO DEL LOCAL Y DELIVERY</Text>
+          <View style={[styles.tarjetaPedido, { borderColor: localCerrado ? ROJO : '#16A34A' }]}>
+            <Text style={[styles.nombreProducto, { marginBottom: 6 }]}>Estado actual: {localCerrado ? '🔒 CERRADO' : '🟢 ABIERTO'}</Text>
+            <TouchableOpacity style={[styles.boton, { backgroundColor: localCerrado ? '#16A34A' : ROJO }]} onPress={() => guardarPagos(!localCerrado)}>
+              <Text style={styles.textoBoton}>{localCerrado ? 'ABRIR LOCAL AHORA' : 'CERRAR LOCAL TEMPORALMENTE'}</Text>
             </TouchableOpacity>
           </View>
-          {editProd && (
-            <View style={styles.tarjetaPedido}>
-              <Text style={[styles.nombreProducto, { marginBottom: 8 }]}>{editProd.id ? 'Editar Plato' : 'Nuevo Plato'}</Text>
-              <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={editProd.nombre} onChangeText={v => setEditProd({ ...editProd, nombre: v })} />
-              <TextInput style={styles.campo} placeholder="Ingredientes" placeholderTextColor="#6B7280" value={editProd.ingredientes || ''} onChangeText={v => setEditProd({ ...editProd, ingredientes: v })} />
-              <TextInput style={styles.campo} placeholder="Categoría" placeholderTextColor="#6B7280" value={editProd.categoria} onChangeText={v => setEditProd({ ...editProd, categoria: v })} />
-              <TextInput style={styles.campo} placeholder="Precio (S/)" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(editProd.precio)} onChangeText={v => setEditProd({ ...editProd, precio: v })} />
-              <TextInput style={styles.campo} placeholder="Stock" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(editProd.stock ?? 10)} onChangeText={v => setEditProd({ ...editProd, stock: v })} />
-              <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B' }]} onPress={() => elegirFoto('prod')} disabled={subiendoImg}>
-                <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : 'SUBIR FOTO'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR PLATO</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setEditProd(null)}><Text style={styles.textoBoton}>CANCELAR</Text></TouchableOpacity>
-            </View>
-          )}
-          {productos.map(prod => (
-            <View key={prod.id} style={styles.producto}>
-              <Image source={prod.imagen_url && prod.imagen_url.includes('supabase.co') ? { uri: prod.imagen_url } : LOGO} style={styles.fotoProducto} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nombreProducto}>{prod.nombre} ({prod.categoria})</Text>
-                <Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)} • Stock: {prod.stock ?? 10}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <TouchableOpacity style={styles.botonAgregar} onPress={() => setEditProd(prod)}><Text style={styles.textoAgregar}>EDITAR</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#252530' }]} onPress={() => borrarProd(prod.id)}><Text style={styles.textoAgregar}>🗑️</Text></TouchableOpacity>
-              </View>
-            </View>
-          ))}
+          <Text style={styles.titulo}>TARIFAS DE DELIVERY GPS</Text>
+          <TextInput style={styles.campo} placeholder="Latitud del local" placeholderTextColor="#6B7280" value={latLocal} onChangeText={setLatLocal} />
+          <TextInput style={styles.campo} placeholder="Longitud del local" placeholderTextColor="#6B7280" value={lngLocal} onChangeText={setLngLocal} />
+          <TextInput style={styles.campo} placeholder="Tarifa base S/" placeholderTextColor="#6B7280" keyboardType="numeric" value={tarifaBase} onChangeText={setTarifaBase} />
+          <TextInput style={styles.campo} placeholder="Tarifa por km S/" placeholderTextColor="#6B7280" keyboardType="numeric" value={tarifaKm} onChangeText={setTarifaKm} />
+          <TouchableOpacity style={styles.boton} onPress={() => guardarPagos()}><Text style={styles.textoBoton}>GUARDAR CONFIGURACIÓN</Text></TouchableOpacity>
         </View>
       )}
 
-      {tab === 'qr pagos' && (
+      {sec === 'historial' && (
         <View>
-          <Text style={styles.titulo}>MÉTODOS DE PAGO (QR YAPE / PLIN)</Text>
+          <Text style={styles.titulo}>HISTORIAL DE VENTAS</Text>
+          <TextInput style={styles.campo} placeholder="Mes (AAAA-MM)" placeholderTextColor="#6B7280" value={filtroMes} onChangeText={setFiltroMes} />
           <View style={styles.tarjetaPedido}>
-            <TextInput style={styles.campo} placeholder="Titular de cuenta" placeholderTextColor="#6B7280" value={cfgPagos.titularLimpio || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, titularLimpio: v })} />
-            <TextInput style={styles.campo} placeholder="URL imagen QR Yape" placeholderTextColor="#6B7280" value={cfgPagos.qr_yape || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_yape: v })} />
-            <TextInput style={styles.campo} placeholder="URL imagen QR Plin" placeholderTextColor="#6B7280" value={cfgPagos.qr_plin || ''} onChangeText={v => setCfgPagos({ ...cfgPagos, qr_plin: v })} />
-            <TouchableOpacity style={styles.boton} onPress={guardarPagos}><Text style={styles.textoBoton}>GUARDAR QR</Text></TouchableOpacity>
+            <Text style={styles.nombreProducto}>Total vendido ({filtroMes}): S/ {totalMes.toFixed(2)}</Text>
+            <Text style={styles.descripcionPedido}>Pedidos completados: {historialFiltrado.length} • Total delivery: S/ {totalDeliveryMes.toFixed(2)}</Text>
           </View>
-        </View>
-      )}
-
-      {tab === 'ventas' && (
-        <View>
-          <View style={[styles.tarjetaSaldo, { borderColor: ROJO }]}>
-            <Text style={styles.etiquetaSaldo}>TOTAL VENTAS COMPLETADAS</Text>
-            <Text style={styles.numeroSaldo}>S/ {totalVentas.toFixed(2)}</Text>
-            <Text style={[styles.etiquetaSaldo, { marginTop: 6 }]}>{completados.length} pedidos completados</Text>
-          </View>
-          <Text style={styles.titulo}>HISTORIAL DIARIO DE VENTAS</Text>
-          {ventasPorDia.map(d => (
-            <View key={d.fecha} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>Fecha: {d.fecha}</Text>
-              <Text style={[styles.descripcionPedido, { color: '#4CAF50' }]}>Ventas ({d.cantComp}): S/ {d.ventas.toFixed(2)}</Text>
-              <Text style={[styles.descripcionPedido, { color: ROJO }]}>Cancelados ({d.cantCanc}): S/ {d.devoluciones.toFixed(2)}</Text>
-              <Text style={styles.totalPedidoTexto}>Neto del día: S/ {(d.ventas - d.devoluciones).toFixed(2)}</Text>
+          {historialFiltrado.map(p => (
+            <View key={p.id} style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'}</Text>
+              <Text style={styles.descripcionPedido}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
             </View>
           ))}
         </View>
       )}
     </ScrollView>
   );
-                }
-            
+            }
+        
