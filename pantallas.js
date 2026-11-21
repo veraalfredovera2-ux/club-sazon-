@@ -5,17 +5,22 @@ import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 export const LOGO = require('./20261104_204552_0000.png');
 export const BANNER_COMIDA = require('./banner_hamburguesa.png');
 
-export function NavegacionSuperior({ regresar, irAInicio, puntos, cantidadCarrito, abrirCarrito, abrirMenuLateral }) {
+export function SiluetaBlanca({ size = 34 }) {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: size * 0.42, height: size * 0.42, borderRadius: size * 0.21, backgroundColor: '#FFFFFF', marginBottom: 2 }} />
+      <View style={{ width: size * 0.72, height: size * 0.34, borderTopLeftRadius: size * 0.36, borderTopRightRadius: size * 0.36, backgroundColor: '#FFFFFF' }} />
+    </View>
+  );
+}
+
+export function NavegacionSuperior({ regresar, irAInicio, cantidadNotif, abrirNotificaciones, cantidadCarrito, abrirCarrito }) {
   return (
     <View style={styles.cabeceraTop}>
-      <View style={{ width: 70, alignItems: 'flex-start' }}>
-        {regresar ? (
+      <View style={{ width: 82, alignItems: 'flex-start' }}>
+        {regresar && (
           <TouchableOpacity onPress={regresar} style={{ paddingVertical: 6, paddingHorizontal: 10, backgroundColor: TARJETA, borderRadius: 10, borderWidth: 1, borderColor: BORDE }}>
             <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '900' }}>←</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={abrirMenuLateral || irAInicio} style={{ padding: 6 }}>
-            <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>≡</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -24,12 +29,22 @@ export function NavegacionSuperior({ regresar, irAInicio, puntos, cantidadCarrit
         <Image source={LOGO} style={styles.logoHeaderCentro} />
       </TouchableOpacity>
 
-      <View style={{ width: 70, alignItems: 'flex-end' }}>
+      <View style={{ width: 82, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+        {abrirNotificaciones && (
+          <TouchableOpacity onPress={abrirNotificaciones} style={{ padding: 5, position: 'relative' }}>
+            <Text style={{ color: '#FFF', fontSize: 21 }}>🔔</Text>
+            {(cantidadNotif || 0) > 0 && (
+              <View style={{ position: 'absolute', top: 1, right: 1, backgroundColor: ROJO, borderRadius: 9, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+                <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '900' }}>{cantidadNotif}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
         {abrirCarrito && (
-          <TouchableOpacity onPress={abrirCarrito} style={{ padding: 6, position: 'relative' }}>
-            <Text style={{ color: '#FFF', fontSize: 22 }}>🔔</Text>
-            <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: ROJO, borderRadius: 10, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
-              <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '900' }}>{cantidadCarrito || 0}</Text>
+          <TouchableOpacity onPress={abrirCarrito} style={{ padding: 5, position: 'relative' }}>
+            <Text style={{ color: '#FFF', fontSize: 21 }}>🛒</Text>
+            <View style={{ position: 'absolute', top: 1, right: 1, backgroundColor: ROJO, borderRadius: 9, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 }}>
+              <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '900' }}>{cantidadCarrito || 0}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -49,7 +64,7 @@ export function BarraInferiorCliente({ vistaActual, cambiarVista }) {
   return (
     <View style={styles.barraInferior}>
       {tabs.map(t => {
-        const activo = vistaActual === t.id || (t.id === 'mas' && ['cuenta', 'canjes', 'ofertas', 'carrito', 'mas'].includes(vistaActual));
+        const activo = vistaActual === t.id || (t.id === 'mas' && ['cuenta', 'canjes', 'ofertas', 'carrito', 'notificaciones', 'mas'].includes(vistaActual));
         return (
           <TouchableOpacity key={t.id} style={styles.tabInferior} onPress={() => cambiarVista(t.id)}>
             <Text style={{ fontSize: 16, color: activo ? ROJO : '#9CA3AF', fontWeight: '900' }}>{t.icono}</Text>
@@ -71,6 +86,7 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
 
         <View style={styles.bannerHero}>
           <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+          <Text style={styles.textoBannerEnamora}>¡Sabor que enamora!</Text>
         </View>
 
         <View style={styles.bannerPuntosBienvenida}>
