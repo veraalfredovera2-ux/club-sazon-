@@ -79,22 +79,22 @@ export function BarraInferiorCliente({ vistaActual, cambiarVista }) {
 export function PantallaBienvenida({ irALogin, irARegistro }) {
   const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
   return (
-    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ paddingTop: 20, paddingBottom: 24, justifyContent: 'space-between', minHeight: '100%' }}>
+    <ScrollView style={styles.pantallaCompleta} contentContainerStyle={{ paddingTop: 12, paddingBottom: 18, justifyContent: 'space-between', minHeight: '100%' }}>
       <View>
         <View style={{ paddingHorizontal: 20 }}>
-          <Image source={LOGO} style={[styles.logoRedondo, { width: 132, height: 132, borderRadius: 66 }]} />
-          <Text style={styles.tituloPrincipal}>EL SAZÓN ORIENTAL</Text>
-          <Text style={{ color: '#F3F4F6', fontSize: 18, fontStyle: 'italic', fontFamily: fuenteElegante, textAlign: 'center', marginBottom: 4 }}>
+          <Image source={LOGO} style={[styles.logoRedondo, { width: 112, height: 112, borderRadius: 56, marginBottom: 6 }]} />
+          <Text style={[styles.tituloPrincipal, { fontSize: 23 }]}>EL SAZÓN ORIENTAL</Text>
+          <Text style={{ color: '#F3F4F6', fontSize: 16, fontStyle: 'italic', fontFamily: fuenteElegante, textAlign: 'center', marginBottom: 2 }}>
             Sabor que te hace volver
           </Text>
         </View>
 
-        <View style={{ width: '100%', height: 295, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
+        <View style={{ width: '100%', height: 245, position: 'relative', backgroundColor: '#070709', overflow: 'hidden' }}>
           <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
           <Text
             style={{
-              position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center',
-              color: '#FFFFFF', fontSize: 24, fontStyle: 'italic', fontWeight: '600',
+              position: 'absolute', bottom: 6, left: 0, right: 0, textAlign: 'center',
+              color: '#FFFFFF', fontSize: 22, fontStyle: 'italic', fontWeight: '600',
               fontFamily: fuenteElegante, letterSpacing: 0.6,
               textShadowColor: 'rgba(0,0,0,0.98)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10
             }}
@@ -103,20 +103,20 @@ export function PantallaBienvenida({ irALogin, irARegistro }) {
           </Text>
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 8, marginBottom: 14, paddingHorizontal: 20 }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>¡Regístrate y recibe</Text>
-          <View style={[styles.pildoraRoja, { borderRadius: 16, paddingVertical: 8, paddingHorizontal: 28, marginVertical: 6 }]}>
-            <Text style={[styles.textoPildoraRoja, { fontSize: 23 }]}>100 puntos</Text>
+        <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 10, paddingHorizontal: 20 }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>¡Regístrate y recibe</Text>
+          <View style={[styles.pildoraRoja, { borderRadius: 14, paddingVertical: 6, paddingHorizontal: 26, marginVertical: 4 }]}>
+            <Text style={[styles.textoPildoraRoja, { fontSize: 21 }]}>100 puntos</Text>
           </View>
-          <Text style={{ color: '#E5E7EB', fontSize: 14, fontWeight: '600' }}>de bienvenida!</Text>
+          <Text style={{ color: '#E5E7EB', fontSize: 13, fontWeight: '600' }}>de bienvenida!</Text>
         </View>
       </View>
 
       <View style={{ paddingHorizontal: 20 }}>
-        <TouchableOpacity style={[styles.boton, { borderRadius: 14, paddingVertical: 15 }]} onPress={irALogin}>
+        <TouchableOpacity style={[styles.boton, { borderRadius: 14, paddingVertical: 13, marginTop: 0 }]} onPress={irALogin}>
           <Text style={[styles.textoBoton, { fontSize: 16 }]}>Comenzar</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={irARegistro} style={{ marginTop: 12, alignItems: 'center' }}>
+        <TouchableOpacity onPress={irARegistro} style={{ marginTop: 10, alignItems: 'center' }}>
           <Text style={{ color: '#9CA3AF', fontSize: 13 }}>
             ¿Eres nuevo? <Text style={styles.enlaceRojo}>Crea tu cuenta gratis</Text>
           </Text>
@@ -319,5 +319,4 @@ export function PantallaRecuperar({ irALogin }) {
       </TouchableOpacity>
     </ScrollView>
   );
-              }
-            
+            }
