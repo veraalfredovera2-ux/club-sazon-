@@ -237,3 +237,37 @@ export async function guardarRiderAdmin(r) {
   return r.id ? apiRest(`riders?id=eq.${r.id}`, 'PATCH', body) : apiRest('riders', 'POST', body);
 }
 export const eliminarRiderAdmin = (id) => apiRest(`riders?id=eq.${id}`, 'DELETE');
+export async function obtenerMotorizados() {
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('*')
+    .eq('rol', 'repartidor')
+    .order('nombre_completo');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function crearMotorizadoAdmin({ nombre_completo, telefono, password, direccion_predeterminada }) {
+  if (!nombre_completo?.trim() || !telefono?.trim() || !password?.trim()) {
+    throw new Error('Completa nombre, teléfono y contraseña del motorizado.');
+  }
+  const { data, error } = await supabase
+    .from('perfiles')
+    .insert({
+      nombre_completo: nombre_completo.trim(),
+      telefono: telefono.trim(),
+      password_hash: password.trim(),
+      rol: 'repartidor',
+      puntos: 0,
+      direccion_predeterminada: (direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm').trim()
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function eliminarMotorizadoAdmin(id) {
+  const { error } = await supabase.from('perfiles').delete().eq('id', id);
+  if (error) throw error;
+}
