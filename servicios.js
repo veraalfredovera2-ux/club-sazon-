@@ -1,5 +1,4 @@
 export const SUPABASE_URL = 'https://' + 'pripxtsriyxhafevokjg' + '.supabase.co';
-
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
@@ -156,7 +155,7 @@ export async function registrarUsuario({ nombreCompleto, telefono, password }) {
 export async function ingresarUsuario({ telefono, password }) {
   const tel = limpiarTel(telefono);
   const res = await apiRest(`perfiles?select=*&telefono=eq.${tel}&limit=1`);
-  const perfil = Array.isArray(res) ? res : null;
+  const perfil = Array.isArray(res) && res.length > 0 ? res.at(0) : null;
   if (!perfil) throw new Error('Número de teléfono no registrado.');
   if (String(perfil.password_hash || '') !== String(password || '').trim()) {
     throw new Error('Contraseña incorrecta.');
@@ -202,8 +201,9 @@ export async function obtenerDatosCliente(clienteId) {
     apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=id.desc`),
     apiRest(`canjes?select=*&cliente_id=eq.${clienteId}&order=id.desc`)
   ]);
+  const filaCli = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : null;
   return {
-    puntos: Number((Array.isArray(perfs) && perfs?.puntos) || 0),
+    puntos: Number(filaCli?.puntos || 0),
     historial: hist || [],
     pedidos: peds || [],
     canjes: canjes || []
