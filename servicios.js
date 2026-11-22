@@ -1,58 +1,30 @@
-const ID_PROYECTO = 'pripxtsriyxhafevokjg';
+const ID_PROYECTO = 'pripstsriyshxfevokjg';
 export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
-export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
-export const VAPID_PUBLIC_KEY = 'BDdITAzUl6okJIKZlfKugOLqEmnwjDeTeCvmBTIEzkzZL0QSqHoT6BVu4Bw1KCaZQ79A2hMiDw22b7SQ0hb0B00';
+export const SUPABASE_KEY = 'sb_publishable_ShY2V3CH7gd4DGBz2t5c_Q_G2Mxzmda';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
 
 const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
-const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  const out = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) out[i] = rawData.charCodeAt(i);
-  return out;
-}
-
-export async function suscribirPushDispositivo(rol, usuarioId) {
-  try {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
-    if (Notification.permission !== 'granted') return false;
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
-    }
-    const json = sub.toJSON();
-    await fetch(`${SUPABASE_URL}/rest/v1/push_suscripciones?on_conflict=endpoint`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Prefer: 'resolution=merge-duplicates' },
-      body: JSON.stringify({ rol, usuario_id: String(usuarioId || ''), endpoint: json.endpoint, p256dh: json.keys?.p256dh || '', auth: json.keys?.auth || '', actualizado_en: new Date().toISOString() })
-    });
-    return true;
-  } catch (e) { return false; }
-}
-
-export async function dispararPushRol(rol, titulo, cuerpo) {
-  try {
-    await fetch(`${SUPABASE_URL}/functions/v1/enviar-push`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
-      body: JSON.stringify({ rol, titulo, cuerpo })
-    });
-  } catch (e) {}
-}
+const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random() * 16 | 0;
+  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+});
 
 async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
-  const op = { method: metodo, cache: 'no-store', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Prefer: 'return=representation' } };
+  const op = {
+    method: metodo,
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      Prefer: 'return=representation'
+    }
+  };
   if (cuerpo) op.body = JSON.stringify(cuerpo);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${ruta}`, op);
   const txt = await res.text();
-  let datos = [];
+  let datos = {};
   try { datos = txt ? JSON.parse(txt) : []; } catch (e) { throw new Error('Error de formato en servidor'); }
   if (!res.ok) throw new Error(datos.message || datos.error || 'Error en la base de datos');
   return datos;
@@ -60,248 +32,303 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
 
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
-  const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
-  const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50' };
+  const titularLimpio = (partes || 'Club Sazón').trim();
+  const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false };
   if (partes.length < 2) return def;
-  const nums = partes.at(1).split('|');
-  return { titularLimpio, local_lat: nums.at(0) || def.local_lat, local_lng: nums.at(1) || def.local_lng, tarifa_base: nums.at(2) || def.tarifa_base, tarifa_km: nums.at(3) || def.tarifa_km };
+  const nums = partes.split('|');
+  return {
+    titularLimpio,
+    local_lat: nums || def.local_lat,
+    local_lng: nums || def.local_lng,
+    tarifa_base: nums || def.tarifa_base,
+    tarifa_km: nums || def.tarifa_km,
+    local_cerrado: nums === '1'
+  };
 }
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  const raw = (Array.isArray(r) && r.at(0)) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón', manana_inicio: '06:50', manana_fin: '11:00', noche_inicio: '18:30', noche_fin: '23:50', local_cerrado: false };
+  const raw = (Array.isArray(r) && r) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
   return { ...raw, ...extraerConfigDelivery(raw.titular) };
 }
 
 export async function guardarConfigPagos(cfg) {
   const del = extraerConfigDelivery(cfg.titular);
-  const titBase = (cfg.titularLimpio != null ? cfg.titularLimpio : del.titularLimpio) || 'Club Sazón';
-  const titularCodificado = `${titBase}||DEL:${String(cfg.local_lat ?? del.local_lat).trim()}|${String(cfg.local_lng ?? del.local_lng).trim()}|${String(cfg.tarifa_base ?? del.tarifa_base).trim()}|${String(cfg.tarifa_km ?? del.tarifa_km).trim()}`;
-  const limpio = { id: cfg.id || 'principal', titular: titularCodificado, qr_yape: cfg.qr_yape || '', qr_plin: cfg.qr_plin || '', manana_inicio: cfg.manana_inicio || '06:50', manana_fin: cfg.manana_fin || '11:00', noche_inicio: cfg.noche_inicio || '18:30', noche_fin: cfg.noche_fin || '23:50', local_cerrado: Boolean(cfg.local_cerrado) };
-  const r = await apiRest(`configuracion_pagos?id=eq.${limpio.id}`, 'PATCH', limpio);
-  if (!r || r.length === 0) return apiRest('configuracion_pagos', 'POST', limpio);
-  return r;
+  const titBase = (cfg.titularLimpio !== undefined ? cfg.titularLimpio : del.titularLimpio) || 'Club Sazón';
+  const cerradoFlag = cfg.local_cerrado ? '1' : '0';
+  const titularEmpacado = `${titBase.trim()}||DEL:${cfg.local_lat || del.local_lat}|${cfg.local_lng || del.local_lng}|${cfg.tarifa_base || del.tarifa_base}|${cfg.tarifa_km || del.tarifa_km}|${cerradoFlag}`;
+  await apiRest('configuracion_pagos?id=eq.principal', 'PATCH', {
+    titular: titularEmpacado,
+    qr_yape: (cfg.qr_yape || '').trim(),
+    qr_plin: (cfg.qr_plin || '').trim()
+  });
+}
+export async function obtenerCatalogo(soloDisp = false) {
+  const q = soloDisp ? 'productos?select=*&disponible=eq.true&order=nombre.asc' : 'productos?select=*&order=nombre.asc';
+  return (await apiRest(q)) || [];
 }
 
-export const obtenerCatalogo = (disp = true) => apiRest(`productos?${disp ? 'disponible=eq.true&' : ''}order=categoria.asc,nombre.asc`);
 export async function guardarProductoAdmin(p) {
-  const body = { nombre: p.nombre, categoria: p.categoria, precio: Number(p.precio), stock: Number(p.stock ?? 10), ingredientes: p.ingredientes || '', imagen_url: p.imagen_url || '', disponible: p.disponible !== false, turno: p.turno || 'ambos' };
-  return p.id ? apiRest(`productos?id=eq.${p.id}`, 'PATCH', body) : apiRest('productos', 'POST', body);
+  const datos = {
+    nombre: (p.nombre || '').trim(),
+    precio: Number(p.precio || 0),
+    stock: Number(p.stock ?? 20),
+    categoria: p.categoria || 'Hamburguesas',
+    turno: p.turno || 'Ambos',
+    ingredientes: (p.ingredientes || '').trim(),
+    imagen_url: (p.imagen_url || '').trim(),
+    disponible: Boolean(p.disponible)
+  };
+  if (p.id) return apiRest(`productos?id=eq.${p.id}`, 'PATCH', datos);
+  return apiRest('productos', 'POST', datos);
 }
-export const eliminarProductoAdmin = (id) => apiRest(`productos?id=eq.${id}`, 'DELETE');
-export const obtenerPromociones = (act = true) => apiRest(`promociones?${act ? 'activa=eq.true&' : ''}order=creado_en.desc`);
+
+export async function eliminarProductoAdmin(id) {
+  await apiRest(`productos?id=eq.${id}`, 'DELETE');
+}
+
+export async function obtenerPromociones(soloAct = false) {
+  const q = soloAct ? 'promociones?select=*&activa=eq.true&order=id.desc' : 'promociones?select=*&order=id.desc';
+  return (await apiRest(q)) || [];
+}
+
 export async function guardarPromocionAdmin(pr) {
-  const body = { tipo: pr.tipo || 'promocion', titulo: pr.titulo, descripcion: pr.descripcion || '', precio: Number(pr.precio), stock: Number(pr.stock ?? 10), imagen_url: pr.imagen_url || '', activa: pr.activa !== false };
-  return pr.id ? apiRest(`promociones?id=eq.${pr.id}`, 'PATCH', body) : apiRest('promociones', 'POST', body);
+  const datos = {
+    titulo: (pr.titulo || '').trim(),
+    descripcion: (pr.descripcion || '').trim(),
+    precio: Number(pr.precio || 0),
+    imagen_url: (pr.imagen_url || '').trim(),
+    activa: Boolean(pr.activa),
+    tipo: pr.tipo || 'promocion'
+  };
+  if (pr.id) return apiRest(`promociones?id=eq.${pr.id}`, 'PATCH', datos);
+  return apiRest('promociones', 'POST', datos);
 }
 
-export const obtenerRecompensas = (act = true) => apiRest(`recompensas?${act ? 'activa=eq.true&' : ''}order=puntos_requeridos.asc`);
+export async function eliminarPromocionAdmin(id) {
+  await apiRest(`promociones?id=eq.${id}`, 'DELETE');
+}
+
+export async function obtenerRecompensas(soloAct = false) {
+  const q = soloAct ? 'recompensas?select=*&activa=eq.true&order=puntos_requeridos.asc' : 'recompensas?select=*&order=puntos_requeridos.asc';
+  return (await apiRest(q)) || [];
+}
+
 export async function guardarRecompensaAdmin(r) {
-  const body = { titulo: r.titulo, descripcion: r.descripcion || '', puntos_requeridos: Number(r.puntos_requeridos), stock: Number(r.stock ?? 5), activa: r.activa !== false };
-  return r.id ? apiRest(`recompensas?id=eq.${r.id}`, 'PATCH', body) : apiRest('recompensas', 'POST', body);
+  const datos = {
+    titulo: (r.titulo || '').trim(),
+    descripcion: (r.descripcion || '').trim(),
+    puntos_requeridos: Number(r.puntos_requeridos || 0),
+    stock: Number(r.stock ?? 10),
+    imagen_url: (r.imagen_url || '').trim(),
+    activa: Boolean(r.activa)
+  };
+  if (r.id) return apiRest(`recompensas?id=eq.${r.id}`, 'PATCH', datos);
+  return apiRest('recompensas', 'POST', datos);
 }
 
-export async function canjearRecompensaCliente(clienteId, rec) {
-  if (rec.stock != null && Number(rec.stock) <= 0) throw new Error('Este premio se quedó sin stock');
-  const pts = Math.abs(Number(rec.puntos_requeridos));
-  const movsActuales = await apiRest(`movimientos_puntos?cliente_id=eq.${clienteId}&select=cantidad`);
-  const saldoReal = (movsActuales || []).reduce((a, m) => a + Number(m.cantidad || 0), 0);
-  if (saldoReal < pts) throw new Error(`Puntos insuficientes. Tu saldo real es ${saldoReal} pts.`);
-  await apiRest('movimientos_puntos', 'POST', { cliente_id: clienteId, tipo: 'CANJE', cantidad: -pts, descripcion: `Canje: ${rec.titulo}` });
-  await apiRest('solicitudes_canje', 'POST', { cliente_id: clienteId, recompensa_id: rec.id, recompensa_titulo: rec.titulo, puntos_usados: pts, estado: 'Pendiente de entrega' });
-  if (rec.id && rec.stock != null) await apiRest(`recompensas?id=eq.${rec.id}`, 'PATCH', { stock: Math.max(0, Number(rec.stock) - 1) });
+export async function eliminarRecompensaAdmin(id) {
+  await apiRest(`recompensas?id=eq.${id}`, 'DELETE');
 }
-
-export const obtenerSolicitudesCanje = () => apiRest('solicitudes_canje?order=creado_en.desc');
-export const confirmarEntregaCanje = (id) => apiRest(`solicitudes_canje?id=eq.${id}`, 'PATCH', { estado: 'Entregado' });
-
-export async function obtenerDatosCliente(id) {
-  const [movs, peds, canjes] = await Promise.all([
-    apiRest(`movimientos_puntos?cliente_id=eq.${id}&order=creado_en.desc`),
-    apiRest(`pedidos?cliente_id=eq.${id}&order=creado_en.desc&select=*,pedido_detalles(*)`),
-    apiRest(`solicitudes_canje?cliente_id=eq.${id}&order=creado_en.desc`)
-  ]);
-  return { puntos: (movs || []).reduce((a, m) => a + Number(m.cantidad || 0), 0), historial: movs || [], pedidos: peds || [], canjes: canjes || [] };
-}
-
-export const obtenerPedidosAdmin = () => apiRest('pedidos?order=creado_en.desc&select=*,clientes(nombre_completo,telefono),pedido_detalles(*)');
 export async function registrarUsuario({ nombreCompleto, telefono, password }) {
   const tel = limpiarTel(telefono);
-  if (tel.length < 8 || tel.length > 15) throw new Error('Teléfono inválido (8 a 15 dígitos).');
-  const ex = await apiRest(`clientes?telefono=eq.${tel}&select=id`);
-  if (ex?.length) throw new Error('Este teléfono ya tiene una cuenta registrada.');
+  if (tel.length < 6) throw new Error('Ingresa un número de teléfono válido.');
+  if ((password || '').length < 4) throw new Error('La contraseña debe tener al menos 4 caracteres.');
+  const existe = await apiRest(`perfiles?select=id&telefono=eq.${tel}`);
+  if (existe.length > 0) throw new Error('Ese número de teléfono ya está registrado.');
   const id = generarUUID();
-  await apiRest('clientes', 'POST', { id, nombre_completo: nombreCompleto, telefono: tel, email_login: `${tel}@clubsazon.com`, password });
-  await apiRest('movimientos_puntos', 'POST', { cliente_id: id, tipo: 'bienvenida', cantidad: 100, descripcion: '100 puntos de bienvenida por registrarse' });
-  return { ok: true, mensaje: `¡Bienvenido/a, ${nombreCompleto}! Has recibido 100 puntos.`, perfil: { id, nombre_completo: nombreCompleto, telefono: tel } };
+  const [perfil] = await apiRest('perfiles', 'POST', {
+    id,
+    nombre_completo: nombreCompleto.trim(),
+    telefono: tel,
+    password_hash: password.trim(),
+    rol: 'cliente',
+    puntos: 100
+  });
+  await apiRest('historial_puntos', 'POST', {
+    cliente_id: id,
+    cantidad: 100,
+    descripcion: 'Bono de bienvenida Club Sazón'
+  });
+  return { perfil, mensaje: 'Cuenta creada con éxito. Ganaste +100 puntos de bienvenida.' };
 }
 
 export async function ingresarUsuario({ telefono, password }) {
   const tel = limpiarTel(telefono);
-  const adm = await apiRest(`administradores?telefono=eq.${tel}&password=eq.${encodeURIComponent(password)}&select=*`);
-  if (adm?.length) return { tipo: 'administrador', perfil: adm.at(0) };
-  const cli = await apiRest(`clientes?telefono=eq.${tel}&password=eq.${encodeURIComponent(password)}&select=*`);
-  if (!cli?.length) throw new Error('Teléfono o contraseña incorrectos.');
-  return { tipo: 'cliente', perfil: cli.at(0) };
-}
-
-export async function crearNuevoPedido(pedidoData, carrito) {
-  const num = pedidoData.numero_pedido || ('PED-' + Math.floor(100000 + Math.random() * 900000));
-  const creados = await apiRest('pedidos', 'POST', { ...pedidoData, numero_pedido: num, estado: pedidoData.estado || 'Pendiente' });
-  const ped = creados.at(0);
-  await apiRest('pedido_detalles', 'POST', carrito.map(p => ({
-    pedido_id: ped.id,
-    producto_id: p.es_promo && String(p.id).includes('-') ? null : p.id,
-    nombre_producto: p.extra_ingrediente?.trim() ? `${p.nombre} (${p.extra_ingrediente.trim()})` : p.nombre,
-    precio_unitario: Number(p.precio),
-    cantidad: p.cantidad,
-    total_linea: Number(p.precio) * p.cantidad
-  })));
-  for (const p of carrito) {
-    if (p.id && p.stock != null) {
-      const tabla = p.es_promo ? 'promociones' : 'productos';
-      await apiRest(`${tabla}?id=eq.${p.id}`, 'PATCH', { stock: Math.max(0, Number(p.stock) - Number(p.cantidad || 1)) });
-    }
+  const res = await apiRest(`perfiles?select=*&telefono=eq.${tel}&limit=1`);
+  const perfil = Array.isArray(res) ? res : null;
+  if (!perfil) throw new Error('Número de teléfono no registrado.');
+  if (String(perfil.password_hash || '') !== String(password || '').trim()) {
+    throw new Error('Contraseña incorrecta.');
   }
-  dispararPushRol('admin', `¡Nuevo Pedido ${num}!`, `Total: S/ ${Number(pedidoData.total || 0).toFixed(2)} • ${pedidoData.tipo_entrega} (${pedidoData.metodo_pago})`);
-  return ped;
-}
-
-export async function confirmarAdminPedido(pedido, costoDelivery = 0) {
-  const sub = Number(pedido.subtotal || pedido.total || 0);
-  const del = costoDelivery !== '' && costoDelivery != null ? Number(costoDelivery) : Number(pedido.costo_delivery || 0);
-  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, costo_delivery: del, total: sub + del, estado: 'Confirmado por local' });
-  if (pedido.tipo_entrega === 'DELIVERY') {
-    dispararPushRol('rider', `¡Nuevo Delivery ${pedido.numero_pedido}!`, `${pedido.distrito || 'Delivery'} • Ganancia: S/ ${del.toFixed(2)}`);
-  }
-}
-
-export async function confirmarRecepcionYDarPuntos(pedido) {
-  const actual = await apiRest(`pedidos?id=eq.${pedido.id}&select=estado,tipo_entrega,rider_id,estado_rider`);
-  const reg = actual.at(0);
-  if (reg?.estado === 'Cancelado') throw new Error('Este pedido fue cancelado.');
-  if (reg?.tipo_entrega === 'DELIVERY' && !reg?.rider_id) {
-    throw new Error('Espera a que un repartidor retire tu pedido para confirmar recepción.');
-  }
-  const nuevoEstado = reg?.tipo_entrega === 'DELIVERY' ? 'Confirmado por local' : 'Completado';
-  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { confirmado_admin: true, recibido_cliente: true, estado: nuevoEstado });
-  const yaDados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.compra&select=cantidad`);
-  if (yaDados?.length) return 0;
-  const puntosGanados = Math.floor(Number(pedido.subtotal || pedido.total || 0) * 10);
-  if (puntosGanados > 0) await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'compra', cantidad: puntosGanados, descripcion: `Compra pedido ${pedido.numero_pedido}` });
-  return puntosGanados;
-}
-
-export async function cancelarPedidoYDescontar(pedido) {
-  await apiRest(`pedidos?id=eq.${pedido.id}`, 'PATCH', { estado: 'Cancelado' });
-  const acreditados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.compra&select=cantidad`);
-  const totalAcreditado = (acreditados || []).reduce((a, m) => a + Math.max(0, Number(m.cantidad || 0)), 0);
-  const yaDescontados = await apiRest(`movimientos_puntos?pedido_id=eq.${pedido.id}&tipo=eq.anulacion&select=id`);
-  if (totalAcreditado > 0 && (!yaDescontados || yaDescontados.length === 0)) {
-    await apiRest('movimientos_puntos', 'POST', { cliente_id: pedido.cliente_id, pedido_id: pedido.id, tipo: 'anulacion', cantidad: -totalAcreditado, descripcion: `Descuento por cancelación pedido ${pedido.numero_pedido}` });
-  }
+  return { tipo: perfil.rol || 'cliente', perfil };
 }
 
 export async function subirImagenGaleria() {
   return new Promise((resolve, reject) => {
-    if (typeof document === 'undefined') return reject(new Error('Disponible solo en navegador'));
+    if (typeof document === 'undefined') return resolve(null);
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
-    inp.onchange = async (e) => {
+    inp.onchange = (e) => {
       const file = e.target?.files?.item(0);
       if (!file) return resolve(null);
-      try {
-        const nombre = `img_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-        const res = await fetch(`${SUPABASE_URL}/storage/v1/object/imagenes/${nombre}`, {
-          method: 'POST',
-          headers: { apikey: SUPABASE_KEY, 'Content-Type': file.type || 'image/jpeg', 'x-upsert': 'true' },
-          body: file
-        });
-        if (!res.ok) throw new Error('Error al subir imagen al Storage');
-        resolve(`${SUPABASE_URL}/storage/v1/object/public/imagenes/${nombre}`);
-      } catch (err) { reject(err); }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const max = 800;
+          const scale = Math.min(max / img.width, max / img.height, 1);
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => resolve(ev.target?.result || null);
+        img.src = ev.target?.result;
+      };
+      reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+      reader.readAsDataURL(file);
     };
     inp.click();
   });
 }
 
-export const obtenerRidersAdmin = () => apiRest('riders?order=nombre_completo.asc');
-export async function guardarRiderAdmin(r) {
-  const tramo = String(r.horario_trabajo || '').split('-');
-  const hEnt = (r.hora_entrada || tramo.at(0) || '18:30').trim();
-  const hSal = (r.hora_salida || tramo.at(1) || '23:50').trim();
-  const libreBase = String(r.dias_libres || '').replace(/\|\s*Placa:.*$/i, '').trim();
-  const libreConPlaca = r.placa?.trim() ? [libreBase, `Placa: ${r.placa.trim()}`].filter(Boolean).join(' | ') : libreBase;
-  const body = { nombre_completo: r.nombre_completo.trim(), telefono: limpiarTel(r.telefono), password: r.password, hora_entrada: hEnt, hora_salida: hSal, dias_libres: libreConPlaca, activo: r.activo !== false };
-  return r.id ? apiRest(`riders?id=eq.${r.id}`, 'PATCH', body) : apiRest('riders', 'POST', body);
+export async function obtenerDatosCliente(clienteId) {
+  const [perfs, hist, peds, canjes] = await Promise.all([
+    apiRest(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`),
+    apiRest(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=id.desc`),
+    apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=id.desc`),
+    apiRest(`canjes?select=*&cliente_id=eq.${clienteId}&order=id.desc`)
+  ]);
+  return {
+    puntos: Number((Array.isArray(perfs) && perfs?.puntos) || 0),
+    historial: hist || [],
+    pedidos: peds || [],
+    canjes: canjes || []
+  };
 }
-export const eliminarRiderAdmin = (id) => apiRest(`riders?id=eq.${id}`, 'DELETE');
+
+export async function obtenerPedidosAdmin() {
+  return (await apiRest('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=id.desc')) || [];
+}
+export async function crearNuevoPedido(cabecera, items) {
+  const num = 'PED-' + Math.floor(100000 + Math.random() * 900000);
+  const [ped] = await apiRest('pedidos', 'POST', {
+    ...cabecera,
+    numero_pedido: num,
+    estado: 'Pendiente',
+    recibido_cliente: false
+  });
+  for (const it of items) {
+    await apiRest('pedido_detalles', 'POST', {
+      pedido_id: ped.id,
+      producto_id: it.es_promo ? null : it.id,
+      nombre_producto: it.nombre,
+      cantidad: Number(it.cantidad),
+      precio_unitario: Number(it.precio),
+      subtotal: Number(it.precio) * Number(it.cantidad)
+    });
+  }
+  return ped;
+}
+
+export async function confirmarAdminPedido(ped) {
+  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: 'Confirmado por local' });
+}
+
+export async function confirmarRecepcionYDarPuntos(ped) {
+  const pts = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
+  const nuevoEstado = ped.tipo_entrega === 'DELIVERY' && ped.rider_id ? ped.estado : 'Completado';
+  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', {
+    recibido_cliente: true,
+    estado: nuevoEstado
+  });
+  if (pts > 0 && ped.cliente_id) {
+    const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${ped.cliente_id}&limit=1`);
+    const actual = Number(cli?.puntos || 0);
+    await apiRest(`perfiles?id=eq.${ped.cliente_id}`, 'PATCH', { puntos: actual + pts });
+    await apiRest('historial_puntos', 'POST', {
+      cliente_id: ped.cliente_id,
+      cantidad: pts,
+      descripcion: `Compra ${ped.numero_pedido}`
+    });
+  }
+  return pts;
+}
+
+export async function cancelarPedidoYDescontar(ped) {
+  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: 'Cancelado' });
+}
+
+export async function canjearRecompensaCliente(clienteId, rec) {
+  const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`);
+  const actual = Number(cli?.puntos || 0);
+  const req = Number(rec.puntos_requeridos || 0);
+  if (actual < req) throw new Error(`Te faltan ${req - actual} puntos para este premio.`);
+  await apiRest(`perfiles?id=eq.${clienteId}`, 'PATCH', { puntos: actual - req });
+  await apiRest('historial_puntos', 'POST', {
+    cliente_id: clienteId,
+    cantidad: -req,
+    descripcion: `Canje: ${rec.titulo}`
+  });
+  await apiRest('canjes', 'POST', {
+    cliente_id: clienteId,
+    recompensa_id: rec.id,
+    puntos_usados: req,
+    estado: 'Pendiente'
+  });
+}
+
 export async function obtenerMotorizados() {
-  const { data, error } = await supabase
-    .from('perfiles')
-    .select('*')
-    .eq('rol', 'repartidor')
-    .order('nombre_completo');
-  if (error) throw error;
-  return data || [];
+  return (await apiRest('perfiles?select=*&rol=eq.repartidor&order=nombre_completo.asc')) || [];
 }
 
 export async function crearMotorizadoAdmin({ nombre_completo, telefono, password, direccion_predeterminada }) {
-  if (!nombre_completo?.trim() || !telefono?.trim() || !password?.trim()) {
-    throw new Error('Completa nombre, teléfono y contraseña del motorizado.');
+  const tel = limpiarTel(telefono);
+  if (!nombre_completo?.trim() || tel.length < 6 || !password?.trim()) {
+    throw new Error('Completa nombre, teléfono válido y contraseña.');
   }
-  const { data, error } = await supabase
-    .from('perfiles')
-    .insert({
-      nombre_completo: nombre_completo.trim(),
-      telefono: telefono.trim(),
-      password_hash: password.trim(),
-      rol: 'repartidor',
-      puntos: 0,
-      direccion_predeterminada: (direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm').trim()
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  const [res] = await apiRest('perfiles', 'POST', {
+    id: generarUUID(),
+    nombre_completo: nombre_completo.trim(),
+    telefono: tel,
+    password_hash: password.trim(),
+    rol: 'repartidor',
+    puntos: 0,
+    direccion_predeterminada: (direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm').trim()
+  });
+  return res;
 }
 
 export async function eliminarMotorizadoAdmin(id) {
-  const { error } = await supabase.from('perfiles').delete().eq('id', id);
-  if (error) throw error;
-}
-export async function obtenerMotorizados() {
-  const { data, error } = await supabase
-    .from('perfiles')
-    .select('*')
-    .eq('rol', 'repartidor')
-    .order('nombre_completo');
-  if (error) throw error;
-  return data || [];
+  await apiRest(`perfiles?id=eq.${id}`, 'DELETE');
 }
 
-export async function crearMotorizadoAdmin({ nombre_completo, telefono, password, direccion_predeterminada }) {
-  if (!nombre_completo?.trim() || !telefono?.trim() || !password?.trim()) {
-    throw new Error('Completa nombre, teléfono y contraseña del motorizado.');
-  }
-  const { data, error } = await supabase
-    .from('perfiles')
-    .insert({
-      nombre_completo: nombre_completo.trim(),
-      telefono: telefono.trim(),
-      password_hash: password.trim(),
-      rol: 'repartidor',
-      puntos: 0,
-      direccion_predeterminada: (direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm').trim()
-    })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+export async function actualizarHorarioRiderAdmin(id, textoHorario) {
+  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { direccion_predeterminada: textoHorario });
 }
 
-export async function eliminarMotorizadoAdmin(id) {
-  const { error } = await supabase.from('perfiles').delete().eq('id', id);
-  if (error) throw error;
+export async function obtenerClientesAdmin() {
+  return (await apiRest('perfiles?select=id,nombre_completo,telefono,puntos&rol=eq.cliente&order=nombre_completo.asc')) || [];
+}
+
+export async function cambiarClaveClienteAdmin(id, nuevaClave) {
+  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave });
+}
+
+export async function asignarRiderPedidoAdmin(pedidoId, riderId, riderNombre) {
+  await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
+    rider_id: riderId,
+    rider_nombre: riderNombre,
+    estado_rider: 'En camino'
+  });
+}
+
+export async function completarEntregaRiderAdmin(pedidoId) {
+  await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
+    estado: 'Completado',
+    estado_rider: 'Entregado'
+  });
 }
