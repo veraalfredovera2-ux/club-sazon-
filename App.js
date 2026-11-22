@@ -5,6 +5,7 @@ import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar, SiluetaBlanca, LOGO, BANNER_COMIDA } from './pantallas';
 import { VentanaAviso, mostrarAviso } from './avisos';
 import { VistaAdmin } from './admin';
+import { VistaRider } from './rider';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
   obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario,
@@ -57,6 +58,7 @@ function IconoRojo({ tipo }) {
       menu: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
       promos: 'M12 2l2.39 1.65 2.89-.39.84 2.79 2.53 1.44-.88 2.78 1.24 2.63-2.29 1.81-.29 2.9-2.88.45-1.69 2.36-2.76-.94-2.76.94-1.69-2.36-2.88-.45-.29-2.9-2.29-1.81 1.24-2.63-.88-2.78 2.53-1.44.84-2.79 2.89.39L12 2zm-2.5 6.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm5 5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm.3-5.8l-7.1 7.1 1.4 1.4 7.1-7.1-1.4-1.4z',
       ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
+      novedades: 'M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z',
       puntos: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
       canjes: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 00-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
       carrito: 'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0020 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
@@ -72,7 +74,6 @@ function IconoRojo({ tipo }) {
   }
   return <Text style={{ fontSize: 22, color: ROJO, fontWeight: '900' }}>★</Text>;
 }
-
 export default function App() {
   const [pantallaAuth, setPantallaAuth] = useState('bienvenida');
   const [usuario, setUsuario] = useState(null);
@@ -98,6 +99,7 @@ export default function App() {
   const [comprobanteUrl, setComprobanteUrl] = useState('');
   const [subiendoComp, setSubiendoComp] = useState(false);
   const [cargando, setCargando] = useState(false);
+
   useEffect(() => {
     AsyncStorage.getItem('sesion_club_sazon').then(s => {
       if (s) {
@@ -143,7 +145,7 @@ export default function App() {
   async function cargarTodoUsuario() {
     try {
       await cargarBase();
-      if (rol === 'administrador') {
+      if (rol === 'administrador' || rol === 'repartidor') {
         const pAdm = await obtenerPedidosAdmin();
         setPedidosAdmin(pAdm || []);
       } else if (usuario?.id) {
@@ -182,8 +184,7 @@ export default function App() {
     setVista('inicio');
     setPantallaAuth('login');
   }
-
-  function agregarAlCarrito(item, esPromo = false) {
+    function agregarAlCarrito(item, esPromo = false) {
     if (cfgPagos.local_cerrado) return mostrarAviso('Local cerrado', 'En este momento el local se encuentra cerrado.');
     setCarrito(prev => {
       const idx = prev.findIndex(x => x.id === item.id && Boolean(x.es_promo) === esPromo);
@@ -227,6 +228,7 @@ export default function App() {
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
+
   const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), gpsCliente.lat, gpsCliente.lng)
@@ -282,7 +284,6 @@ export default function App() {
       mostrarAviso('¡Canje solicitado!', `Has canjeado: ${rec.titulo}`);
     } catch (e) { mostrarAviso('No disponible', e.message); } finally { setCargando(false); }
   }
-
   if (!usuario) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
@@ -327,6 +328,20 @@ export default function App() {
     );
   }
 
+  if (rol === 'repartidor') {
+    return (
+      <SafeAreaView style={styles.pantallaCompleta}>
+        <VentanaAviso />
+        <VistaRider
+          usuario={usuario}
+          pedidos={pedidosAdmin}
+          recargar={cargarTodoUsuario}
+          cerrarSesion={cerrarSesion}
+        />
+      </SafeAreaView>
+    );
+  }
+
   const accesosInicio = [
     { id: 'menu', tipo: 'menu', titulo: 'Menú' },
     { id: 'promos', tipo: 'promos', titulo: 'Promociones' },
@@ -346,7 +361,6 @@ export default function App() {
   const cantTotalCarrito = carrito.reduce((a, x) => a + x.cantidad, 0);
   const pedidosActivos = (datosCli.pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
   const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
-
   return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <VentanaAviso />
@@ -362,10 +376,14 @@ export default function App() {
               <View style={{ padding: 16 }}>
                 <Text style={{ color: '#FFF', fontSize: 19, fontWeight: '900', marginBottom: 6 }}>{promoDetalle.titulo}</Text>
                 <Text style={{ color: '#D1D5DB', fontSize: 13, marginBottom: 12 }}>{promoDetalle.descripcion || 'Especialidad preparada al momento en El Sazón Oriental.'}</Text>
-                <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900', marginBottom: 14 }}>S/ {Number(promoDetalle.precio).toFixed(2)}</Text>
-                <TouchableOpacity style={styles.boton} onPress={() => { agregarAlCarrito(promoDetalle, true); setPromoDetalle(null); }}>
-                  <Text style={styles.textoBoton}>Agregar al carrito</Text>
-                </TouchableOpacity>
+                {promoDetalle.tipo !== 'novedad' && (
+                  <>
+                    <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900', marginBottom: 14 }}>S/ {Number(promoDetalle.precio).toFixed(2)}</Text>
+                    <TouchableOpacity style={styles.boton} onPress={() => { agregarAlCarrito(promoDetalle, true); setPromoDetalle(null); }}>
+                      <Text style={styles.textoBoton}>Agregar al carrito</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
                 <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setPromoDetalle(null)}>
                   <Text style={styles.textoBoton}>Cerrar</Text>
                 </TouchableOpacity>
@@ -374,6 +392,7 @@ export default function App() {
           )}
         </View>
       </Modal>
+
       <ScrollView contentContainerStyle={styles.contenido}>
         <NavegacionSuperior
           regresar={vista !== 'inicio' ? () => setVista('inicio') : null}
@@ -484,19 +503,20 @@ export default function App() {
             )}
           </View>
         )}
-
-        {(vista === 'promos' || vista === 'ofertas') && (
+        {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
-            <Text style={[styles.titulo, { fontSize: 20 }]}>{vista === 'promos' ? 'Promociones' : 'Ofertas'}</Text>
-            {promos.filter(pr => vista === 'promos' ? pr.tipo !== 'oferta' : pr.tipo === 'oferta').length === 0 ? (
+            <Text style={[styles.titulo, { fontSize: 20 }]}>
+              {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
+            </Text>
+            {promos.filter(pr => vista === 'novedades' ? pr.tipo === 'novedad' : vista === 'promos' ? (pr.tipo !== 'oferta' && pr.tipo !== 'novedad') : pr.tipo === 'oferta').length === 0 ? (
               <View style={styles.tarjetaVacia}>
                 <Text style={styles.textoVacio}>
-                  {vista === 'promos' ? 'Pronto publicaremos nuevas promociones aquí.' : 'Pronto publicaremos nuevas ofertas del día aquí.'}
+                  {vista === 'novedades' ? 'Pronto publicaremos novedades aquí.' : vista === 'promos' ? 'Pronto publicaremos promociones aquí.' : 'Pronto publicaremos ofertas aquí.'}
                 </Text>
               </View>
             ) : (
               promos
-                .filter(pr => vista === 'promos' ? pr.tipo !== 'oferta' : pr.tipo === 'oferta')
+                .filter(pr => vista === 'novedades' ? pr.tipo === 'novedad' : vista === 'promos' ? (pr.tipo !== 'oferta' && pr.tipo !== 'novedad') : pr.tipo === 'oferta')
                 .map(pr => (
                   <View key={pr.id} style={[styles.tarjetaPromo, { height: 215, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
                     <Image
@@ -508,17 +528,18 @@ export default function App() {
                       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(7,7,9,0.5) 48%, rgba(7,7,9,0.96) 100%)', pointerEvents: 'none' }} />
                     )}
                     <View style={[styles.etiquetaPromo, { top: 12, left: 12, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12 }]}>
-                      <Text style={[styles.textoEtiquetaPromo, { fontSize: 11 }]}>{vista === 'promos' ? 'PROMOCIÓN' : 'OFERTA'}</Text>
+                      <Text style={[styles.textoEtiquetaPromo, { fontSize: 11 }]}>
+                        {vista === 'novedades' ? 'NOVEDAD' : vista === 'promos' ? 'PROMOCIÓN' : 'OFERTA'}
+                      </Text>
                     </View>
                     <View style={{ position: 'absolute', bottom: 12, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                       <View style={{ flex: 1, paddingRight: 8 }}>
                         <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginBottom: 2 }} numberOfLines={1}>{pr.titulo}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                        {vista === 'novedades' ? (
+                          <Text style={{ color: '#D1D5DB', fontSize: 12 }} numberOfLines={2}>{pr.descripcion}</Text>
+                        ) : (
                           <Text style={{ color: ROJO, fontSize: 21, fontWeight: '900' }}>S/ {Number(pr.precio).toFixed(2)}</Text>
-                          {!!pr.precio_anterior && (
-                            <Text style={{ color: '#9CA3AF', fontSize: 13, textDecorationLine: 'line-through' }}>S/ {Number(pr.precio_anterior).toFixed(2)}</Text>
-                          )}
-                        </View>
+                        )}
                       </View>
                       <TouchableOpacity
                         style={{ backgroundColor: ROJO, paddingVertical: 9, paddingHorizontal: 18, borderRadius: 20 }}
@@ -532,7 +553,7 @@ export default function App() {
             )}
           </View>
         )}
-                          {(vista === 'puntos' || vista === 'canjes') && (
+        {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               {Platform.OS === 'web' && (
@@ -662,7 +683,8 @@ export default function App() {
                     <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}</Text>
                   </View>
                 )}
-                          <Text style={styles.titulo}>Método de pago</Text>
+
+                <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
@@ -733,7 +755,132 @@ export default function App() {
             )}
           </View>
         )}
-        {vista === 'pedidos' && (
+                  {vista === 'carrito' && (
+          <View>
+            <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
+            {carrito.length === 0 ? (
+              <View style={styles.tarjetaVacia}>
+                <Text style={styles.textoVacio}>Tu carrito está vacío. Agrega platos desde el Menú.</Text>
+                <TouchableOpacity style={[styles.boton, { marginTop: 14 }]} onPress={() => setVista('menu')}>
+                  <Text style={styles.textoBoton}>Ir al Menú</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                {carrito.map((item, idx) => (
+                  <View key={`${item.id}-${idx}`} style={[styles.producto, { padding: 12 }]}>
+                    <Image source={item.imagen_url && item.imagen_url.includes('http') ? { uri: item.imagen_url } : LOGO} style={{ width: 66, height: 66, borderRadius: 12, backgroundColor: '#1F1F28' }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.nombreProducto}>{item.nombre}</Text>
+                      <Text style={[styles.precioProducto, { color: '#D1D5DB', marginBottom: 6 }]}>S/ {(Number(item.precio) * item.cantidad).toFixed(2)}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, -1)}>
+                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>{item.cantidad}</Text>
+                        <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, 1)}>
+                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => eliminarDelCarrito(idx)} style={{ padding: 8 }}>
+                      <Text style={{ fontSize: 18, color: ROJO }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                <Text style={styles.titulo}>Entrega y ubicación</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                  {['DELIVERY', 'RECOJO EN LOCAL'].map(tipo => (
+                    <TouchableOpacity key={tipo} style={[styles.opcionEntrega, tipoEntrega === tipo && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]} onPress={() => setTipoEntrega(tipo)}>
+                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>{tipo}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {tipoEntrega === 'DELIVERY' && (
+                  <View style={styles.tarjetaPedido}>
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginBottom: 10, paddingVertical: 11 }]} onPress={obtenerUbicacionCliente}>
+                      <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL (GPS)</Text>
+                    </TouchableOpacity>
+                    <TextInput style={styles.campo} placeholder="Distrito (ej. San Borja, Surquillo...)" placeholderTextColor="#6B7280" value={distrito} onChangeText={setDistrito} />
+                    <TextInput style={styles.campo} placeholder="Dirección exacta o referencia" placeholderTextColor="#6B7280" value={direccion} onChangeText={setDireccion} />
+                    <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}</Text>
+                  </View>
+                )}
+
+                <Text style={styles.titulo}>Método de pago</Text>
+                <View style={styles.tarjetaPedido}>
+                  {[
+                    { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
+                    { id: 'Plin', bg: '#00B2E3', tag: 'plin', label: 'Plin' },
+                    { id: 'Efectivo', bg: '#0D9488', tag: '💵', label: 'Efectivo' }
+                  ].map(mp => {
+                    const sel = metodoPago === mp.id;
+                    return (
+                      <TouchableOpacity
+                        key={mp.id}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#22222C', gap: 12 }}
+                        onPress={() => setMetodoPago(mp.id)}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: sel ? ROJO : '#6B7280', alignItems: 'center', justifyContent: 'center' }}>
+                          {sel && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: ROJO }} />}
+                        </View>
+                        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: mp.bg, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{mp.tag}</Text>
+                        </View>
+                        <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>{mp.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {(metodoPago === 'Yape' || metodoPago === 'Plin') && (
+                    <View style={{ marginTop: 10, alignItems: 'center', width: '100%' }}>
+                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12, marginBottom: 4 }}>Titular: {cfgPagos.titularLimpio || 'Club Sazón'}</Text>
+                      {!!(metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin) && (
+                        <Image source={{ uri: metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin }} style={{ width: 150, height: 150, borderRadius: 10, marginVertical: 6 }} />
+                      )}
+                      <TouchableOpacity
+                        style={[styles.boton, { backgroundColor: comprobanteUrl ? '#16A34A' : '#1E293B', width: '100%', paddingVertical: 10 }]}
+                        disabled={subiendoComp}
+                        onPress={async () => {
+                          setSubiendoComp(true);
+                          try {
+                            const url = await subirImagenGaleria();
+                            if (url) { setComprobanteUrl(url); mostrarAviso('Comprobante listo', 'Captura adjuntada al pedido.'); }
+                          } catch (e) { mostrarAviso('Error', e.message); } finally { setSubiendoComp(false); }
+                        }}
+                      >
+                        <Text style={styles.textoBoton}>
+                          {subiendoComp ? 'SUBIENDO CAPTURA...' : comprobanteUrl ? '✅ CAPTURA DE PAGO ADJUNTADA' : `📸 ADJUNTAR CAPTURA DE PAGO ${metodoPago.toUpperCase()}`}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                <TextInput style={styles.campo} placeholder="Notas adicionales (sin ají, cubiertos, etc.)" placeholderTextColor="#6B7280" value={notas} onChangeText={setNotas} />
+
+                <View style={styles.tarjetaPedido}>
+                  {tipoEntrega === 'DELIVERY' && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <Text style={styles.descripcionPedido}>Subtotal + Delivery</Text>
+                      <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>S/ {subtotal.toFixed(2)} + S/ {costoDelivery.toFixed(2)}</Text>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900' }}>Total</Text>
+                    <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
+                  </View>
+                  <TouchableOpacity style={[styles.boton, { marginTop: 0 }]} onPress={enviarPedido} disabled={cargando}>
+                    <Text style={styles.textoBoton}>{cargando ? 'Enviando pedido...' : 'Realizar pedido'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+                            {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -788,11 +935,11 @@ export default function App() {
             <Text style={styles.titulo}>MÁS OPCIONES</Text>
             <View style={styles.cuadricula3}>
               {[
+                { id: 'novedades', tipo: 'novedades', titulo: 'Novedades' },
                 { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' },
                 { id: 'canjes', tipo: 'canjes', titulo: 'Canjes' },
                 { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas' },
                 { id: 'carrito', tipo: 'carrito', titulo: `Carrito (${cantTotalCarrito})` },
-                { id: 'notificaciones', tipo: 'pedidos', titulo: 'Notificaciones' },
                 { id: 'salir', tipo: 'salir', titulo: 'Cerrar sesión' }
               ].map(op => (
                 <TouchableOpacity
@@ -840,5 +987,4 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-                    }
-                    
+          }
