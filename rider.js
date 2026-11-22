@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, Linking } from 'react-native';
-import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
+import { styles, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
-import { supabase } from './servicios';
+import { completarEntregaRiderAdmin } from './servicios';
 
 function obtenerRangoSemana(offsetSemanas = 0) {
   const hoy = new Date();
@@ -61,11 +61,7 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion }) {
     }
     setProcesando(true);
     try {
-      const { error } = await supabase
-        .from('pedidos')
-        .update({ estado: 'Completado', estado_rider: 'Entregado' })
-        .eq('id', ped.id);
-      if (error) throw error;
+      await completarEntregaRiderAdmin(ped.id);
       await recargar();
       mostrarAviso('¡Entrega completada!', `Se sumó +S/ ${Number(ped.costo_delivery || 0).toFixed(2)} a tu ganancia.`);
     } catch (e) {
@@ -77,11 +73,11 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion }) {
 
   function abrirMapaCliente(dir) {
     const match = (dir || '').match(/https:\/\/www\.google\.com\/maps\?q=[^\s|]+/);
-    if (match) return Linking.openURL(match).catch(() => {});
+    if (match) return Linking.openURL(match[0]).catch(() => {});
     const query = encodeURIComponent(dir || 'Lima, Peru');
     Linking.openURL(`https://google.com{query}`).catch(() => {});
   }
-    return (
+  return (
     <ScrollView contentContainerStyle={styles.contenido}>
       <View style={styles.cabeceraTop}>
         <View style={{ width: 70 }} />
@@ -184,5 +180,5 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion }) {
       </TouchableOpacity>
     </ScrollView>
   );
-        }
-        
+          }
+              
