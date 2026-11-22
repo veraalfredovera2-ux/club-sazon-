@@ -1,5 +1,4 @@
-const ID_PROYECTO = 'pripstsriyshxfewokjg';
-
+const ID_PROYECTO = 'pripstsriyshxfewokjgn';
 export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3CH7gd4DGBz2t5c_Q_G2Mxzmda';
 
