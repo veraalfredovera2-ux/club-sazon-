@@ -1,4 +1,5 @@
-export const SUPABASE_URL = 'https://supabase.co';
+export const SUPABASE_URL = 'https://' + 'pripstsrlyshxfevokjg' + '.supabase.co';
+
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
