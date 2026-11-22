@@ -1,5 +1,4 @@
-const ID_PROYECTO = 'pripstsriyshxfewokjgn';
-export const SUPABASE_URL = 'https://' + ID_PROYECTO + '.supabase.co';
+export const SUPABASE_URL = 'https://supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
@@ -32,23 +31,23 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
 
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
-  const titularLimpio = (partes || 'Club Sazón').trim();
+  const titularLimpio = (partes[0] || 'Club Sazón').trim();
   const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false };
   if (partes.length < 2) return def;
-  const nums = partes.split('|');
+  const nums = partes[1].split('|');
   return {
     titularLimpio,
-    local_lat: nums || def.local_lat,
-    local_lng: nums || def.local_lng,
-    tarifa_base: nums || def.tarifa_base,
-    tarifa_km: nums || def.tarifa_km,
-    local_cerrado: nums === '1'
+    local_lat: nums[0] || def.local_lat,
+    local_lng: nums[1] || def.local_lng,
+    tarifa_base: nums[2] || def.tarifa_base,
+    tarifa_km: nums[3] || def.tarifa_km,
+    local_cerrado: nums[4] === '1'
   };
 }
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  const raw = (Array.isArray(r) && r) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
+  const raw = (Array.isArray(r) && r[0]) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
   return { ...raw, ...extraerConfigDelivery(raw.titular) };
 }
 
