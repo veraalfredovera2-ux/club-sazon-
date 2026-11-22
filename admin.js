@@ -19,10 +19,11 @@ function IconoAdmin({ tipo }) {
       productos: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
       promos: 'M12 2l2.39 1.65 2.89-.39.84 2.79 2.53 1.44-.88 2.78 1.24 2.63-2.29 1.81-.29 2.9-2.88.45-1.69 2.36-2.76-.94-2.76.94-1.69-2.36-2.88-.45-.29-2.9-2.29-1.81 1.24-2.63-.88-2.78 2.53-1.44.84-2.79 2.89.39L12 2z',
       ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
+      novedades: 'M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z',
       premios: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 00-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
       riders: 'M19 7c0-1.1-.9-2-2-2h-3v2h3v2.65L13.52 14H10V9H6c-2.21 0-4 1.79-4 4v3h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4.48L19 10.35V7zM7 17c-.55 0-1-.45-1-1h2c0 .55-.45 1-1 1zm12-1c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z',
       pagos: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
-      config: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+      config: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.44.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
       historial: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z',
       clientes: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'
     };
@@ -34,7 +35,6 @@ function IconoAdmin({ tipo }) {
   }
   return <Text style={{ fontSize: 22, color: ROJO, fontWeight: '900' }}>★</Text>;
 }
-
 export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCompletar, onCancelar, cerrarSesion, cargando }) {
   const [sec, setSec] = useState('inicio');
   const [horaActual, setHoraActual] = useState('');
@@ -46,6 +46,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [clientesList, setClientesList] = useState([]);
   const [busquedaCli, setBusquedaCli] = useState('');
   const [nuevaClaveCli, setNuevaClaveCli] = useState({});
+  const [horarioRiderEdit, setHorarioRiderEdit] = useState({});
   const [subiendo, setSubiendo] = useState(false);
 
   const [editId, setEditId] = useState(null);
@@ -76,6 +77,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [nomRider, setNomRider] = useState('');
   const [telRider, setTelRider] = useState('');
   const [passRider, setPassRider] = useState('');
+  const [horarioNuevoRider, setHorarioNuevoRider] = useState('Lun a Dom: 12:00 pm - 10:00 pm');
   const [riderSeleccionado, setRiderSeleccionado] = useState({});
 
   const [titular, setTitular] = useState('');
@@ -88,6 +90,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [localCerrado, setLocalCerrado] = useState(false);
   const [notifActivas, setNotifActivas] = useState(true);
   const [filtroMes, setFiltroMes] = useState(() => new Date().toISOString().slice(0, 7));
+
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = new Date();
@@ -106,6 +109,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         obtenerCatalogo(false), obtenerPromociones(false), obtenerRecompensas(false), obtenerConfigPagos(), obtenerMotorizados()
       ]);
       setCatalogo(c || []); setPromos(p || []); setRecompensas(r || []); setRiders(mds || []);
+      const mapHorarios = {};
+      (mds || []).forEach(m => { mapHorarios[m.id] = m.direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm'; });
+      setHorarioRiderEdit(mapHorarios);
       if (cfg) {
         setTitular(cfg.titularLimpio || ''); setQrYape(cfg.qr_yape || ''); setQrPlin(cfg.qr_plin || '');
         setLatLocal(cfg.local_lat || '-12.089700'); setLngLocal(cfg.local_lng || '-77.003100');
@@ -115,6 +121,16 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       const { data: clis } = await supabase.from('perfiles').select('id, nombre_completo, telefono, puntos').eq('rol', 'cliente').order('nombre_completo');
       setClientesList(clis || []);
     } catch (e) {}
+  }
+
+  async function guardarHorarioRider(riderObj) {
+    const textoHorario = (horarioRiderEdit[riderObj.id] || '').trim();
+    try {
+      const { error } = await supabase.from('perfiles').update({ direccion_predeterminada: textoHorario }).eq('id', riderObj.id);
+      if (error) throw error;
+      await cargarTodo();
+      mostrarAviso('Horario guardado', `Turno semanal actualizado para ${riderObj.nombre_completo}.`);
+    } catch (e) { mostrarAviso('Error', e.message); }
   }
 
   async function restablecerClaveCliente(cli) {
@@ -153,9 +169,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
   async function guardarPromo(tipo = 'promocion') {
     try {
-      await guardarPromocionAdmin({ id: editPromoId, titulo: tituloP, descripcion: descP, precio: precioP, imagen_url: imgP, activa: activaP, tipo });
+      const precioFinal = tipo === 'novedad' ? 0 : precioP;
+      await guardarPromocionAdmin({ id: editPromoId, titulo: tituloP, descripcion: descP, precio: precioFinal, imagen_url: imgP, activa: activaP, tipo });
       setEditPromoId(null); setTituloP(''); setDescP(''); setPrecioP(''); setImgP(''); setActivaP(true);
-      await cargarTodo(); await recargar(); mostrarAviso('Listo', tipo === 'oferta' ? 'Oferta guardada.' : 'Promoción guardada.');
+      await cargarTodo(); await recargar();
+      mostrarAviso('Listo', tipo === 'novedad' ? 'Novedad publicada.' : tipo === 'oferta' ? 'Oferta guardada.' : 'Promoción guardada.');
     } catch (e) { mostrarAviso('Error', e.message); }
   }
 
@@ -190,8 +208,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
   function extraerComprobante(notasStr) {
     if (!notasStr || !notasStr.includes('COMPROBANTE:')) return null;
-    const parte = notasStr.split('COMPROBANTE:')[1] || '';
-    return parte.split('|')[0].trim();
+    const parte = notasStr.split('COMPROBANTE:') || '';
+    return parte.split('|').trim();
   }
 
   const activos = (pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
@@ -202,11 +220,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const historialFiltrado = completados.filter(p => (p.creado_en || '').startsWith(filtroMes));
   const totalMes = historialFiltrado.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const totalDeliveryMes = historialFiltrado.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-    const tarjetasMenuAdmin = [
+  const tarjetasMenuAdmin = [
     { id: 'pedidos', tipo: 'pedidos', titulo: 'Pedidos', badge: activos.length },
     { id: 'productos', tipo: 'productos', titulo: 'Productos', badge: 0 },
     { id: 'promos', tipo: 'promos', titulo: 'Promociones', badge: 0 },
     { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas', badge: 0 },
+    { id: 'novedades', tipo: 'novedades', titulo: 'Novedades', badge: promos.filter(x => x.tipo === 'novedad').length },
     { id: 'premios', tipo: 'premios', titulo: 'Premios y canjes', badge: 0 },
     { id: 'riders', tipo: 'riders', titulo: 'Motorizados', badge: riders.length },
     { id: 'clientes', tipo: 'clientes', titulo: 'Clientes / Claves', badge: clientesList.length },
@@ -304,7 +323,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-      {sec === 'pedidos' && (
+                  {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -373,7 +392,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                                                       {sec === 'productos' && (
+      {sec === 'productos' && (
         <View>
           <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
           <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
@@ -386,7 +405,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '800', marginBottom: 6 }]}>Turno:</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
             {['Mañana', 'Tarde/Noche', 'Ambos'].map(t => (
               <TouchableOpacity key={t} style={[styles.opcionEntrega, turno === t && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]} onPress={() => setTurno(t)}>
@@ -425,27 +443,29 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         </View>
       )}
 
-      {(sec === 'promos' || sec === 'ofertas') && (
+      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
-          <Text style={styles.titulo}>{sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
+          <Text style={styles.titulo}>{sec === 'novedades' ? 'PUBLICAR NOVEDAD' : sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
           <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={tituloP} onChangeText={setTituloP} />
-          <TextInput style={styles.campo} placeholder="Descripción" placeholderTextColor="#6B7280" value={descP} onChangeText={setDescP} />
-          <TextInput style={styles.campo} placeholder="Precio (S/)" placeholderTextColor="#6B7280" keyboardType="numeric" value={precioP} onChangeText={setPrecioP} />
+          <TextInput style={styles.campo} placeholder="Mensaje o descripción" placeholderTextColor="#6B7280" value={descP} onChangeText={setDescP} />
+          {sec !== 'novedades' && (
+            <TextInput style={styles.campo} placeholder="Precio (S/)" placeholderTextColor="#6B7280" keyboardType="numeric" value={precioP} onChangeText={setPrecioP} />
+          )}
           <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 10 }]} onPress={() => subirFoto('promo')} disabled={subiendo}>
-            <Text style={styles.textoBoton}>{subiendo ? 'SUBIENDO...' : '📸 SUBIR BANNER'}</Text>
+            <Text style={styles.textoBoton}>{subiendo ? 'SUBIENDO...' : '📸 SUBIR IMAGEN'}</Text>
           </TouchableOpacity>
-          <TextInput style={styles.campo} placeholder="URL de banner" placeholderTextColor="#6B7280" value={imgP} onChangeText={setImgP} />
+          <TextInput style={styles.campo} placeholder="URL de imagen" placeholderTextColor="#6B7280" value={imgP} onChangeText={setImgP} />
           <TouchableOpacity style={[styles.opcionEntrega, activaP && styles.opcionEntregaActiva]} onPress={() => setActivaP(!activaP)}>
             <Text style={{ color: '#FFF', fontWeight: '800' }}>{activaP ? '✅ Visible al cliente' : '⛔ Oculta'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.boton} onPress={() => guardarPromo(sec === 'ofertas' ? 'oferta' : 'promocion')}>
+          <TouchableOpacity style={styles.boton} onPress={() => guardarPromo(sec === 'novedades' ? 'novedad' : sec === 'ofertas' ? 'oferta' : 'promocion')}>
             <Text style={styles.textoBoton}>GUARDAR</Text>
           </TouchableOpacity>
 
           <Text style={styles.titulo}>PUBLICADAS</Text>
-          {promos.filter(pr => sec === 'ofertas' ? pr.tipo === 'oferta' : pr.tipo !== 'oferta').map(pr => (
+          {promos.filter(pr => sec === 'novedades' ? pr.tipo === 'novedad' : sec === 'ofertas' ? pr.tipo === 'oferta' : (pr.tipo !== 'oferta' && pr.tipo !== 'novedad')).map(pr => (
             <View key={pr.id} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{pr.titulo} • S/ {Number(pr.precio).toFixed(2)}</Text>
+              <Text style={styles.nombreProducto}>{pr.titulo} {pr.tipo !== 'novedad' ? `• S/ ${Number(pr.precio).toFixed(2)}` : ''}</Text>
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                 <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => { setEditPromoId(pr.id); setTituloP(pr.titulo); setDescP(pr.descripcion || ''); setPrecioP(String(pr.precio)); setImgP(pr.imagen_url || ''); setActivaP(Boolean(pr.activa)); }}>
                   <Text style={styles.textoBoton}>Editar</Text>
@@ -458,8 +478,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-
-      {sec === 'premios' && (
+                    {sec === 'premios' && (
         <View>
           <Text style={styles.titulo}>PREMIOS Y CANJES</Text>
           <TextInput style={styles.campo} placeholder="Nombre del premio" placeholderTextColor="#6B7280" value={tituloR} onChangeText={setTituloR} />
@@ -488,31 +507,43 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                                                               {sec === 'riders' && (
+
+      {sec === 'riders' && (
         <View>
           <Text style={styles.titulo}>REGISTRAR MOTORIZADO</Text>
           <TextInput style={styles.campo} placeholder="Nombre completo" placeholderTextColor="#6B7280" value={nomRider} onChangeText={setNomRider} />
           <TextInput style={styles.campo} placeholder="Teléfono" placeholderTextColor="#6B7280" keyboardType="phone-pad" value={telRider} onChangeText={setTelRider} />
           <TextInput style={styles.campo} placeholder="Contraseña" placeholderTextColor="#6B7280" value={passRider} onChangeText={setPassRider} />
-          <TouchableOpacity style={styles.boton} onPress={async () => { try { await crearMotorizadoAdmin({ nombre_completo: nomRider, telefono: telRider, password: passRider }); setNomRider(''); setTelRider(''); setPassRider(''); await cargarTodo(); mostrarAviso('Listo', 'Motorizado registrado.'); } catch (e) { mostrarAviso('Error', e.message); } }}>
+          <TextInput style={styles.campo} placeholder="Horario semanal (ej. Lun a Dom: 12pm - 10pm)" placeholderTextColor="#6B7280" value={horarioNuevoRider} onChangeText={setHorarioNuevoRider} />
+          <TouchableOpacity style={styles.boton} onPress={async () => { try { await crearMotorizadoAdmin({ nombre_completo: nomRider, telefono: telRider, password: passRider, direccion_predeterminada: horarioNuevoRider }); setNomRider(''); setTelRider(''); setPassRider(''); await cargarTodo(); mostrarAviso('Listo', 'Motorizado registrado.'); } catch (e) { mostrarAviso('Error', e.message); } }}>
             <Text style={styles.textoBoton}>GUARDAR MOTORIZADO</Text>
           </TouchableOpacity>
-          <Text style={styles.titulo}>EQUIPO DE REPARTO ({riders.length})</Text>
+
+          <Text style={styles.titulo}>EQUIPO Y HORARIOS SEMANALES ({riders.length})</Text>
           {riders.map(r => (
-            <View key={r.id} style={styles.producto}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nombreProducto}>🛵 {r.nombre_completo}</Text>
-                <Text style={styles.descripcionPedido}>Tel: {r.telefono}</Text>
+            <View key={r.id} style={styles.tarjetaPedido}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={styles.nombreProducto}>🛵 {r.nombre_completo} ({r.telefono})</Text>
+                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#7F1D1D' }]} onPress={async () => { await eliminarMotorizadoAdmin(r.id); await cargarTodo(); }}>
+                  <Text style={styles.textoAgregar}>Eliminar</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#7F1D1D' }]} onPress={async () => { await eliminarMotorizadoAdmin(r.id); await cargarTodo(); }}>
-                <Text style={styles.textoAgregar}>Eliminar</Text>
-              </TouchableOpacity>
+              <Text style={[styles.descripcionPedido, { color: DORADO, marginBottom: 4 }]}>Horario semanal asignado:</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.campo, { flex: 1, marginBottom: 0, paddingVertical: 9 }]}
+                  value={horarioRiderEdit[r.id] || ''}
+                  onChangeText={(txt) => setHorarioRiderEdit(prev => ({ ...prev, [r.id]: txt }))}
+                />
+                <TouchableOpacity style={[styles.boton, { marginTop: 0, paddingVertical: 10, backgroundColor: '#16A34A' }]} onPress={() => guardarHorarioRider(r)}>
+                  <Text style={styles.textoBoton}>Guardar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
       )}
-
-      {sec === 'clientes' && (
+                            {sec === 'clientes' && (
         <View>
           <Text style={styles.titulo}>CLIENTES Y RESTABLECER CLAVES ({clientesList.length})</Text>
           <TextInput
@@ -597,5 +628,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-            }
-        
+        }
+       
