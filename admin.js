@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Linking, Modal, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, Platform } from 'react-native';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
 import { mostrarAviso } from './avisos';
@@ -9,7 +9,8 @@ import {
   obtenerRecompensas, guardarRecompensaAdmin, eliminarRecompensaAdmin,
   obtenerConfigPagos, guardarConfigPagos,
   obtenerMotorizados, crearMotorizadoAdmin, eliminarMotorizadoAdmin,
-  subirImagenGaleria, supabase
+  subirImagenGaleria, actualizarHorarioRiderAdmin, obtenerClientesAdmin,
+  cambiarClaveClienteAdmin, asignarRiderPedidoAdmin
 } from './servicios';
 
 function IconoAdmin({ tipo }) {
@@ -105,10 +106,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
   async function cargarTodo() {
     try {
-      const [c, p, r, cfg, mds] = await Promise.all([
-        obtenerCatalogo(false), obtenerPromociones(false), obtenerRecompensas(false), obtenerConfigPagos(), obtenerMotorizados()
+      const [c, p, r, cfg, mds, clis] = await Promise.all([
+        obtenerCatalogo(false), obtenerPromociones(false), obtenerRecompensas(false), obtenerConfigPagos(), obtenerMotorizados(), obtenerClientesAdmin()
       ]);
-      setCatalogo(c || []); setPromos(p || []); setRecompensas(r || []); setRiders(mds || []);
+      setCatalogo(c || []); setPromos(p || []); setRecompensas(r || []); setRiders(mds || []); setClientesList(clis || []);
       const mapHorarios = {};
       (mds || []).forEach(m => { mapHorarios[m.id] = m.direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm'; });
       setHorarioRiderEdit(mapHorarios);
@@ -118,16 +119,13 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         setTarifaBase(cfg.tarifa_base || '4.00'); setTarifaKm(cfg.tarifa_km || '1.50');
         setLocalCerrado(Boolean(cfg.local_cerrado));
       }
-      const { data: clis } = await supabase.from('perfiles').select('id, nombre_completo, telefono, puntos').eq('rol', 'cliente').order('nombre_completo');
-      setClientesList(clis || []);
     } catch (e) {}
   }
-
+  
   async function guardarHorarioRider(riderObj) {
     const textoHorario = (horarioRiderEdit[riderObj.id] || '').trim();
     try {
-      const { error } = await supabase.from('perfiles').update({ direccion_predeterminada: textoHorario }).eq('id', riderObj.id);
-      if (error) throw error;
+      await actualizarHorarioRiderAdmin(riderObj.id, textoHorario);
       await cargarTodo();
       mostrarAviso('Horario guardado', `Turno semanal actualizado para ${riderObj.nombre_completo}.`);
     } catch (e) { mostrarAviso('Error', e.message); }
@@ -137,8 +135,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     const nueva = (nuevaClaveCli[cli.id] || '').trim();
     if (nueva.length < 4) return mostrarAviso('Clave corta', 'Escribe una contraseña de al menos 4 caracteres.');
     try {
-      const { error } = await supabase.from('perfiles').update({ password_hash: nueva }).eq('id', cli.id);
-      if (error) throw error;
+      await cambiarClaveClienteAdmin(cli.id, nueva);
       setNuevaClaveCli(prev => ({ ...prev, [cli.id]: '' }));
       mostrarAviso('Clave actualizada', `La nueva contraseña de ${cli.nombre_completo} es: ${nueva}`);
     } catch (e) { mostrarAviso('Error', e.message); }
@@ -200,7 +197,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     if (!rId) return mostrarAviso('Elige motorizado', 'Selecciona un repartidor antes de confirmar este delivery.');
     const rObj = riders.find(x => x.id === rId);
     try {
-      await supabase.from('pedidos').update({ rider_id: rObj.id, rider_nombre: rObj.nombre_completo, estado_rider: 'En camino' }).eq('id', p.id);
+      await asignarRiderPedidoAdmin(p.id, rObj.id, rObj.nombre_completo);
       await onConfirmarAdmin(p, true);
       mostrarAviso('Pedido asignado', `Asignado a ${rObj.nombre_completo} y confirmado.`);
     } catch (e) { mostrarAviso('Error', e.message); }
@@ -220,7 +217,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const historialFiltrado = completados.filter(p => (p.creado_en || '').startsWith(filtroMes));
   const totalMes = historialFiltrado.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const totalDeliveryMes = historialFiltrado.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-  const tarjetasMenuAdmin = [
+    const tarjetasMenuAdmin = [
     { id: 'pedidos', tipo: 'pedidos', titulo: 'Pedidos', badge: activos.length },
     { id: 'productos', tipo: 'productos', titulo: 'Productos', badge: 0 },
     { id: 'promos', tipo: 'promos', titulo: 'Promociones', badge: 0 },
@@ -323,7 +320,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-                  {sec === 'pedidos' && (
+      {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -392,7 +389,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-      {sec === 'productos' && (
+                          {sec === 'productos' && (
         <View>
           <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
           <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
@@ -543,7 +540,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                            {sec === 'clientes' && (
+              {sec === 'clientes' && (
         <View>
           <Text style={styles.titulo}>CLIENTES Y RESTABLECER CLAVES ({clientesList.length})</Text>
           <TextInput
@@ -628,5 +625,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-        }
-       
+}
