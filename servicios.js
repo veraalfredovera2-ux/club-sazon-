@@ -3,7 +3,11 @@ export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
 export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
 
-const limpiarTel = (t) => String(t || '').replace(/\D/g, '');
+const limpiarTel = (t) => {
+  const n = String(t || '').replace(/\D/g, '');
+  return n.length === 11 && n.startsWith('51') ? n.slice(2) : n;
+};
+
 const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
   const r = Math.random() * 16 | 0;
   return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
@@ -31,23 +35,23 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
 
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
-  const titularLimpio = (partes[0] || 'Club Sazón').trim();
+  const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
   const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false };
   if (partes.length < 2) return def;
-  const nums = partes[1].split('|');
+  const nums = partes.at(1).split('|');
   return {
     titularLimpio,
-    local_lat: nums[0] || def.local_lat,
-    local_lng: nums[1] || def.local_lng,
-    tarifa_base: nums[2] || def.tarifa_base,
-    tarifa_km: nums[3] || def.tarifa_km,
-    local_cerrado: nums[4] === '1'
+    local_lat: nums.at(0) || def.local_lat,
+    local_lng: nums.at(1) || def.local_lng,
+    tarifa_base: nums.at(2) || def.tarifa_base,
+    tarifa_km: nums.at(3) || def.tarifa_km,
+    local_cerrado: nums.at(4) === '1'
   };
 }
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  const raw = (Array.isArray(r) && r[0]) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
+  const raw = (Array.isArray(r) && r.length > 0 ? r.at(0) : null) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
   return { ...raw, ...extraerConfigDelivery(raw.titular) };
 }
 
@@ -198,7 +202,7 @@ export async function obtenerDatosCliente(clienteId) {
   const [perfs, hist, peds, canjes] = await Promise.all([
     apiRest(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`),
     apiRest(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=id.desc`),
-    apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=id.desc`),
+    apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=creado_en.desc`),
     apiRest(`canjes?select=*&cliente_id=eq.${clienteId}&order=id.desc`)
   ]);
   const filaCli = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : null;
@@ -211,7 +215,7 @@ export async function obtenerDatosCliente(clienteId) {
 }
 
 export async function obtenerPedidosAdmin() {
-  return (await apiRest('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=id.desc')) || [];
+  return (await apiRest('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=creado_en.desc')) || [];
 }
 export async function crearNuevoPedido(cabecera, items) {
   const num = 'PED-' + Math.floor(100000 + Math.random() * 900000);
@@ -234,13 +238,16 @@ export async function crearNuevoPedido(cabecera, items) {
   return ped;
 }
 
-export async function confirmarAdminPedido(ped) {
-  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: 'Confirmado por local' });
+export async function actualizarEstadoPedidoAdmin(ped, nuevoEstado) {
+  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', {
+    estado: nuevoEstado,
+    ...(nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY' ? { estado_rider: 'Disponible' } : {})
+  });
 }
 
 export async function confirmarRecepcionYDarPuntos(ped) {
   const pts = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
-  const nuevoEstado = ped.tipo_entrega === 'DELIVERY' && ped.rider_id ? ped.estado : 'Completado';
+  const nuevoEstado = ped.tipo_entrega === 'DELIVERY' ? ped.estado : 'Completado';
   await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', {
     recibido_cliente: true,
     estado: nuevoEstado
@@ -316,19 +323,4 @@ export async function obtenerClientesAdmin() {
 
 export async function cambiarClaveClienteAdmin(id, nuevaClave) {
   await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave });
-}
-
-export async function asignarRiderPedidoAdmin(pedidoId, riderId, riderNombre) {
-  await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
-    rider_id: riderId,
-    rider_nombre: riderNombre,
-    estado_rider: 'En camino'
-  });
-}
-
-export async function completarEntregaRiderAdmin(pedidoId) {
-  await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
-    estado: 'Completado',
-    estado_rider: 'Entregado'
-  });
 }
