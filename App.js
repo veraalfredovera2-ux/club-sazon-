@@ -6,6 +6,7 @@ import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaL
 import { VentanaAviso, mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
 import { VistaAdmin } from './admin';
 import { VistaRider } from './rider';
+import { iniciarOneSignalWeb, pedirPermisoPushWeb } from './push';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
   obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario, actualizarFotoPerfilNube,
@@ -108,6 +109,7 @@ export default function App() {
         const parsed = JSON.parse(s);
         setUsuario(parsed.perfil);
         setRol(parsed.tipo);
+        iniciarOneSignalWeb({ ...parsed.perfil, rol: parsed.tipo });
         if (parsed.perfil?.foto_url) {
           setFotoPerfil(parsed.perfil.foto_url);
         } else if (parsed.perfil?.id) {
@@ -120,6 +122,7 @@ export default function App() {
 
   useEffect(() => {
     if (!usuario?.id) return;
+    iniciarOneSignalWeb({ ...usuario, rol: rol || usuario.rol || 'cliente' });
     if (usuario.foto_url) setFotoPerfil(usuario.foto_url);
     cargarTodoUsuario();
     const t = setInterval(cargarTodoUsuario, 5000);
@@ -187,6 +190,7 @@ export default function App() {
       setModoClienteRider(true);
       setFotoPerfil(res.perfil?.foto_url || null);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(res));
+      await pedirPermisoPushWeb({ ...res.perfil, rol: res.tipo });
     } catch (e) { mostrarAviso('Error al ingresar', e.message); } finally { setCargando(false); }
   }
 
@@ -198,6 +202,7 @@ export default function App() {
       setRol('cliente');
       setFotoPerfil(null);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify({ tipo: 'cliente', perfil: res.perfil }));
+      await pedirPermisoPushWeb({ ...res.perfil, rol: 'cliente' });
       mostrarAviso('¡Bienvenido!', res.mensaje);
     } catch (e) { mostrarAviso('Error al registrar', e.message); } finally { setCargando(false); }
   }
@@ -555,7 +560,7 @@ export default function App() {
             )}
           </View>
         )}
-                          {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                      {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -605,6 +610,7 @@ export default function App() {
             )}
           </View>
         )}
+
         {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
@@ -807,7 +813,7 @@ export default function App() {
             )}
           </View>
         )}
-                                                         {vista === 'pedidos' && (
+                  {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -931,6 +937,20 @@ export default function App() {
               <Text style={styles.descripcionPedido}>Teléfono: {usuario.telefono}</Text>
               <Text style={[styles.precioProducto, { color: DORADO, marginTop: 8 }]}>Saldo actual: {datosCli.puntos} puntos</Text>
             </View>
+            <TouchableOpacity
+              style={[styles.boton, { backgroundColor: '#16A34A', marginBottom: 8 }]}
+              onPress={async () => {
+                const ok = await pedirPermisoPushWeb({ ...usuario, rol: rol || 'cliente' });
+                mostrarAviso(
+                  ok ? '🔔 Notificaciones activadas' : 'Permiso pendiente',
+                  ok
+                    ? 'Recibirás alertas en tu teléfono incluso con la pantalla apagada.'
+                    : 'Permite las notificaciones en la barra de tu navegador Chrome o Safari.'
+                );
+              }}
+            >
+              <Text style={styles.textoBoton}>🔔 ACTIVAR NOTIFICACIONES PUSH</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={[styles.boton, { backgroundColor: '#252530' }]} onPress={cerrarSesion}>
               <Text style={styles.textoBoton}>Cerrar sesión</Text>
             </TouchableOpacity>
@@ -940,5 +960,4 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-              }
-          
+                    }
