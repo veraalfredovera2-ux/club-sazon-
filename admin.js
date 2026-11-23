@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, Platform } from 'react-native';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
-import { mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
+import { mostrarAviso } from './avisos';
 import {
   categorias, obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin,
   obtenerPromociones, guardarPromocionAdmin, eliminarPromocionAdmin,
@@ -140,7 +140,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       }
     } catch (e) {}
   }
-    async function guardarHorarioRider(riderOb) {
+  async function guardarHorarioRider(riderOb) {
     const textoHorario = (horarioRiderEdit[riderOb.id] || '').trim();
     try {
       await actualizarHorarioRiderAdmin(riderOb.id, textoHorario);
@@ -248,6 +248,20 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     );
   }
 
+  function confirmarLiquidacionRider(item) {
+    pedirConfirmacion(
+      'Confirmar efectivo recibido en caja',
+      `¿Confirmas que recibiste S/ ${item.monto.toFixed(2)} en efectivo de ${item.nombre} (${item.cantidad} pedidos)?`,
+      async () => {
+        try {
+          await liquidarEfectivoRiderAdmin(item.id);
+          await recargar();
+          mostrarAviso('Caja liquidada', `El efectivo pendiente de ${item.nombre} quedó en S/ 0.00.`);
+        } catch (e) { mostrarAviso('Error', e.message); }
+      }
+    );
+  }
+
   function extraerComprobante(notasStr) {
     const txt = String(notasStr || '');
     if (!txt.includes('COMPROBANTE:')) return null;
@@ -268,6 +282,18 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const totalMes = historialFiltrado.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const totalDeliveryMes = historialFiltrado.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
 
+  const efectivoPorRiderMap = {};
+  completados
+    .filter(p => p.metodo_pago === 'Efectivo' && p.rider_id && p.estado_rider !== 'Liquidado en caja')
+    .forEach(p => {
+      if (!efectivoPorRiderMap[p.rider_id]) {
+        efectivoPorRiderMap[p.rider_id] = { id: p.rider_id, nombre: p.rider_nombre || 'Repartidor', monto: 0, cantidad: 0 };
+      }
+      efectivoPorRiderMap[p.rider_id].monto += Number(p.total || 0);
+      efectivoPorRiderMap[p.rider_id].cantidad += 1;
+    });
+  const listaEfectivoRiders = Object.values(efectivoPorRiderMap);
+
   const tarjetasMenuAdmin = [
     { id: 'pedidos', tipo: 'pedidos', titulo: 'Pedidos', badge: activos.length },
     { id: 'productos', tipo: 'productos', titulo: 'Productos', badge: 0 },
@@ -279,7 +305,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     { id: 'clientes', tipo: 'clientes', titulo: 'Clientes / Claves', badge: clientesList.length },
     { id: 'pagos', tipo: 'pagos', titulo: 'Métodos de pago', badge: 0 },
     { id: 'config', tipo: 'config', titulo: 'Config. negocio', badge: 0 },
-    { id: 'historial', tipo: 'historial', titulo: 'Historial ventas', badge: 0 }
+    { id: 'historial', tipo: 'historial', titulo: 'Historial ventas', badge: listaEfectivoRiders.length }
   ];
 
   return (
@@ -381,7 +407,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-                    {sec === 'pedidos' && (
+                  {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -457,7 +483,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                            {sec === 'productos' && (
+                          {sec === 'productos' && (
         <View>
           <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
           <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
@@ -509,7 +535,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
+                    {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
           <Text style={styles.titulo}>{sec === 'novedades' ? 'PUBLICAR NOVEDAD' : sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
           <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={tituloP} onChangeText={setTituloP} />
@@ -580,7 +606,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-              {sec === 'riders' && (
+                            {sec === 'riders' && (
         <View>
           <Text style={styles.titulo}>REGISTRAR MOTORIZADO</Text>
           <TextInput style={styles.campo} placeholder="Nombre completo" placeholderTextColor="#6B7280" value={nomRider} onChangeText={setNomRider} />
@@ -648,8 +674,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             ))}
         </View>
       )}
-
-      {sec === 'pagos' && (
+                  {sec === 'pagos' && (
         <View>
           <Text style={styles.titulo}>MÉTODOS DE PAGO (YAPE / PLIN)</Text>
           <TextInput style={styles.campo} placeholder="Nombre del titular" placeholderTextColor="#6B7280" value={titular} onChangeText={setTitular} />
@@ -685,6 +710,25 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
       {sec === 'historial' && (
         <View>
+          <Text style={styles.titulo}>EFECTIVO PENDIENTE POR MOTORIZADO ({listaEfectivoRiders.length})</Text>
+          {listaEfectivoRiders.length === 0 ? (
+            <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Ningún motorizado tiene efectivo pendiente por rendir.</Text></View>
+          ) : (
+            listaEfectivoRiders.map(item => (
+              <View key={item.id} style={[styles.tarjetaPedido, { borderColor: DORADO }]}>
+                <Text style={[styles.nombreProducto, { color: DORADO }]}>🛵 {item.nombre}</Text>
+                <Text style={styles.descripcionPedido}>Pedidos cobrados en efectivo sin rendir: {item.cantidad}</Text>
+                <Text style={styles.totalPedidoTexto}>Monto por entregar en caja: S/ {item.monto.toFixed(2)}</Text>
+                <TouchableOpacity
+                  style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]}
+                  onPress={() => confirmarLiquidacionRider(item)}
+                >
+                  <Text style={styles.textoBoton}>✅ CONFIRMAR EFECTIVO RECIBIDO EN CAJA</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+
           <Text style={styles.titulo}>CIERRE DE CAJA DE HOY ({hoyStr})</Text>
           <View style={styles.tarjetaPedido}>
             <Text style={[styles.nombreProducto, { color: DORADO, marginBottom: 6 }]}>Total cobrado hoy: S/ {ventasHoy.toFixed(2)}</Text>
@@ -709,4 +753,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-                           }
+}
