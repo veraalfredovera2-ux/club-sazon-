@@ -240,6 +240,17 @@ export async function crearNuevoPedido(cabecera, items) {
       precio_unitario: Number(it.precio),
       subtotal: Number(it.precio) * Number(it.cantidad)
     });
+    if (!it.es_promo && it.id) {
+      const prodRes = await apiRest(`productos?select=stock&id=eq.${it.id}&limit=1`);
+      const prodActual = Array.isArray(prodRes) && prodRes.length > 0 ? prodRes.at(0) : null;
+      if (prodActual && prodActual.stock !== null && prodActual.stock !== undefined) {
+        const nuevoStock = Math.max(0, Number(prodActual.stock) - Number(it.cantidad));
+        await apiRest(`productos?id=eq.${it.id}`, 'PATCH', {
+          stock: nuevoStock,
+          disponible: nuevoStock > 0
+        });
+      }
+    }
   }
   return ped;
 }
@@ -252,6 +263,7 @@ export async function actualizarEstadoPedidoAdmin(ped, nuevoEstado) {
 }
 
 export async function confirmarRecepcionYDarPuntos(ped) {
+  if (ped.recibido_cliente) return 0;
   const pts = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
   const nuevoEstado = ped.tipo_entrega === 'DELIVERY' ? ped.estado : 'Completado';
   await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', {
@@ -273,6 +285,20 @@ export async function confirmarRecepcionYDarPuntos(ped) {
 
 export async function cancelarPedidoYDescontar(ped) {
   await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: 'Cancelado' });
+  if (ped.cliente_id && ped.recibido_cliente) {
+    const ptsGanados = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
+    if (ptsGanados > 0) {
+      const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${ped.cliente_id}&limit=1`);
+      const actual = Number(cli?.puntos || 0);
+      const nuevoSaldo = Math.max(0, actual - ptsGanados);
+      await apiRest(`perfiles?id=eq.${ped.cliente_id}`, 'PATCH', { puntos: nuevoSaldo });
+      await apiRest('historial_puntos', 'POST', {
+        cliente_id: ped.cliente_id,
+        cantidad: -ptsGanados,
+        descripcion: `Cancelación ${ped.numero_pedido}`
+      });
+    }
+  }
 }
 
 export async function canjearRecompensaCliente(clienteId, rec) {
