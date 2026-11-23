@@ -146,7 +146,8 @@ export async function registrarUsuario({ nombreCompleto, telefono, password }) {
     telefono: tel,
     password_hash: password.trim(),
     rol: 'cliente',
-    puntos: 100
+    puntos: 100,
+    foto_url: ''
   });
   await apiRest('historial_puntos', 'POST', {
     cliente_id: id,
@@ -165,6 +166,10 @@ export async function ingresarUsuario({ telefono, password }) {
     throw new Error('Contraseña incorrecta.');
   }
   return { tipo: perfil.rol || 'cliente', perfil };
+}
+
+export async function actualizarFotoPerfilNube(perfilId, fotoUrl) {
+  await apiRest(`perfiles?id=eq.${perfilId}`, 'PATCH', { foto_url: fotoUrl || '' });
 }
 
 export async function subirImagenGaleria() {
@@ -200,7 +205,7 @@ export async function subirImagenGaleria() {
 
 export async function obtenerDatosCliente(clienteId) {
   const [perfs, hist, peds, canjes] = await Promise.all([
-    apiRest(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`),
+    apiRest(`perfiles?select=puntos,foto_url&id=eq.${clienteId}&limit=1`),
     apiRest(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=id.desc`),
     apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=creado_en.desc`),
     apiRest(`canjes?select=*&cliente_id=eq.${clienteId}&order=id.desc`)
@@ -208,6 +213,7 @@ export async function obtenerDatosCliente(clienteId) {
   const filaCli = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : null;
   return {
     puntos: Number(filaCli?.puntos || 0),
+    foto_url: filaCli?.foto_url || '',
     historial: hist || [],
     pedidos: peds || [],
     canjes: canjes || []
