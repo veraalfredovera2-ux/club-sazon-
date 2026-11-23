@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar, SiluetaBlanca, LOGO, BANNER_COMIDA } from './pantallas';
-import { VentanaAviso, mostrarAviso } from './avisos';
+import { VentanaAviso, mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
 import { VistaAdmin } from './admin';
 import { VistaRider } from './rider';
 import {
@@ -100,6 +100,7 @@ export default function App() {
   const [comprobanteUrl, setComprobanteUrl] = useState('');
   const [subiendoComp, setSubiendoComp] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const puertaAvisadaRef = useRef({});
 
   useEffect(() => {
     AsyncStorage.getItem('sesion_club_sazon').then(s => {
@@ -124,6 +125,17 @@ export default function App() {
     const t = setInterval(cargarTodoUsuario, 5000);
     return () => clearInterval(t);
   }, [usuario?.id, rol, modoClienteRider]);
+
+  useEffect(() => {
+    const lista = datosCli.pedidos || [];
+    lista.forEach(p => {
+      if (p.estado_rider === 'En la puerta' && !p.recibido_cliente && !puertaAvisadaRef.current[p.id]) {
+        puertaAvisadaRef.current[p.id] = true;
+        reproducirTimbreAlerta();
+        mostrarAviso('🛵 ¡Tu repartidor está en la puerta!', `${p.rider_nombre || 'Tu motorizado'} ha llegado con tu pedido ${p.numero_pedido}. Por favor sal a recibirlo.`);
+      }
+    });
+  }, [datosCli.pedidos]);
 
   async function cambiarFotoPerfil() {
     try {
@@ -258,6 +270,9 @@ export default function App() {
     if (tipoEntrega === 'DELIVERY' && !direccion.trim() && !gpsCliente) {
       return mostrarAviso('Falta dirección', 'Usa tu ubicación GPS actual o escribe tu dirección de entrega.');
     }
+    if ((metodoPago === 'Yape' || metodoPago === 'Plin') && !comprobanteUrl) {
+      return mostrarAviso('Falta captura de pago', `Por favor adjunta la captura de transferencia ${metodoPago} antes de realizar el pedido.`);
+    }
     setCargando(true);
     try {
       const linkMaps = gpsCliente ? ` | https://google.com{gpsCliente.lat},${gpsCliente.lng}` : '';
@@ -282,22 +297,34 @@ export default function App() {
     } catch (e) { mostrarAviso('Error al pedir', e.message); } finally { setCargando(false); }
   }
 
-  async function clienteConfirmaRecepcion(ped) {
-    setCargando(true);
-    try {
-      const pts = await confirmarRecepcionYDarPuntos(ped);
-      await cargarTodoUsuario();
-      mostrarAviso('¡Pedido recibido!', pts > 0 ? `Sumaste +${pts} puntos. Ya se habilitó el cierre al repartidor.` : 'Recepción confirmada.');
-    } catch (e) { mostrarAviso('Aviso', e.message); } finally { setCargando(false); }
+  function clienteConfirmaRecepcion(ped) {
+    pedirConfirmacion(
+      'Confirmar recepción de pedido',
+      `¿Confirmas que recibiste correctamente tu pedido ${ped.numero_pedido}? Se acreditarán tus puntos ganados y se habilitará el cierre al repartidor.`,
+      async () => {
+        setCargando(true);
+        try {
+          const pts = await confirmarRecepcionYDarPuntos(ped);
+          await cargarTodoUsuario();
+          mostrarAviso('¡Pedido recibido!', pts > 0 ? `Sumaste +${pts} puntos a tu cuenta.` : 'Recepción confirmada.');
+        } catch (e) { mostrarAviso('Aviso', e.message); } finally { setCargando(false); }
+      }
+    );
   }
 
-  async function clienteCanjea(rec) {
-    setCargando(true);
-    try {
-      await canjearRecompensaCliente(usuario.id, rec);
-      await cargarTodoUsuario();
-      mostrarAviso('¡Canje solicitado!', `Has canjeado: ${rec.titulo}`);
-    } catch (e) { mostrarAviso('No disponible', e.message); } finally { setCargando(false); }
+  function clienteCanjea(rec) {
+    pedirConfirmacion(
+      'Confirmar canje de recompensa',
+      `¿Confirmas el canje de "${rec.titulo}" por ${rec.puntos_requeridos} puntos?`,
+      async () => {
+        setCargando(true);
+        try {
+          await canjearRecompensaCliente(usuario.id, rec);
+          await cargarTodoUsuario();
+          mostrarAviso('¡Canje solicitado!', `Has canjeado: ${rec.titulo}`);
+        } catch (e) { mostrarAviso('No disponible', e.message); } finally { setCargando(false); }
+      }
+    );
   }
     if (!usuario) {
     return (
@@ -528,7 +555,7 @@ export default function App() {
             )}
           </View>
         )}
-                                 {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                          {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -578,7 +605,7 @@ export default function App() {
             )}
           </View>
         )}
-                                             {(vista === 'puntos' || vista === 'canjes') && (
+        {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               {Platform.OS === 'web' && (
@@ -655,7 +682,7 @@ export default function App() {
             )}
           </View>
         )}
-                      {vista === 'carrito' && (
+        {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -780,7 +807,7 @@ export default function App() {
             )}
           </View>
         )}
-                                {vista === 'pedidos' && (
+                                                         {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -789,11 +816,15 @@ export default function App() {
               </View>
             ) : (
               (datosCli.pedidos || []).map(p => (
-                <View key={p.id} style={styles.tarjetaPedido}>
+                <View key={p.id} style={[styles.tarjetaPedido, p.estado_rider === 'En la puerta' && !p.recibido_cliente && { borderColor: DORADO, borderWidth: 2 }]}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
                   <View style={styles.estadoPedido}>
                     <Text style={styles.textoEstado}>
-                      {p.recibido_cliente && p.estado !== 'Completado' ? 'Recibido por ti • Esperando cierre del repartidor' : p.estado}
+                      {p.recibido_cliente && p.estado !== 'Completado'
+                        ? 'Recibido por ti • Esperando cierre del repartidor'
+                        : p.estado_rider === 'En la puerta' && !p.recibido_cliente
+                          ? '🛵 ¡REPARTIDOR EN LA PUERTA!'
+                          : p.estado}
                     </Text>
                   </View>
                   {(p.pedido_detalles || []).map(d => (
@@ -804,6 +835,26 @@ export default function App() {
                   {(p.estado === 'En camino' || p.estado === 'Listo') && !p.recibido_cliente && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
                       <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
+                    </TouchableOpacity>
+                  )}
+                  {(p.estado === 'Completado' || p.estado === 'Cancelado') && (p.pedido_detalles || []).length > 0 && (
+                    <TouchableOpacity
+                      style={[styles.boton, { backgroundColor: '#1E293B', marginTop: 8 }]}
+                      onPress={() => {
+                        const itemsReorden = (p.pedido_detalles || []).map(d => ({
+                          id: d.producto_id || d.id,
+                          nombre: d.nombre_producto,
+                          precio: Number(d.precio_unitario || 0),
+                          cantidad: Number(d.cantidad || 1),
+                          es_promo: !d.producto_id,
+                          imagen_url: ''
+                        }));
+                        setCarrito(itemsReorden);
+                        setVista('carrito');
+                        mostrarAviso('Pedido cargado', 'Los productos de este pedido se añadieron a tu carrito.');
+                      }}
+                    >
+                      <Text style={styles.textoBoton}>🔄 VOLVER A PEDIR</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -823,7 +874,9 @@ export default function App() {
               (datosCli.pedidos || []).slice(0, 10).map(p => (
                 <TouchableOpacity key={p.id} style={styles.tarjetaPedido} onPress={() => setVista('pedidos')}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
-                  <Text style={[styles.descripcionPedido, { color: DORADO, fontWeight: '800', marginTop: 4 }]}>Estado: {p.estado}</Text>
+                  <Text style={[styles.descripcionPedido, { color: DORADO, fontWeight: '800', marginTop: 4 }]}>
+                    Estado: {p.estado_rider === 'En la puerta' ? '🛵 Repartidor en la puerta' : p.estado}
+                  </Text>
                 </TouchableOpacity>
               ))
             )}
@@ -888,3 +941,4 @@ export default function App() {
     </SafeAreaView>
   );
               }
+          
