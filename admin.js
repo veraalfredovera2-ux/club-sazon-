@@ -18,13 +18,13 @@ function IconoAdmin({ tipo }) {
     const paths = {
       pedidos: 'M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
       productos: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
-      promos: 'M12 2l2.39 1.65 2.89-.39.84 2.79 2.53 1.44-.88 2.78 1.24 2.63-2.29 1.81-.29 2.9-2.88.45-1.69 2.36-2.76-.94-2.76.94-1.69-2.36-2.88-.45-.29-2.9-2.29-1.81 1.24-2.63-.88-2.78 2.53-1.44.84-2.79 2.89.39L12 2z',
+      promos: 'M12 2l2.39 1.65 2.89-.39.84 2.79 2.53 1.44-.88 2.78 1.24 2.63-2.29 1.81-.29 2.9-2.88.45-1.69 2.36-2.76-.94-2.76.94-1.69-2.36-2.88-.45-.29-2.9-2.29-1.81 1.24-2.63-.88-2.78 2.53-1.44.84-2.79 2.89.39L12 2zm-2.5 6.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm5 5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm.3-5.8l-7.1 7.1 1.4 1.4 7.1-7.1-1.4-1.4z',
       ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
       novedades: 'M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z',
       premios: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 00-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
-      riders: 'M19 7c0-1.1-.9-2-2-2h-3v2h3v2.65L13.52 14H10V9H6c-2.21 0-4 1.79-4 4v3h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4.48L19 10.35V7zM7 17c-.55 0-1-.45-1-1h2c0 .55-.45 1-1 1zm12-1c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z',
+      riders: 'M19 7c0-1.1-.9-2-2-2h-3v2h3v2.65L13.52 14H10V9H6c-2.21 0-4 1.79-4 4v3h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4.48L19 10.35V7zM7 17c-.55 0-1-.45-1-1h2c0 .55-.45 1-1 1zM5 6h5v2H5V6zm14 7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z',
       pagos: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
-      config: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.44.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+      config: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
       historial: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z',
       clientes: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'
     };
@@ -106,28 +106,37 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
   async function cargarTodo() {
     try {
-      const [c, p, r, cfg, mds, clis] = await Promise.all([
-        obtenerCatalogo(false), obtenerPromociones(false), obtenerRecompensas(false), obtenerConfigPagos(), obtenerMotorizados(), obtenerClientesAdmin()
+      const [c, p, r, cfg, rds, clis] = await Promise.all([
+        obtenerCatalogo(false), obtenerPromociones(false), obtenerRecompensas(false), obtenerConfigPagos(),
+        obtenerMotorizados(), obtenerClientesAdmin()
       ]);
-      setCatalogo(c || []); setPromos(p || []); setRecompensas(r || []); setRiders(mds || []); setClientesList(clis || []);
+      setCatalogo(Array.isArray(c) ? c : []);
+      setPromos(Array.isArray(p) ? p : []);
+      setRecompensas(Array.isArray(r) ? r : []);
+      const listaRds = Array.isArray(rds) ? rds : [];
+      setRiders(listaRds);
+      setClientesList(Array.isArray(clis) ? clis : []);
       const mapHorarios = {};
-      (mds || []).forEach(m => { mapHorarios[m.id] = m.direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm'; });
+      listaRds.forEach(m => { mapHorarios[m.id] = m.direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm'; });
       setHorarioRiderEdit(mapHorarios);
       if (cfg) {
-        setTitular(cfg.titularLimpio || ''); setQrYape(cfg.qr_yape || ''); setQrPlin(cfg.qr_plin || '');
-        setLatLocal(cfg.local_lat || '-12.089700'); setLngLocal(cfg.local_lng || '-77.003100');
-        setTarifaBase(cfg.tarifa_base || '4.00'); setTarifaKm(cfg.tarifa_km || '1.50');
+        setTitular(cfg.titularLimpio || '');
+        setQrYape(cfg.qr_yape || '');
+        setQrPlin(cfg.qr_plin || '');
+        setLatLocal(cfg.local_lat || '-12.089700');
+        setLngLocal(cfg.local_lng || '-77.003100');
+        setTarifaBase(cfg.tarifa_base || '4.00');
+        setTarifaKm(cfg.tarifa_km || '1.50');
         setLocalCerrado(Boolean(cfg.local_cerrado));
       }
     } catch (e) {}
   }
-  
-  async function guardarHorarioRider(riderObj) {
-    const textoHorario = (horarioRiderEdit[riderObj.id] || '').trim();
+  async function guardarHorarioRider(riderOb) {
+    const textoHorario = (horarioRiderEdit[riderOb.id] || '').trim();
     try {
-      await actualizarHorarioRiderAdmin(riderObj.id, textoHorario);
+      await actualizarHorarioRiderAdmin(riderOb.id, textoHorario);
       await cargarTodo();
-      mostrarAviso('Horario guardado', `Turno semanal actualizado para ${riderObj.nombre_completo}.`);
+      mostrarAviso('Horario guardado', `Turno semanal actualizado para ${riderOb.nombre_completo}.`);
     } catch (e) { mostrarAviso('Error', e.message); }
   }
 
@@ -160,7 +169,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     try {
       await guardarProductoAdmin({ id: editId, nombre, precio, stock, categoria: cat, turno, ingredientes: ing, imagen_url: img, disponible });
       setEditId(null); setNombre(''); setPrecio(''); setStock('20'); setTurno('Ambos'); setIng(''); setImg(''); setDisponible(true);
-      await cargarTodo(); await recargar(); mostrarAviso('Listo', 'Producto guardado.');
+      await cargarTodo(); await recargar();
+      mostrarAviso('Listo', 'Producto guardado.');
     } catch (e) { mostrarAviso('Error', e.message); }
   }
 
@@ -178,14 +188,18 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     try {
       await guardarRecompensaAdmin({ id: editRecId, titulo: tituloR, descripcion: descR, puntos_requeridos: ptsR, stock: stockR, imagen_url: imgR, activa: activaR });
       setEditRecId(null); setTituloR(''); setDescR(''); setPtsR(''); setStockR('10'); setImgR(''); setActivaR(true);
-      await cargarTodo(); await recargar(); mostrarAviso('Listo', 'Premio guardado.');
+      await cargarTodo(); await recargar();
+      mostrarAviso('Listo', 'Premio guardado.');
     } catch (e) { mostrarAviso('Error', e.message); }
   }
 
   async function guardarPagos(cerradoOverride) {
     const estadoCierre = typeof cerradoOverride === 'boolean' ? cerradoOverride : localCerrado;
     try {
-      await guardarConfigPagos({ titular, qr_yape: qrYape, qr_plin: qrPlin, local_lat: latLocal, local_lng: lngLocal, tarifa_base: tarifaBase, tarifa_km: tarifaKm, local_cerrado: estadoCierre });
+      await guardarConfigPagos({
+        titularLimpio: titular, qr_yape: qrYape, qr_plin: qrPlin,
+        local_lat: latLocal, local_lng: lngLocal, tarifa_base: tarifaBase, tarifa_km: tarifaKm, local_cerrado: estadoCierre
+      });
       setLocalCerrado(estadoCierre);
       await recargar();
       mostrarAviso('Guardado', estadoCierre ? 'El local ahora figura como CERRADO.' : 'Configuración actualizada.');
@@ -193,9 +207,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   }
 
   async function asignarYConfirmarPedido(p) {
-    const rId = riderSeleccionado[p.id];
-    if (!rId) return mostrarAviso('Elige motorizado', 'Selecciona un repartidor antes de confirmar este delivery.');
-    const rObj = riders.find(x => x.id === rId);
+    const rid = riderSeleccionado[p.id];
+    if (!rid) return mostrarAviso('Elige motorizado', 'Selecciona un repartidor antes de confirmar este delivery.');
+    const rObj = riders.find(x => x.id === rid);
+    if (!rObj) return mostrarAviso('Elige motorizado', 'Vuelve a seleccionar el repartidor.');
     try {
       await asignarRiderPedidoAdmin(p.id, rObj.id, rObj.nombre_completo);
       await onConfirmarAdmin(p, true);
@@ -204,25 +219,27 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   }
 
   function extraerComprobante(notasStr) {
-    if (!notasStr || !notasStr.includes('COMPROBANTE:')) return null;
-    const parte = notasStr.split('COMPROBANTE:') || '';
-    return parte.split('|').trim();
+    const txt = String(notasStr || '');
+    if (!txt.includes('COMPROBANTE:')) return null;
+    const parte = txt.split('COMPROBANTE:').at(1) || '';
+    return parte.split('|').at(0).trim();
   }
-
-  const activos = (pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
-  const completados = (pedidos || []).filter(p => p.estado === 'Completado');
+    const listaPedidosSegura = Array.isArray(pedidos) ? pedidos : [];
+  const activos = listaPedidosSegura.filter(p => p && p.estado !== 'Completado' && p.estado !== 'Cancelado');
+  const completados = listaPedidosSegura.filter(p => p && p.estado === 'Completado');
   const hoyStr = new Date().toISOString().slice(0, 10);
-  const ventasHoy = completados.filter(p => (p.creado_en || '').startsWith(hoyStr)).reduce((acc, p) => acc + Number(p.total || 0), 0);
-  const pedidosHoyCount = (pedidos || []).filter(p => (p.creado_en || '').startsWith(hoyStr) && p.estado !== 'Cancelado').length;
-  const historialFiltrado = completados.filter(p => (p.creado_en || '').startsWith(filtroMes));
+  const ventasHoy = completados.filter(p => String(p.creado_en || '').startsWith(hoyStr)).reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const pedidosHoyCount = listaPedidosSegura.filter(p => p && String(p.creado_en || '').startsWith(hoyStr) && p.estado !== 'Cancelado').length;
+  const historialFiltrado = completados.filter(p => String(p.creado_en || '').startsWith(filtroMes));
   const totalMes = historialFiltrado.reduce((acc, p) => acc + Number(p.total || 0), 0);
   const totalDeliveryMes = historialFiltrado.reduce((acc, p) => acc + Number(p.costo_delivery || 0), 0);
-    const tarjetasMenuAdmin = [
+
+  const tarjetasMenuAdmin = [
     { id: 'pedidos', tipo: 'pedidos', titulo: 'Pedidos', badge: activos.length },
     { id: 'productos', tipo: 'productos', titulo: 'Productos', badge: 0 },
     { id: 'promos', tipo: 'promos', titulo: 'Promociones', badge: 0 },
     { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas', badge: 0 },
-    { id: 'novedades', tipo: 'novedades', titulo: 'Novedades', badge: promos.filter(x => x.tipo === 'novedad').length },
+    { id: 'novedades', tipo: 'novedades', titulo: 'Novedades', badge: promos.filter(x => x && x.tipo === 'novedad').length },
     { id: 'premios', tipo: 'premios', titulo: 'Premios y canjes', badge: 0 },
     { id: 'riders', tipo: 'riders', titulo: 'Motorizados', badge: riders.length },
     { id: 'clientes', tipo: 'clientes', titulo: 'Clientes / Claves', badge: clientesList.length },
@@ -275,7 +292,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <Text style={{ color: '#F3F4F6', fontSize: 12, fontWeight: '800' }}>PANEL DE ADMINISTRACIÓN • {horaActual}</Text>
               <Text style={styles.nombreDoradoHero}>{usuario?.nombre_completo || 'Alfredo Vera'}</Text>
               <Text style={{ color: localCerrado ? ROJO : '#22C55E', fontSize: 11, fontWeight: '900', marginTop: 3 }}>
-                {localCerrado ? '🔒 LOCAL CERRADO' : '🟢 LOCAL ABIERTO Y RECIBIENDO PEDIDOS'}
+                {localCerrado ? '🔴 LOCAL CERRADO' : '🟢 LOCAL ABIERTO Y RECIBIENDO PEDIDOS'}
               </Text>
             </View>
             <TouchableOpacity style={styles.badgePuntosHero} onPress={() => setSec('pedidos')}>
@@ -316,11 +333,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </View>
 
           <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E1E28', borderWidth: 1, borderColor: BORDE, marginTop: 14 }]} onPress={cerrarSesion}>
-            <Text style={styles.textoBoton}>↪ Cerrar sesión</Text>
+            <Text style={styles.textoBoton}>Cerrar sesión</Text>
           </TouchableOpacity>
         </View>
       )}
-      {sec === 'pedidos' && (
+              {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -328,7 +345,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ) : (
             activos.map(p => {
               const compUrl = extraerComprobante(p.notas);
-              const notasLimpias = (p.notas || '').split('| COMPROBANTE:').trim();
+              const notasLimpias = String(p.notas || '').split('| COMPROBANTE:').at(0).trim();
+              const detalles = Array.isArray(p.pedido_detalles) ? p.pedido_detalles : [];
               return (
                 <View key={p.id} style={styles.tarjetaPedido}>
                   <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'} ({p.perfiles?.telefono || ''})</Text>
@@ -336,15 +354,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   <Text style={styles.descripcionPedido}>Entrega: {p.tipo_entrega} | Pago: {p.metodo_pago}</Text>
                   {p.tipo_entrega === 'DELIVERY' && <Text style={styles.descripcionPedido}>Destino: {p.distrito} - {p.direccion}</Text>}
                   {!!notasLimpias && <Text style={[styles.descripcionPedido, { color: DORADO }]}>Nota: {notasLimpias}</Text>}
-                  {(p.pedido_detalles || []).map(d => (
-                    <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {Number(d.subtotal).toFixed(2)})</Text>
+                  {detalles.map(d => (
+                    <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto} (S/ {Number(d.subtotal || 0).toFixed(2)})</Text>
                   ))}
                   {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#38BDF8', fontWeight: '800' }]}>Motorizado: {p.rider_nombre} ({p.estado_rider})</Text>}
-                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} (Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)})</Text>
+                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total || 0).toFixed(2)} (Delivery: S/ {Number(p.costo_delivery || 0).toFixed(2)})</Text>
 
                   {compUrl && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#742284', marginTop: 8 }]} onPress={() => setComprobanteModal(compUrl)}>
-                      <Text style={styles.textoBoton}>🧾 VER CAPTURA DE PAGO {p.metodo_pago.toUpperCase()}</Text>
+                      <Text style={styles.textoBoton}>🧾 VER CAPTURA DE PAGO ({String(p.metodo_pago || '').toUpperCase()})</Text>
                     </TouchableOpacity>
                   )}
 
@@ -362,7 +380,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
-                      <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A' }]} onPress={() => asignarYConfirmarPedido(p)} disabled={cargando}>
+                      <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A' }]} onPress={() => asignarYConfirmarPedido(p)}>
                         <Text style={styles.textoBoton}>ASIGNAR Y CONFIRMAR PEDIDO</Text>
                       </TouchableOpacity>
                     </View>
@@ -389,7 +407,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                          {sec === 'productos' && (
+      {sec === 'productos' && (
         <View>
           <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
           <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
@@ -415,7 +433,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
           <TextInput style={styles.campo} placeholder="URL de imagen" placeholderTextColor="#6B7280" value={img} onChangeText={setImg} />
           <TouchableOpacity style={[styles.opcionEntrega, disponible && styles.opcionEntregaActiva]} onPress={() => setDisponible(!disponible)}>
-            <Text style={{ color: '#FFF', fontWeight: '800' }}>{disponible ? '✅ Disponible en carta' : '⛔ Agotado'}</Text>
+            <Text style={{ color: '#FFF', fontWeight: '800' }}>{disponible ? '🟢 Disponible en carta' : '🔴 Agotado'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.boton} onPress={guardarProd}><Text style={styles.textoBoton}>GUARDAR PRODUCTO</Text></TouchableOpacity>
 
@@ -425,10 +443,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <Image source={p.imagen_url && p.imagen_url.includes('http') ? { uri: p.imagen_url } : LOGO} style={styles.fotoProducto} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.nombreProducto}>{p.nombre} ({p.categoria})</Text>
-                <Text style={styles.precioProducto}>S/ {Number(p.precio).toFixed(2)} • Stock: {p.stock}</Text>
+                <Text style={styles.precioProducto}>S/ {Number(p.precio || 0).toFixed(2)} • Stock: {p.stock}</Text>
               </View>
               <View style={{ gap: 6 }}>
-                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#1E293B' }]} onPress={() => { setEditId(p.id); setNombre(p.nombre); setPrecio(String(p.precio)); setStock(String(p.stock ?? 20)); setCat(p.categoria || 'Hamburguesas'); setTurno(p.turno || 'Ambos'); setIng(p.ingredientes || ''); setImg(p.imagen_url || ''); setDisponible(Boolean(p.disponible)); }}>
+                <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#1E293B' }]} onPress={() => {
+                  setEditId(p.id); setNombre(p.nombre); setPrecio(String(p.precio)); setStock(String(p.stock ?? 20)); setCat(p.categoria || 'Hamburguesas'); setTurno(p.turno || 'Ambos'); setIng(p.ingredientes || ''); setImg(p.imagen_url || ''); setDisponible(Boolean(p.disponible));
+                }}>
                   <Text style={styles.textoAgregar}>Editar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#7F1D1D' }]} onPress={async () => { await eliminarProductoAdmin(p.id); await cargarTodo(); await recargar(); }}>
@@ -439,8 +459,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-
-      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
+              {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
           <Text style={styles.titulo}>{sec === 'novedades' ? 'PUBLICAR NOVEDAD' : sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
           <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={tituloP} onChangeText={setTituloP} />
@@ -453,29 +472,34 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
           <TextInput style={styles.campo} placeholder="URL de imagen" placeholderTextColor="#6B7280" value={imgP} onChangeText={setImgP} />
           <TouchableOpacity style={[styles.opcionEntrega, activaP && styles.opcionEntregaActiva]} onPress={() => setActivaP(!activaP)}>
-            <Text style={{ color: '#FFF', fontWeight: '800' }}>{activaP ? '✅ Visible al cliente' : '⛔ Oculta'}</Text>
+            <Text style={{ color: '#FFF', fontWeight: '800' }}>{activaP ? '🟢 Visible al cliente' : '🔴 Oculta'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.boton} onPress={() => guardarPromo(sec === 'novedades' ? 'novedad' : sec === 'ofertas' ? 'oferta' : 'promocion')}>
             <Text style={styles.textoBoton}>GUARDAR</Text>
           </TouchableOpacity>
 
           <Text style={styles.titulo}>PUBLICADAS</Text>
-          {promos.filter(pr => sec === 'novedades' ? pr.tipo === 'novedad' : sec === 'ofertas' ? pr.tipo === 'oferta' : (pr.tipo !== 'oferta' && pr.tipo !== 'novedad')).map(pr => (
-            <View key={pr.id} style={styles.tarjetaPedido}>
-              <Text style={styles.nombreProducto}>{pr.titulo} {pr.tipo !== 'novedad' ? `• S/ ${Number(pr.precio).toFixed(2)}` : ''}</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => { setEditPromoId(pr.id); setTituloP(pr.titulo); setDescP(pr.descripcion || ''); setPrecioP(String(pr.precio)); setImgP(pr.imagen_url || ''); setActivaP(Boolean(pr.activa)); }}>
-                  <Text style={styles.textoBoton}>Editar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#7F1D1D', flex: 1 }]} onPress={async () => { await eliminarPromocionAdmin(pr.id); await cargarTodo(); await recargar(); }}>
-                  <Text style={styles.textoBoton}>Borrar</Text>
-                </TouchableOpacity>
+          {promos
+            .filter(pr => sec === 'novedades' ? pr.tipo === 'novedad' : sec === 'ofertas' ? pr.tipo === 'oferta' : (pr.tipo !== 'oferta' && pr.tipo !== 'novedad'))
+            .map(pr => (
+              <View key={pr.id} style={styles.tarjetaPedido}>
+                <Text style={styles.nombreProducto}>{pr.titulo} {pr.tipo === 'novedad' ? '' : `• S/ ${Number(pr.precio || 0).toFixed(2)}`}</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => {
+                    setEditPromoId(pr.id); setTituloP(pr.titulo); setDescP(pr.descripcion || ''); setPrecioP(String(pr.precio || 0)); setImgP(pr.imagen_url || ''); setActivaP(Boolean(pr.activa));
+                  }}>
+                    <Text style={styles.textoBoton}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.boton, { backgroundColor: '#7F1D1D', flex: 1 }]} onPress={async () => { await eliminarPromocionAdmin(pr.id); await cargarTodo(); await recargar(); }}>
+                    <Text style={styles.textoBoton}>Borrar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
         </View>
       )}
-                    {sec === 'premios' && (
+
+      {sec === 'premios' && (
         <View>
           <Text style={styles.titulo}>PREMIOS Y CANJES</Text>
           <TextInput style={styles.campo} placeholder="Nombre del premio" placeholderTextColor="#6B7280" value={tituloR} onChangeText={setTituloR} />
@@ -493,10 +517,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             <View key={r.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{r.titulo} • {r.puntos_requeridos} pts (Stock: {r.stock})</Text>
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => { setEditRecId(r.id); setTituloR(r.titulo); setDescR(r.descripcion || ''); setPtsR(String(r.puntos_requeridos)); setStockR(String(r.stock ?? 10)); setImgR(r.imagen_url || ''); setActivaR(Boolean(r.activa)); }}>
+                <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', flex: 1 }]} onPress={() => {
+                  setEditRecId(r.id); setTituloR(r.titulo); setDescR(r.descripcion || ''); setPtsR(String(r.puntos_requeridos)); setStockR(String(r.stock ?? 10)); setImgR(r.imagen_url || ''); setActivaR(Boolean(r.activa));
+                }}>
                   <Text style={styles.textoBoton}>Editar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.boton, styles.botonPequeno, { backgroundColor: '#7F1D1D', flex: 1 }]} onPress={async () => { await eliminarRecompensaAdmin(r.id); await cargarTodo(); await recargar(); }}>
+                <TouchableOpacity style={[styles.boton, { backgroundColor: '#7F1D1D', flex: 1 }]} onPress={async () => { await eliminarRecompensaAdmin(r.id); await cargarTodo(); await recargar(); }}>
                   <Text style={styles.textoBoton}>Borrar</Text>
                 </TouchableOpacity>
               </View>
@@ -504,8 +530,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-
-      {sec === 'riders' && (
+                      {sec === 'riders' && (
         <View>
           <Text style={styles.titulo}>REGISTRAR MOTORIZADO</Text>
           <TextInput style={styles.campo} placeholder="Nombre completo" placeholderTextColor="#6B7280" value={nomRider} onChangeText={setNomRider} />
@@ -520,7 +545,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           {riders.map(r => (
             <View key={r.id} style={styles.tarjetaPedido}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={styles.nombreProducto}>🛵 {r.nombre_completo} ({r.telefono})</Text>
+                <Text style={styles.nombreProducto}>{r.nombre_completo} ({r.telefono})</Text>
                 <TouchableOpacity style={[styles.botonAgregar, { backgroundColor: '#7F1D1D' }]} onPress={async () => { await eliminarMotorizadoAdmin(r.id); await cargarTodo(); }}>
                   <Text style={styles.textoAgregar}>Eliminar</Text>
                 </TouchableOpacity>
@@ -540,7 +565,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-              {sec === 'clientes' && (
+
+      {sec === 'clientes' && (
         <View>
           <Text style={styles.titulo}>CLIENTES Y RESTABLECER CLAVES ({clientesList.length})</Text>
           <TextInput
@@ -578,11 +604,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <Text style={styles.titulo}>MÉTODOS DE PAGO (YAPE / PLIN)</Text>
           <TextInput style={styles.campo} placeholder="Nombre del titular" placeholderTextColor="#6B7280" value={titular} onChangeText={setTitular} />
           <TouchableOpacity style={[styles.boton, { backgroundColor: '#742284', marginBottom: 8 }]} onPress={() => subirFoto('yape')} disabled={subiendo}>
-            <Text style={styles.textoBoton}>🟣 SUBIR QR YAPE</Text>
+            <Text style={styles.textoBoton}>📸 SUBIR QR YAPE</Text>
           </TouchableOpacity>
           {!!qrYape && <Image source={{ uri: qrYape }} style={{ width: 140, height: 140, alignSelf: 'center', marginBottom: 10, borderRadius: 10 }} />}
           <TouchableOpacity style={[styles.boton, { backgroundColor: '#00B2E3', marginBottom: 8 }]} onPress={() => subirFoto('plin')} disabled={subiendo}>
-            <Text style={styles.textoBoton}>🔵 SUBIR QR PLIN</Text>
+            <Text style={styles.textoBoton}>📸 SUBIR QR PLIN</Text>
           </TouchableOpacity>
           {!!qrPlin && <Image source={{ uri: qrPlin }} style={{ width: 140, height: 140, alignSelf: 'center', marginBottom: 10, borderRadius: 10 }} />}
           <TouchableOpacity style={styles.boton} onPress={() => guardarPagos()}><Text style={styles.textoBoton}>GUARDAR MÉTODOS DE PAGO</Text></TouchableOpacity>
@@ -593,7 +619,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         <View>
           <Text style={styles.titulo}>ESTADO DEL LOCAL Y DELIVERY</Text>
           <View style={[styles.tarjetaPedido, { borderColor: localCerrado ? ROJO : '#16A34A' }]}>
-            <Text style={[styles.nombreProducto, { marginBottom: 6 }]}>Estado actual: {localCerrado ? '🔒 CERRADO' : '🟢 ABIERTO'}</Text>
+            <Text style={[styles.nombreProducto, { marginBottom: 6 }]}>Estado actual: {localCerrado ? '🔴 CERRADO' : '🟢 ABIERTO'}</Text>
             <TouchableOpacity style={[styles.boton, { backgroundColor: localCerrado ? '#16A34A' : ROJO }]} onPress={() => guardarPagos(!localCerrado)}>
               <Text style={styles.textoBoton}>{localCerrado ? 'ABRIR LOCAL AHORA' : 'CERRAR LOCAL TEMPORALMENTE'}</Text>
             </TouchableOpacity>
@@ -618,11 +644,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           {historialFiltrado.map(p => (
             <View key={p.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'}</Text>
-              <Text style={styles.descripcionPedido}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
+              <Text style={styles.descripcionPedido}>Total: S/ {Number(p.total || 0).toFixed(2)} ({p.metodo_pago})</Text>
             </View>
           ))}
         </View>
       )}
     </ScrollView>
   );
-}
+        }
+            
