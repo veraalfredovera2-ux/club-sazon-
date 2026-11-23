@@ -78,6 +78,7 @@ export default function App() {
   const [pantallaAuth, setPantallaAuth] = useState('bienvenida');
   const [usuario, setUsuario] = useState(null);
   const [rol, setRol] = useState(null);
+  const [modoClienteRider, setModoClienteRider] = useState(false);
   const [fotoPerfil, setFotoPerfil] = useState(null);
   const [vista, setVista] = useState('inicio');
   const [catActiva, setCatActiva] = useState('Todas');
@@ -120,7 +121,7 @@ export default function App() {
     cargarTodoUsuario();
     const t = setInterval(cargarTodoUsuario, 5000);
     return () => clearInterval(t);
-  }, [usuario?.id, rol]);
+  }, [usuario?.id, rol, modoClienteRider]);
 
   async function cambiarFotoPerfil() {
     try {
@@ -148,7 +149,8 @@ export default function App() {
       if (rol === 'administrador' || rol === 'repartidor') {
         const pAdm = await obtenerPedidosAdmin();
         setPedidosAdmin(pAdm || []);
-      } else if (usuario?.id) {
+      }
+      if (usuario?.id && (rol === 'cliente' || modoClienteRider)) {
         const d = await obtenerDatosCliente(usuario.id);
         setDatosCli(d);
       }
@@ -161,6 +163,7 @@ export default function App() {
       const res = await ingresarUsuario(cred);
       setUsuario(res.perfil);
       setRol(res.tipo);
+      setModoClienteRider(false);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(res));
     } catch (e) { mostrarAviso('Error al ingresar', e.message); } finally { setCargando(false); }
   }
@@ -180,6 +183,7 @@ export default function App() {
     await AsyncStorage.removeItem('sesion_club_sazon');
     setUsuario(null);
     setRol(null);
+    setModoClienteRider(false);
     setFotoPerfil(null);
     setVista('inicio');
     setPantallaAuth('login');
@@ -284,7 +288,7 @@ export default function App() {
       mostrarAviso('¡Canje solicitado!', `Has canjeado: ${rec.titulo}`);
     } catch (e) { mostrarAviso('No disponible', e.message); } finally { setCargando(false); }
   }
-  if (!usuario) {
+    if (!usuario) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -328,7 +332,7 @@ export default function App() {
     );
   }
 
-  if (rol === 'repartidor') {
+  if (rol === 'repartidor' && !modoClienteRider) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -337,6 +341,7 @@ export default function App() {
           pedidos={pedidosAdmin}
           recargar={cargarTodoUsuario}
           cerrarSesion={cerrarSesion}
+          irAModoCliente={() => setModoClienteRider(true)}
         />
       </SafeAreaView>
     );
@@ -413,6 +418,15 @@ export default function App() {
 
         {vista === 'inicio' && (
           <View>
+            {rol === 'repartidor' && (
+              <TouchableOpacity
+                style={[styles.boton, { backgroundColor: '#1E1E28', borderWidth: 1.5, borderColor: DORADO, marginBottom: 10, paddingVertical: 10 }]}
+                onPress={() => setModoClienteRider(false)}
+              >
+                <Text style={[styles.textoBoton, { color: DORADO }]}>🛵 VOLVER A MI PANEL ORIENTAL RIDERS</Text>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.tarjetaPerfilHero}>
               <TouchableOpacity style={styles.avatarClienteBox} onPress={cambiarFotoPerfil}>
                 {fotoPerfil ? (
@@ -503,7 +517,7 @@ export default function App() {
             )}
           </View>
         )}
-        {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                    {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -553,7 +567,7 @@ export default function App() {
             )}
           </View>
         )}
-        {(vista === 'puntos' || vista === 'canjes') && (
+                      {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               {Platform.OS === 'web' && (
@@ -630,7 +644,7 @@ export default function App() {
             )}
           </View>
         )}
-        {vista === 'carrito' && (
+                              {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -755,132 +769,7 @@ export default function App() {
             )}
           </View>
         )}
-                  {vista === 'carrito' && (
-          <View>
-            <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
-            {carrito.length === 0 ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>Tu carrito está vacío. Agrega platos desde el Menú.</Text>
-                <TouchableOpacity style={[styles.boton, { marginTop: 14 }]} onPress={() => setVista('menu')}>
-                  <Text style={styles.textoBoton}>Ir al Menú</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View>
-                {carrito.map((item, idx) => (
-                  <View key={`${item.id}-${idx}`} style={[styles.producto, { padding: 12 }]}>
-                    <Image source={item.imagen_url && item.imagen_url.includes('http') ? { uri: item.imagen_url } : LOGO} style={{ width: 66, height: 66, borderRadius: 12, backgroundColor: '#1F1F28' }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.nombreProducto}>{item.nombre}</Text>
-                      <Text style={[styles.precioProducto, { color: '#D1D5DB', marginBottom: 6 }]}>S/ {(Number(item.precio) * item.cantidad).toFixed(2)}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, -1)}>
-                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>−</Text>
-                        </TouchableOpacity>
-                        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>{item.cantidad}</Text>
-                        <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, 1)}>
-                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>+</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <TouchableOpacity onPress={() => eliminarDelCarrito(idx)} style={{ padding: 8 }}>
-                      <Text style={{ fontSize: 18, color: ROJO }}>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                <Text style={styles.titulo}>Entrega y ubicación</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                  {['DELIVERY', 'RECOJO EN LOCAL'].map(tipo => (
-                    <TouchableOpacity key={tipo} style={[styles.opcionEntrega, tipoEntrega === tipo && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]} onPress={() => setTipoEntrega(tipo)}>
-                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>{tipo}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {tipoEntrega === 'DELIVERY' && (
-                  <View style={styles.tarjetaPedido}>
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginBottom: 10, paddingVertical: 11 }]} onPress={obtenerUbicacionCliente}>
-                      <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL (GPS)</Text>
-                    </TouchableOpacity>
-                    <TextInput style={styles.campo} placeholder="Distrito (ej. San Borja, Surquillo...)" placeholderTextColor="#6B7280" value={distrito} onChangeText={setDistrito} />
-                    <TextInput style={styles.campo} placeholder="Dirección exacta o referencia" placeholderTextColor="#6B7280" value={direccion} onChangeText={setDireccion} />
-                    <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}</Text>
-                  </View>
-                )}
-
-                <Text style={styles.titulo}>Método de pago</Text>
-                <View style={styles.tarjetaPedido}>
-                  {[
-                    { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
-                    { id: 'Plin', bg: '#00B2E3', tag: 'plin', label: 'Plin' },
-                    { id: 'Efectivo', bg: '#0D9488', tag: '💵', label: 'Efectivo' }
-                  ].map(mp => {
-                    const sel = metodoPago === mp.id;
-                    return (
-                      <TouchableOpacity
-                        key={mp.id}
-                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#22222C', gap: 12 }}
-                        onPress={() => setMetodoPago(mp.id)}
-                      >
-                        <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: sel ? ROJO : '#6B7280', alignItems: 'center', justifyContent: 'center' }}>
-                          {sel && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: ROJO }} />}
-                        </View>
-                        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: mp.bg, alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{mp.tag}</Text>
-                        </View>
-                        <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '800' }}>{mp.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-
-                  {(metodoPago === 'Yape' || metodoPago === 'Plin') && (
-                    <View style={{ marginTop: 10, alignItems: 'center', width: '100%' }}>
-                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12, marginBottom: 4 }}>Titular: {cfgPagos.titularLimpio || 'Club Sazón'}</Text>
-                      {!!(metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin) && (
-                        <Image source={{ uri: metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin }} style={{ width: 150, height: 150, borderRadius: 10, marginVertical: 6 }} />
-                      )}
-                      <TouchableOpacity
-                        style={[styles.boton, { backgroundColor: comprobanteUrl ? '#16A34A' : '#1E293B', width: '100%', paddingVertical: 10 }]}
-                        disabled={subiendoComp}
-                        onPress={async () => {
-                          setSubiendoComp(true);
-                          try {
-                            const url = await subirImagenGaleria();
-                            if (url) { setComprobanteUrl(url); mostrarAviso('Comprobante listo', 'Captura adjuntada al pedido.'); }
-                          } catch (e) { mostrarAviso('Error', e.message); } finally { setSubiendoComp(false); }
-                        }}
-                      >
-                        <Text style={styles.textoBoton}>
-                          {subiendoComp ? 'SUBIENDO CAPTURA...' : comprobanteUrl ? '✅ CAPTURA DE PAGO ADJUNTADA' : `📸 ADJUNTAR CAPTURA DE PAGO ${metodoPago.toUpperCase()}`}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-
-                <TextInput style={styles.campo} placeholder="Notas adicionales (sin ají, cubiertos, etc.)" placeholderTextColor="#6B7280" value={notas} onChangeText={setNotas} />
-
-                <View style={styles.tarjetaPedido}>
-                  {tipoEntrega === 'DELIVERY' && (
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <Text style={styles.descripcionPedido}>Subtotal + Delivery</Text>
-                      <Text style={{ color: '#9CA3AF', fontWeight: '700' }}>S/ {subtotal.toFixed(2)} + S/ {costoDelivery.toFixed(2)}</Text>
-                    </View>
-                  )}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900' }}>Total</Text>
-                    <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
-                  </View>
-                  <TouchableOpacity style={[styles.boton, { marginTop: 0 }]} onPress={enviarPedido} disabled={cargando}>
-                    <Text style={styles.textoBoton}>{cargando ? 'Enviando pedido...' : 'Realizar pedido'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-                            {vista === 'pedidos' && (
+                          {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
