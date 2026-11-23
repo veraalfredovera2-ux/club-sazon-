@@ -1,3 +1,5 @@
+import { notificarPushPorRol, notificarPushUsuario } from './push';
+
 export const SUPABASE_URL = 'https://' + 'pripxtsriyxhafevokjg' + '.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
@@ -133,6 +135,7 @@ export async function guardarRecompensaAdmin(r) {
 export async function eliminarRecompensaAdmin(id) {
   await apiRest(`recompensas?id=eq.${id}`, 'DELETE');
 }
+
 export async function registrarUsuario({ nombreCompleto, telefono, password }) {
   const tel = limpiarTel(telefono);
   if (tel.length < 6) throw new Error('Ingresa un número de teléfono válido.');
@@ -171,7 +174,6 @@ export async function ingresarUsuario({ telefono, password }) {
 export async function actualizarFotoPerfilNube(perfilId, fotoUrl) {
   await apiRest(`perfiles?id=eq.${perfilId}`, 'PATCH', { foto_url: fotoUrl || '' });
 }
-
 export async function subirImagenGaleria() {
   return new Promise((resolve, reject) => {
     if (typeof document === 'undefined') return resolve(null);
@@ -223,6 +225,7 @@ export async function obtenerDatosCliente(clienteId) {
 export async function obtenerPedidosAdmin() {
   return (await apiRest('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=creado_en.desc')) || [];
 }
+
 export async function crearNuevoPedido(cabecera, items) {
   const num = 'PED-' + Math.floor(100000 + Math.random() * 900000);
   const [ped] = await apiRest('pedidos', 'POST', {
@@ -252,6 +255,11 @@ export async function crearNuevoPedido(cabecera, items) {
       }
     }
   }
+  await notificarPushPorRol(
+    'administrador',
+    '🍔 ¡Nuevo pedido en Club Sazón!',
+    `Pedido ${num} por S/ ${Number(cabecera.total || 0).toFixed(2)} (${cabecera.tipo_entrega}).`
+  );
   return ped;
 }
 
@@ -260,6 +268,20 @@ export async function actualizarEstadoPedidoAdmin(ped, nuevoEstado) {
     estado: nuevoEstado,
     ...(nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY' ? { estado_rider: 'Disponible' } : {})
   });
+  if (nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY') {
+    await notificarPushPorRol(
+      'repartidor',
+      '🛵 ¡Pedido listo para recoger!',
+      `${ped.numero_pedido} listo en cocina • Delivery: S/ ${Number(ped.costo_delivery || 0).toFixed(2)}.`
+    );
+  }
+  if (ped.cliente_id) {
+    await notificarPushUsuario(
+      ped.cliente_id,
+      `Actualización de tu pedido ${ped.numero_pedido}`,
+      `Tu pedido ahora está: ${nuevoEstado}`
+    );
+  }
 }
 
 export async function confirmarRecepcionYDarPuntos(ped) {
@@ -356,6 +378,7 @@ export async function obtenerClientesAdmin() {
 export async function cambiarClaveClienteAdmin(id, nuevaClave) {
   await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave });
 }
+
 export async function liquidarEfectivoRiderAdmin(riderId) {
   await apiRest(
     `pedidos?rider_id=eq.${riderId}&metodo_pago=eq.Efectivo&estado=eq.Completado&estado_rider=neq.Liquidado en caja`,
