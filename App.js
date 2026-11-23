@@ -8,7 +8,7 @@ import { VistaAdmin } from './admin';
 import { VistaRider } from './rider';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
-  obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario,
+  obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario, actualizarFotoPerfilNube,
   crearNuevoPedido, actualizarEstadoPedidoAdmin, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar, canjearRecompensaCliente, subirImagenGaleria
 } from './servicios';
 
@@ -107,7 +107,9 @@ export default function App() {
         const parsed = JSON.parse(s);
         setUsuario(parsed.perfil);
         setRol(parsed.tipo);
-        if (parsed.perfil?.id) {
+        if (parsed.perfil?.foto_url) {
+          setFotoPerfil(parsed.perfil.foto_url);
+        } else if (parsed.perfil?.id) {
           AsyncStorage.getItem(`foto_perfil_${parsed.perfil.id}`).then(f => { if (f) setFotoPerfil(f); });
         }
       }
@@ -117,7 +119,7 @@ export default function App() {
 
   useEffect(() => {
     if (!usuario?.id) return;
-    AsyncStorage.getItem(`foto_perfil_${usuario.id}`).then(f => { if (f) setFotoPerfil(f); });
+    if (usuario.foto_url) setFotoPerfil(usuario.foto_url);
     cargarTodoUsuario();
     const t = setInterval(cargarTodoUsuario, 5000);
     return () => clearInterval(t);
@@ -128,8 +130,14 @@ export default function App() {
       const dataUrl = await seleccionarYComprimirAvatar();
       if (!dataUrl) return;
       setFotoPerfil(dataUrl);
-      if (usuario?.id) await AsyncStorage.setItem(`foto_perfil_${usuario.id}`, dataUrl);
-      mostrarAviso('Foto actualizada', 'Tu foto de perfil se guardó correctamente.');
+      if (usuario?.id) {
+        await AsyncStorage.setItem(`foto_perfil_${usuario.id}`, dataUrl);
+        await actualizarFotoPerfilNube(usuario.id, dataUrl);
+        const actualizado = { ...usuario, foto_url: dataUrl };
+        setUsuario(actualizado);
+        await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify({ tipo: rol, perfil: actualizado }));
+      }
+      mostrarAviso('Foto actualizada', 'Tu foto de perfil se guardó en la nube para cualquier dispositivo.');
     } catch (e) { mostrarAviso('Error al subir', 'Intenta con otra imagen más ligera.'); }
   }
 
@@ -153,6 +161,7 @@ export default function App() {
       if (usuario?.id && (rol === 'cliente' || modoClienteRider)) {
         const d = await obtenerDatosCliente(usuario.id);
         setDatosCli(d);
+        if (d.foto_url) setFotoPerfil(d.foto_url);
       }
     } catch (e) {}
   }
@@ -164,6 +173,7 @@ export default function App() {
       setUsuario(res.perfil);
       setRol(res.tipo);
       setModoClienteRider(true);
+      setFotoPerfil(res.perfil?.foto_url || null);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(res));
     } catch (e) { mostrarAviso('Error al ingresar', e.message); } finally { setCargando(false); }
   }
@@ -174,6 +184,7 @@ export default function App() {
       const res = await registrarUsuario(datos);
       setUsuario(res.perfil);
       setRol('cliente');
+      setFotoPerfil(null);
       await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify({ tipo: 'cliente', perfil: res.perfil }));
       mostrarAviso('¡Bienvenido!', res.mensaje);
     } catch (e) { mostrarAviso('Error al registrar', e.message); } finally { setCargando(false); }
@@ -517,7 +528,7 @@ export default function App() {
             )}
           </View>
         )}
-                                         {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                                 {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -567,7 +578,7 @@ export default function App() {
             )}
           </View>
         )}
-        {(vista === 'puntos' || vista === 'canjes') && (
+                                             {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               {Platform.OS === 'web' && (
@@ -644,7 +655,7 @@ export default function App() {
             )}
           </View>
         )}
-                            {vista === 'carrito' && (
+                      {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -769,7 +780,7 @@ export default function App() {
             )}
           </View>
         )}
-                                      {vista === 'pedidos' && (
+                                {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -876,4 +887,4 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-                                             }
+              }
