@@ -356,3 +356,10 @@ export async function obtenerClientesAdmin() {
 export async function cambiarClaveClienteAdmin(id, nuevaClave) {
   await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave });
 }
+export async function liquidarEfectivoRiderAdmin(riderId) {
+  await apiRest(
+    `pedidos?rider_id=eq.${riderId}&metodo_pago=eq.Efectivo&estado=eq.Completado&estado_rider=neq.Liquidado en caja`,
+    'PATCH',
+    { estado_rider: 'Liquidado en caja' }
+  );
+}
