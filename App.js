@@ -9,7 +9,7 @@ import { VistaRider } from './rider';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
   obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario,
-  crearNuevoPedido, confirmarAdminPedido, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar, canjearRecompensaCliente, subirImagenGaleria
+  crearNuevoPedido, actualizarEstadoPedidoAdmin, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar, canjearRecompensaCliente, subirImagenGaleria
 } from './servicios';
 
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
@@ -322,7 +322,7 @@ export default function App() {
           usuario={usuario}
           pedidos={pedidosAdmin}
           recargar={cargarTodoUsuario}
-          onConfirmarAdmin={async (p, del) => { await confirmarAdminPedido(p, del); await cargarTodoUsuario(); }}
+          onConfirmarAdmin={async (p, del) => { await actualizarEstadoPedidoAdmin(p, del ? 'Listo' : 'Aceptado por el local'); await cargarTodoUsuario(); }}
           onCompletar={async (p) => { await confirmarRecepcionYDarPuntos(p); await cargarTodoUsuario(); }}
           onCancelar={async (p) => { await cancelarPedidoYDescontar(p); await cargarTodoUsuario(); }}
           cerrarSesion={cerrarSesion}
@@ -517,7 +517,7 @@ export default function App() {
             )}
           </View>
         )}
-                    {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                                         {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -567,7 +567,7 @@ export default function App() {
             )}
           </View>
         )}
-                                 {(vista === 'puntos' || vista === 'canjes') && (
+        {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               {Platform.OS === 'web' && (
@@ -644,7 +644,7 @@ export default function App() {
             )}
           </View>
         )}
-        {vista === 'carrito' && (
+                            {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -769,7 +769,7 @@ export default function App() {
             )}
           </View>
         )}
-                  {vista === 'pedidos' && (
+                                      {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -790,7 +790,7 @@ export default function App() {
                   ))}
                   {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#38BDF8', fontWeight: '800' }]}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
                   <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
-                  {p.estado === 'Confirmado por local' && !p.recibido_cliente && (
+                  {(p.estado === 'En camino' || p.estado === 'Listo') && !p.recibido_cliente && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
                       <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
                     </TouchableOpacity>
@@ -876,5 +876,4 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-                    }
-                  
+                                             }
