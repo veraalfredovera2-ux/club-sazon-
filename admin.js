@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, Platform } from 'react-native';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
-import { mostrarAviso } from './avisos';
+import { mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
 import {
   categorias, obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin,
   obtenerPromociones, guardarPromocionAdmin, eliminarPromocionAdmin,
@@ -90,6 +90,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [localCerrado, setLocalCerrado] = useState(false);
   const [notifActivas, setNotifActivas] = useState(true);
   const [filtroMes, setFiltroMes] = useState(() => new Date().toISOString().slice(0, 7));
+  const conteoPrevioRef = useRef(null);
 
   useEffect(() => {
     const actualizarHora = () => {
@@ -100,6 +101,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     const timer = setInterval(actualizarHora, 15000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const lista = Array.isArray(pedidos) ? pedidos : [];
+    const pendientes = lista.filter(p => p && p.estado === 'Pendiente').length;
+    if (conteoPrevioRef.current !== null && pendientes > conteoPrevioRef.current && notifActivas) {
+      reproducirTimbreAlerta();
+    }
+    conteoPrevioRef.current = pendientes;
+  }, [pedidos, notifActivas]);
 
   useEffect(() => { cargarTodo(); }, []);
 
@@ -206,11 +216,36 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   }
 
   async function cambiarEstadoLocal(p, nuevoEstado) {
-    try {
-      await actualizarEstadoPedidoAdmin(p, nuevoEstado);
-      await recargar();
-      mostrarAviso('Estado actualizado', nuevoEstado === 'Listo' && p.tipo_entrega === 'DELIVERY' ? 'Pedido marcado como LISTO y enviado a los repartidores disponibles.' : `El pedido ahora está: ${nuevoEstado}`);
-    } catch (e) { mostrarAviso('Error', e.message); }
+    const ejecutar = async () => {
+      try {
+        await actualizarEstadoPedidoAdmin(p, nuevoEstado);
+        await recargar();
+        mostrarAviso('Estado actualizado', nuevoEstado === 'Listo' && p.tipo_entrega === 'DELIVERY' ? 'Pedido marcado como LISTO y enviado a los repartidores disponibles.' : `El pedido ahora está: ${nuevoEstado}`);
+      } catch (e) { mostrarAviso('Error', e.message); }
+    };
+    if (nuevoEstado === 'Listo') {
+      pedirConfirmacion(
+        'Confirmar pedido listo',
+        p.tipo_entrega === 'DELIVERY'
+          ? `¿Confirmas que el pedido ${p.numero_pedido} está terminado y listo para ser publicado a los repartidores?`
+          : `¿Confirmas que el pedido ${p.numero_pedido} está listo para entrega en local?`,
+        ejecutar
+      );
+    } else {
+      await ejecutar();
+    }
+  }
+
+  function solicitarCancelacionPedido(p) {
+    const pts = Math.floor(Number(p.subtotal || p.total || 0) * 10);
+    const detallePuntos = p.recibido_cliente && pts > 0
+      ? ` Se descontarán automáticamente ${pts} puntos del saldo del cliente.`
+      : '';
+    pedirConfirmacion(
+      'Confirmar cancelación de pedido',
+      `¿Confirmas la cancelación definitiva del pedido ${p.numero_pedido}?${detallePuntos}`,
+      () => onCancelar(p)
+    );
   }
 
   function extraerComprobante(notasStr) {
@@ -223,7 +258,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const activos = listaPedidosSegura.filter(p => p && p.estado !== 'Completado' && p.estado !== 'Cancelado');
   const completados = listaPedidosSegura.filter(p => p && p.estado === 'Completado');
   const hoyStr = new Date().toISOString().slice(0, 10);
-  const ventasHoy = completados.filter(p => String(p.creado_en || '').startsWith(hoyStr)).reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const completadosHoy = completados.filter(p => String(p.creado_en || '').startsWith(hoyStr));
+  const ventasHoy = completadosHoy.reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const ventasHoyEfectivo = completadosHoy.filter(p => p.metodo_pago === 'Efectivo').reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const ventasHoyYape = completadosHoy.filter(p => p.metodo_pago === 'Yape').reduce((acc, p) => acc + Number(p.total || 0), 0);
+  const ventasHoyPlin = completadosHoy.filter(p => p.metodo_pago === 'Plin').reduce((acc, p) => acc + Number(p.total || 0), 0);
   const pedidosHoyCount = listaPedidosSegura.filter(p => p && String(p.creado_en || '').startsWith(hoyStr) && p.estado !== 'Cancelado').length;
   const historialFiltrado = completados.filter(p => String(p.creado_en || '').startsWith(filtroMes));
   const totalMes = historialFiltrado.reduce((acc, p) => acc + Number(p.total || 0), 0);
@@ -271,7 +310,17 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <Image source={LOGO} style={styles.logoHeaderCentro} />
         </TouchableOpacity>
         <View style={{ width: 82, flexDirection: 'row', justifyContent: 'flex-end', gap: 6 }}>
-          <TouchableOpacity onPress={() => setNotifActivas(!notifActivas)} style={{ backgroundColor: notifActivas ? '#16A34A' : '#374151', paddingVertical: 6, paddingHorizontal: 9, borderRadius: 10 }}>
+          <TouchableOpacity
+            onPress={() => {
+              const nuevo = !notifActivas;
+              setNotifActivas(nuevo);
+              if (nuevo) {
+                reproducirTimbreAlerta();
+                mostrarAviso('Alerta sonora activada', 'El timbre sonará automáticamente cuando ingrese un pedido nuevo.');
+              }
+            }}
+            style={{ backgroundColor: notifActivas ? '#16A34A' : '#374151', paddingVertical: 6, paddingHorizontal: 9, borderRadius: 10 }}
+          >
             <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{notifActivas ? '🔔 ON' : '🔕'}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { recargar(); cargarTodo(); }} style={{ backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, paddingVertical: 6, paddingHorizontal: 9, borderRadius: 10 }}>
@@ -332,7 +381,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-                  {sec === 'pedidos' && (
+                    {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -390,12 +439,16 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   )}
 
                   {p.estado === 'Listo' && p.tipo_entrega !== 'DELIVERY' && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => onCompletar(p)} disabled={cargando}>
+                    <TouchableOpacity
+                      style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]}
+                      onPress={() => pedirConfirmacion('Confirmar entrega en local', `¿Confirmas que el cliente recibió el pedido ${p.numero_pedido} en el local?`, () => onCompletar(p))}
+                      disabled={cargando}
+                    >
                       <Text style={styles.textoBoton}>✅ ENTREGADO EN LOCAL Y DAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
 
-                  <TouchableOpacity style={[styles.boton, { backgroundColor: '#7F1D1D', marginTop: 8 }]} onPress={() => onCancelar(p)} disabled={cargando}>
+                  <TouchableOpacity style={[styles.boton, { backgroundColor: '#7F1D1D', marginTop: 8 }]} onPress={() => solicitarCancelacionPedido(p)} disabled={cargando}>
                     <Text style={styles.textoBoton}>CANCELAR PEDIDO</Text>
                   </TouchableOpacity>
                 </View>
@@ -404,7 +457,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                          {sec === 'productos' && (
+                            {sec === 'productos' && (
         <View>
           <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
           <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
@@ -456,7 +509,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                    {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
+      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
           <Text style={styles.titulo}>{sec === 'novedades' ? 'PUBLICAR NOVEDAD' : sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
           <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={tituloP} onChangeText={setTituloP} />
@@ -527,7 +580,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                            {sec === 'riders' && (
+              {sec === 'riders' && (
         <View>
           <Text style={styles.titulo}>REGISTRAR MOTORIZADO</Text>
           <TextInput style={styles.campo} placeholder="Nombre completo" placeholderTextColor="#6B7280" value={nomRider} onChangeText={setNomRider} />
@@ -632,7 +685,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
       {sec === 'historial' && (
         <View>
-          <Text style={styles.titulo}>HISTORIAL DE VENTAS</Text>
+          <Text style={styles.titulo}>CIERRE DE CAJA DE HOY ({hoyStr})</Text>
+          <View style={styles.tarjetaPedido}>
+            <Text style={[styles.nombreProducto, { color: DORADO, marginBottom: 6 }]}>Total cobrado hoy: S/ {ventasHoy.toFixed(2)}</Text>
+            <Text style={styles.descripcionPedido}>💵 Efectivo: S/ {ventasHoyEfectivo.toFixed(2)}</Text>
+            <Text style={styles.descripcionPedido}>🟣 Yape: S/ {ventasHoyYape.toFixed(2)}</Text>
+            <Text style={styles.descripcionPedido}>🔵 Plin: S/ {ventasHoyPlin.toFixed(2)}</Text>
+          </View>
+
+          <Text style={styles.titulo}>HISTORIAL DE VENTAS MENSUAL</Text>
           <TextInput style={styles.campo} placeholder="Mes (AAAA-MM)" placeholderTextColor="#6B7280" value={filtroMes} onChangeText={setFiltroMes} />
           <View style={styles.tarjetaPedido}>
             <Text style={styles.nombreProducto}>Total vendido ({filtroMes}): S/ {totalMes.toFixed(2)}</Text>
@@ -648,5 +709,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-                  }
-            
+                           }
