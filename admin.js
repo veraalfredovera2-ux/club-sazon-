@@ -10,7 +10,7 @@ import {
   obtenerConfigPagos, guardarConfigPagos,
   obtenerMotorizados, crearMotorizadoAdmin, eliminarMotorizadoAdmin,
   subirImagenGaleria, actualizarHorarioRiderAdmin, obtenerClientesAdmin,
-  cambiarClaveClienteAdmin, asignarRiderPedidoAdmin
+  cambiarClaveClienteAdmin, actualizarEstadoPedidoAdmin
 } from './servicios';
 
 function IconoAdmin({ tipo }) {
@@ -79,7 +79,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [telRider, setTelRider] = useState('');
   const [passRider, setPassRider] = useState('');
   const [horarioNuevoRider, setHorarioNuevoRider] = useState('Lun a Dom: 12:00 pm - 10:00 pm');
-  const [riderSeleccionado, setRiderSeleccionado] = useState({});
 
   const [titular, setTitular] = useState('');
   const [qrYape, setQrYape] = useState('');
@@ -131,7 +130,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       }
     } catch (e) {}
   }
-  async function guardarHorarioRider(riderOb) {
+    async function guardarHorarioRider(riderOb) {
     const textoHorario = (horarioRiderEdit[riderOb.id] || '').trim();
     try {
       await actualizarHorarioRiderAdmin(riderOb.id, textoHorario);
@@ -206,15 +205,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     } catch (e) { mostrarAviso('Error', e.message); }
   }
 
-  async function asignarYConfirmarPedido(p) {
-    const rid = riderSeleccionado[p.id];
-    if (!rid) return mostrarAviso('Elige motorizado', 'Selecciona un repartidor antes de confirmar este delivery.');
-    const rObj = riders.find(x => x.id === rid);
-    if (!rObj) return mostrarAviso('Elige motorizado', 'Vuelve a seleccionar el repartidor.');
+  async function cambiarEstadoLocal(p, nuevoEstado) {
     try {
-      await asignarRiderPedidoAdmin(p.id, rObj.id, rObj.nombre_completo);
-      await onConfirmarAdmin(p, true);
-      mostrarAviso('Pedido asignado', `Asignado a ${rObj.nombre_completo} y confirmado.`);
+      await actualizarEstadoPedidoAdmin(p, nuevoEstado);
+      await recargar();
+      mostrarAviso('Estado actualizado', nuevoEstado === 'Listo' && p.tipo_entrega === 'DELIVERY' ? 'Pedido marcado como LISTO y enviado a los repartidores disponibles.' : `El pedido ahora está: ${nuevoEstado}`);
     } catch (e) { mostrarAviso('Error', e.message); }
   }
 
@@ -337,7 +332,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-              {sec === 'pedidos' && (
+                  {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -366,35 +361,37 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                     </TouchableOpacity>
                   )}
 
-                  {p.estado === 'Pendiente' && p.tipo_entrega === 'DELIVERY' && (
-                    <View style={{ marginTop: 10 }}>
-                      <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '800', marginBottom: 6 }]}>Asignar motorizado:</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                        {riders.map(r => (
-                          <TouchableOpacity
-                            key={r.id}
-                            style={[styles.categoria, riderSeleccionado[p.id] === r.id && styles.categoriaActiva]}
-                            onPress={() => setRiderSeleccionado(prev => ({ ...prev, [p.id]: r.id }))}
-                          >
-                            <Text style={styles.textoCategoria}>🛵 {r.nombre_completo}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                      <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A' }]} onPress={() => asignarYConfirmarPedido(p)}>
-                        <Text style={styles.textoBoton}>ASIGNAR Y CONFIRMAR PEDIDO</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {p.estado === 'Pendiente' && p.tipo_entrega !== 'DELIVERY' && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => onConfirmarAdmin(p, false)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>CONFIRMAR PEDIDO EN LOCAL</Text>
+                  {p.estado === 'Pendiente' && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => cambiarEstadoLocal(p, 'Aceptado por el local')} disabled={cargando}>
+                      <Text style={styles.textoBoton}>✅ ACEPTAR PEDIDO</Text>
                     </TouchableOpacity>
                   )}
 
-                  {p.estado === 'Confirmado por local' && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 10 }]} onPress={() => onCompletar(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>COMPLETAR Y ACREDITAR PUNTOS</Text>
+                  {p.estado === 'Aceptado por el local' && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#D97706', marginTop: 10 }]} onPress={() => cambiarEstadoLocal(p, 'En preparación')} disabled={cargando}>
+                      <Text style={styles.textoBoton}>👨‍🍳 MARCAR EN PREPARACIÓN</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {p.estado === 'En preparación' && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 10 }]} onPress={() => cambiarEstadoLocal(p, 'Listo')} disabled={cargando}>
+                      <Text style={styles.textoBoton}>
+                        {p.tipo_entrega === 'DELIVERY' ? '📦 MARCAR COMO LISTO (AVISAR RIDERS)' : '📦 MARCAR COMO LISTO PARA RECOJO'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {p.estado === 'Listo' && p.tipo_entrega === 'DELIVERY' && !p.rider_id && (
+                    <View style={{ backgroundColor: '#1E293B', borderRadius: 10, padding: 10, marginTop: 10 }}>
+                      <Text style={{ color: DORADO, fontSize: 12, fontWeight: '900', textAlign: 'center' }}>
+                        📡 Pedido publicado • Esperando que un repartidor lo acepte
+                      </Text>
+                    </View>
+                  )}
+
+                  {p.estado === 'Listo' && p.tipo_entrega !== 'DELIVERY' && (
+                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => onCompletar(p)} disabled={cargando}>
+                      <Text style={styles.textoBoton}>✅ ENTREGADO EN LOCAL Y DAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
 
@@ -407,7 +404,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-      {sec === 'productos' && (
+                          {sec === 'productos' && (
         <View>
           <Text style={styles.titulo}>{editId ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO'}</Text>
           <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={nombre} onChangeText={setNombre} />
@@ -459,7 +456,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-              {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
+                    {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
           <Text style={styles.titulo}>{sec === 'novedades' ? 'PUBLICAR NOVEDAD' : sec === 'ofertas' ? 'GESTIÓN DE OFERTAS' : 'GESTIÓN DE PROMOCIONES'}</Text>
           <TextInput style={styles.campo} placeholder="Título" placeholderTextColor="#6B7280" value={tituloP} onChangeText={setTituloP} />
@@ -530,7 +527,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                      {sec === 'riders' && (
+                            {sec === 'riders' && (
         <View>
           <Text style={styles.titulo}>REGISTRAR MOTORIZADO</Text>
           <TextInput style={styles.campo} placeholder="Nombre completo" placeholderTextColor="#6B7280" value={nomRider} onChangeText={setNomRider} />
@@ -651,5 +648,5 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-        }
+                  }
             
