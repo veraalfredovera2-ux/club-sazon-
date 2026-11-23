@@ -78,7 +78,7 @@ export default function App() {
   const [pantallaAuth, setPantallaAuth] = useState('bienvenida');
   const [usuario, setUsuario] = useState(null);
   const [rol, setRol] = useState(null);
-  const [modoClienteRider, setModoClienteRider] = useState(false);
+  const [modoClienteRider, setModoClienteRider] = useState(true);
   const [fotoPerfil, setFotoPerfil] = useState(null);
   const [vista, setVista] = useState('inicio');
   const [catActiva, setCatActiva] = useState('Todas');
