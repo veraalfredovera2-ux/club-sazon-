@@ -21,7 +21,7 @@ function obtenerRangoMes(offsetMeses = 0) {
   return { inicio, fin };
 }
 
-export function VistaRider({ usuario, pedidos, recargar, cerrarSesion }) {
+export function VistaRider({ usuario, pedidos, recargar, cerrarSesion, irAModoCliente }) {
   const [periodo, setPeriodo] = useState('esta_semana');
   const [procesando, setProcesando] = useState(false);
 
@@ -73,14 +73,16 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion }) {
 
   function abrirMapaCliente(dir) {
     const match = (dir || '').match(/https:\/\/www\.google\.com\/maps\?q=[^\s|]+/);
-    if (match) return Linking.openURL(match[0]).catch(() => {});
+    if (match) return Linking.openURL(match).catch(() => {});
     const query = encodeURIComponent(dir || 'Lima, Peru');
     Linking.openURL(`https://google.com{query}`).catch(() => {});
   }
   return (
     <ScrollView contentContainerStyle={styles.contenido}>
       <View style={styles.cabeceraTop}>
-        <View style={{ width: 70 }} />
+        <TouchableOpacity onPress={irAModoCliente} style={{ backgroundColor: '#1E1E28', borderWidth: 1, borderColor: DORADO, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10 }}>
+          <Text style={{ color: DORADO, fontSize: 11, fontWeight: '900' }}>🛒 Cliente</Text>
+        </TouchableOpacity>
         <Image source={LOGO} style={styles.logoHeaderCentro} />
         <TouchableOpacity onPress={recargar} style={{ backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10 }}>
           <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '900' }}>↻</Text>
@@ -180,5 +182,4 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion }) {
       </TouchableOpacity>
     </ScrollView>
   );
-          }
-              
+}
