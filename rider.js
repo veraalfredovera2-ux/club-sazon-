@@ -105,18 +105,19 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion, irAModoCl
   }
   return (
     <ScrollView contentContainerStyle={styles.contenido}>
-      <View style={styles.barraSuperior}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Image source={LOGO} style={styles.logoBarra} />
-          <View>
-            <Text style={styles.tituloBarra}>ORIENTAL RIDERS</Text>
-            <Text style={{ color: DORADO, fontSize: 11, fontWeight: '700' }}>🛵 {usuario.nombre_completo}</Text>
-          </View>
-        </View>
-        <TouchableOpacity onPress={cerrarSesion} style={{ backgroundColor: '#252530', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}>
-          <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>Salir</Text>
-        </TouchableOpacity>
-      </View>
+         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+       <Image source={LOGO} style={{ width: 44, height: 44, borderRadius: 10 }} resizeMode="contain" />
+       <View style={{ flex: 1 }}>
+         <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>ORIENTAL RIDERS</Text>
+         <Text style={{ color: DORADO, fontSize: 11, fontWeight: '700' }} numberOfLines={1}>🛵 {usuario.nombre_completo}</Text>
+       </View>
+     </View>
+     <TouchableOpacity onPress={cerrarSesion} style={{ backgroundColor: '#252530', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}>
+       <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>Salir</Text>
+     </TouchableOpacity>
+   </View>
+
 
       {irAModoCliente && (
         <TouchableOpacity
