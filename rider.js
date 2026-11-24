@@ -158,19 +158,30 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion, irAModoCl
         <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '900', marginTop: 2 }}>{usuario.direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm'}</Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          {[
-            { id: 'disponibles', label: `Disponibles (${disponibles.length})` },
-            { id: 'encurso', label: `En ruta (${enCurso.length})` },
-            { id: 'ganancias', label: 'Mis Pagos' },
-            { id: 'historial', label: `Historial (${entregados.length})` }
-          ].map(t => (
-            <TouchableOpacity key={t.id} style={[styles.categoria, tab === t.id && styles.categoriaActiva, { paddingHorizontal: 14, alignItems: 'center' }]} onPress={() => setTab(t.id)}>
-              <Text style={styles.textoCategoria}>{t.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 12 }} contentContainerStyle={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+        {[
+          { id: 'disponibles', label: `Disponibles (${disponibles.length})` },
+          { id: 'encurso', label: `En ruta (${enCurso.length})` },
+          { id: 'ganancias', label: 'Mis Pagos' },
+          { id: 'historial', label: `Historial (${entregados.length})` }
+        ].map(t => (
+          <TouchableOpacity
+            key={t.id}
+            style={{
+              backgroundColor: tab === t.id ? ROJO : TARJETA,
+              borderWidth: 1,
+              borderColor: tab === t.id ? ROJO : BORDE,
+              borderRadius: 10,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onPress={() => setTab(t.id)}
+          >
+            <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>{t.label}</Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
       {tab === 'disponibles' && (
