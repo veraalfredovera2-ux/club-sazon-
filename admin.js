@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, Platform } from 'react-native';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
