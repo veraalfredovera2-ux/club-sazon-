@@ -7,7 +7,7 @@ import { VistaAdmin } from './admin';
 import { VistaRider } from './rider';
 import { VistaCanjes, VistaMas } from './vistas';
 import { VentanaAviso, mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
-import { iniciarOneSignalWeb, pedirPermisoPushWeb, estadoPermisoPushWeb } from './push';
+import * as PushWeb from './push';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas,
   obtenerPedidosUsuario, obtenerHistorialPuntos, obtenerConfigPagos,
@@ -71,7 +71,7 @@ export default function App() {
   const [subiendoComp, setSubiendoComp] = useState(false);
   const [qrGrande, setQrGrande] = useState(null);
   const [cargando, setCargando] = useState(false);
-  const [permisoPush, setPermisoPush] = useState(() => estadoPermisoPushWeb());
+  const [permisoPush, setPermisoPush] = useState(() => (typeof Notification !== 'undefined' ? Notification.permission : 'no-soportado'));
   const avisosPuertaRef = useRef(new Set());
 
   const rol = String(usuario?.rol || 'cliente').trim().toLowerCase();
@@ -86,7 +86,8 @@ export default function App() {
 
   useEffect(() => {
     if (!usuario?.id) return;
-    iniciarOneSignalWeb(usuario).then(() => setPermisoPush(estadoPermisoPushWeb()));
+    const fnInit = PushWeb.iniciarOneSignalWeb || PushWeb.iniciarPushWeb || PushWeb.default;
+if (typeof fnInit === 'function') fnInit(usuario);
     cargarTodoUsuario();
     const timer = setInterval(cargarTodoUsuario, 6000);
     return () => clearInterval(timer);
@@ -130,7 +131,9 @@ export default function App() {
     if (u?.rol === 'repartidor') setModoRiderActivo(true);
     await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(u));
     if (u?.id) {
-      iniciarOneSignalWeb(u).then(() => setPermisoPush(estadoPermisoPushWeb()));
+      const fnInit = PushWeb.iniciarOneSignalWeb || PushWeb.iniciarPushWeb || PushWeb.default;
+if (typeof fnInit === 'function') fnInit(u);
+
     }
   }
 
@@ -448,8 +451,10 @@ export default function App() {
           <TouchableOpacity
             style={{ backgroundColor: '#1E1E28', borderWidth: 1, borderColor: DORADO, borderRadius: 12, padding: 10, marginBottom: 10, alignItems: 'center' }}
             onPress={async () => {
-              await pedirPermisoPushWeb(usuario);
-              setPermisoPush(estadoPermisoPushWeb());
+                         const fnPedir = PushWeb.pedirPermisoPushWeb || PushWeb.pedirPermisoPush || PushWeb.default;
+           if (typeof fnPedir === 'function') await fnPedir(usuario);
+           else if (typeof Notification !== 'undefined') await Notification.requestPermission();
+           setPermisoPush(typeof Notification !== 'undefined' ? Notification.permission : 'granted') 
             }}
           >
             <Text style={{ color: DORADO, fontWeight: '900', fontSize: 12 }}>🔔 ACTIVAR NOTIFICACIONES DE TU PEDIDO</Text>
