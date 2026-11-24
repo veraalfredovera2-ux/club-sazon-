@@ -38,7 +38,7 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
   const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
-  const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false };
+  const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false, puntos_rider: '10' };
   if (partes.length < 2) return def;
   const nums = partes.at(1).split('|');
   return {
@@ -47,7 +47,8 @@ export function extraerConfigDelivery(titularRaw) {
     local_lng: nums.at(1) || def.local_lng,
     tarifa_base: nums.at(2) || def.tarifa_base,
     tarifa_km: nums.at(3) || def.tarifa_km,
-    local_cerrado: nums.at(4) === '1'
+    local_cerrado: nums.at(4) === '1',
+    puntos_rider: nums.at(5) !== undefined ? String(nums.at(5)) : '10'
   };
 }
 
@@ -61,12 +62,16 @@ export async function guardarConfigPagos(cfg) {
   const del = extraerConfigDelivery(cfg.titular);
   const titBase = (cfg.titularLimpio !== undefined ? cfg.titularLimpio : del.titularLimpio) || 'Club Sazón';
   const cerradoFlag = cfg.local_cerrado ? '1' : '0';
-  const titularEmpacado = `${titBase.trim()}||DEL:${cfg.local_lat || del.local_lat}|${cfg.local_lng || del.local_lng}|${cfg.tarifa_base || del.tarifa_base}|${cfg.tarifa_km || del.tarifa_km}|${cerradoFlag}`;
+  const ptsRider = cfg.puntos_rider !== undefined ? String(cfg.puntos_rider) : del.puntos_rider;
+  const titEmpacado = `${titBase.trim()}||DEL:${cfg.local_lat || del.local_lat}|${cfg.local_lng || del.local_lng}|${cfg.tarifa_base || del.tarifa_base}|${cfg.tarifa_km || del.tarifa_km}|${cerradoFlag}|${ptsRider}`;
   await apiRest('configuracion_pagos?id=eq.principal', 'PATCH', {
-    titular: titularEmpacado,
+    titular: titEmpacado,
     qr_yape: (cfg.qr_yape || '').trim(),
     qr_plin: (cfg.qr_plin || '').trim()
   });
+}
+
+  
 }
 export async function obtenerCatalogo(soloDisp = false) {
   const q = soloDisp ? 'productos?select=*&disponible=eq.true&order=nombre.asc' : 'productos?select=*&order=nombre.asc';
