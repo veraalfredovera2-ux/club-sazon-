@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform } from 'react-native';
+import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar, SiluetaBlanca, LOGO, BANNER_COMIDA } from './pantallas';
@@ -97,6 +97,7 @@ export default function App() {
   const [distrito, setDistrito] = useState('');
   const [direccion, setDireccion] = useState('');
   const [gpsCliente, setGpsCliente] = useState(null);
+  const [calculandoRuta, setCalculandoRuta] = useState(false);
   const [notas, setNotas] = useState('');
   const [comprobanteUrl, setComprobanteUrl] = useState('');
   const [subiendoComp, setSubiendoComp] = useState(false);
@@ -261,6 +262,33 @@ export default function App() {
     );
   }
 
+  async function calcularRutaDireccionManual() {
+    const consulta = `${direccion.trim()} ${distrito.trim()} Peru`.trim();
+    if (consulta.length < 6) {
+      return mostrarAviso('Falta dirección', 'Escribe primero tu calle/avenida y distrito.');
+    }
+    setCalculandoRuta(true);
+    try {
+      const urlGeo = 'https://openstreetmap.org' + encodeURIComponent(consulta);
+      const res = await fetch(urlGeo);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const lat = parseFloat(data.at(0).lat);
+        const lng = parseFloat(data.at(0).lon);
+        setGpsCliente({ lat, lng });
+        const km = calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), lat, lng);
+        const costo = Number((Number(cfgPagos.tarifa_base || 4) + km * Number(cfgPagos.tarifa_km || 1.5)).toFixed(2));
+        mostrarAviso('Distancia calculada', `Distancia estimada: ${km.toFixed(1)} km • Costo delivery: S/ ${costo.toFixed(2)}`);
+      } else {
+        mostrarAviso('Dirección no ubicada en mapa', 'Verifica el nombre de la calle o usa el botón GPS. Se aplicará la tarifa base.');
+      }
+    } catch (e) {
+      mostrarAviso('Aviso', 'No se pudo consultar el mapa en este momento.');
+    } finally {
+      setCalculandoRuta(false);
+    }
+  }
+
   const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), gpsCliente.lat, gpsCliente.lng)
@@ -280,7 +308,11 @@ export default function App() {
     }
     setCargando(true);
     try {
-      const linkMaps = gpsCliente ? ` | https://google.com{gpsCliente.lat},${gpsCliente.lng}` : '';
+      const textoDir = `${direccion.trim()}${distrito.trim() ? ', ' + distrito.trim() : ''}`.trim();
+      const mapsHost = 'https://google.com';
+      const linkMaps = gpsCliente
+        ? ` | ${mapsHost}?q=${gpsCliente.lat},${gpsCliente.lng}`
+        : ` | ${mapsHost}/search/?api=1&query=${encodeURIComponent(textoDir)}`;
       const dirCompleta = tipoEntrega === 'DELIVERY' ? `${direccion.trim() || 'Ubicación GPS'}${linkMaps}` : 'Recojo en local';
       await crearNuevoPedido({
         cliente_id: usuario.id,
@@ -409,7 +441,7 @@ export default function App() {
   const cantTotalCarrito = carrito.reduce((a, x) => a + x.cantidad, 0);
   const pedidosActivos = (datosCli.pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
   const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
-  return (
+      return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <VentanaAviso />
       <Modal transparent animationType="fade" visible={Boolean(promoDetalle)}>
@@ -560,7 +592,7 @@ export default function App() {
             )}
           </View>
         )}
-                    {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                          {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -688,7 +720,7 @@ export default function App() {
             )}
           </View>
         )}
-                              {vista === 'carrito' && (
+                                {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -738,11 +770,33 @@ export default function App() {
                     </TouchableOpacity>
                     <TextInput style={styles.campo} placeholder="Distrito (ej. San Borja, Surquillo...)" placeholderTextColor="#6B7280" value={distrito} onChangeText={setDistrito} />
                     <TextInput style={styles.campo} placeholder="Dirección exacta o referencia" placeholderTextColor="#6B7280" value={direccion} onChangeText={setDireccion} />
+                    {!!direccion.trim() && (
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                        <TouchableOpacity
+                          style={[styles.boton, { flex: 1, backgroundColor: '#7C3AED', marginTop: 0, paddingVertical: 10 }]}
+                          disabled={calculandoRuta}
+                          onPress={calcularRutaDireccionManual}
+                        >
+                          <Text style={[styles.textoBoton, { fontSize: 11 }]}>
+                            {calculandoRuta ? 'CALCULANDO...' : '📏 CALCULAR KM / COSTO'}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.boton, { flex: 1, backgroundColor: '#0284C7', marginTop: 0, paddingVertical: 10 }]}
+                          onPress={() => {
+                            const q = encodeURIComponent(`${direccion.trim()} ${distrito.trim()}`.trim());
+                            const mapsBase = 'https://google.com';
+                            Linking.openURL(`${mapsBase}${q}`);
+                          }}
+                        >
+                          <Text style={[styles.textoBoton, { fontSize: 11 }]}>🗺️ VER EN MAPS</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}</Text>
                   </View>
                 )}
-
-                <Text style={styles.titulo}>Método de pago</Text>
+                                  <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
@@ -813,7 +867,7 @@ export default function App() {
             )}
           </View>
         )}
-                          {vista === 'pedidos' && (
+                            {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {!(datosCli.pedidos || []).length ? (
@@ -960,5 +1014,5 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-                          }
+          }
           
