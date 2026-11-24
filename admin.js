@@ -7,10 +7,9 @@ import {
   categorias, obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin,
   obtenerPromociones, guardarPromocionAdmin, eliminarPromocionAdmin,
   obtenerRecompensas, guardarRecompensaAdmin, eliminarRecompensaAdmin,
-  obtenerConfigPagos, guardarConfigPagos,
-  obtenerMotorizados, crearMotorizadoAdmin, eliminarMotorizadoAdmin,
-  subirImagenGaleria, actualizarHorarioRiderAdmin, obtenerClientesAdmin,
-  cambiarClaveClienteAdmin, actualizarEstadoPedidoAdmin
+  obtenerMotorizados, crearMotorizadoAdmin, eliminarMotorizadoAdmin, actualizarHorarioRiderAdmin,
+  obtenerClientesAdmin, cambiarClaveClienteAdmin, liquidarEfectivoRiderAdmin, actualizarEstadoPedidoAdmin,
+  obtenerConfigPagos, guardarConfigPagos, subirImagenGaleria
 } from './servicios';
 
 function IconoAdmin({ tipo }) {
