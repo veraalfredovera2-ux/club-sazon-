@@ -306,27 +306,58 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   )}
 
                   {p.estado === 'Pendiente' && (
-                    <TouchableOpacity style={styles.boton} onPress={() => onConfirmarAdmin(p, esDel)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>{esDel ? 'LISTO PARA RECOJO POR REPARTIDOR' : 'CONFIRMAR PEDIDO (EN LOCAL)'}</Text>
+                    <TouchableOpacity
+                      style={styles.boton}
+                      onPress={async () => {
+                        await actualizarEstadoPedidoAdmin(p, 'Aceptado por el local');
+                        await recargar();
+                        mostrarAviso('Pedido aceptado', 'El cliente fue notificado.');
+                      }}
+                      disabled={cargando}
+                    >
+                      <Text style={styles.textoBoton}>✅ ACEPTAR PEDIDO</Text>
                     </TouchableOpacity>
                   )}
-                  {p.estado !== 'Pendiente' && esDel && p.estado_rider !== 'Disponible' && !p.rider_id && (
+
+                  {p.estado === 'Aceptado por el local' && (
+                    <TouchableOpacity
+                      style={[styles.boton, { backgroundColor: '#D97706', marginTop: 6 }]}
+                      onPress={async () => {
+                        await actualizarEstadoPedidoAdmin(p, 'En preparación');
+                        await recargar();
+                        mostrarAviso('En preparación', 'Se notificó al cliente que su pedido se está preparando.');
+                      }}
+                      disabled={cargando}
+                    >
+                      <Text style={styles.textoBoton}>👨‍🍳 MARCAR EN PREPARACIÓN</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {p.estado === 'En preparación' && (
                     <TouchableOpacity
                       style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 6 }]}
                       onPress={async () => {
                         await actualizarEstadoPedidoAdmin(p, 'Listo');
                         await recargar();
-                        mostrarAviso('Enviado a Riders', 'El pedido ya aparece disponible para todos los motorizados.');
+                        mostrarAviso(
+                          esDel ? 'Listo para recoger' : 'Listo en local',
+                          esDel ? 'Se notificó a los repartidores.' : 'Se notificó al cliente que puede recoger su pedido.'
+                        );
                       }}
+                      disabled={cargando}
                     >
-                      <Text style={styles.textoBoton}>🛵 PUBLICAR PARA REPARTIDORES</Text>
+                      <Text style={styles.textoBoton}>
+                        {esDel ? '🛵 LISTO PARA RECOGER (AVISAR RIDERS)' : '🛍️ LISTO PARA RECOJO EN LOCAL'}
+                      </Text>
                     </TouchableOpacity>
                   )}
+
                   {p.estado !== 'Pendiente' && (!esDel || p.recibido_cliente) && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 6 }]} onPress={() => onCompletar(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>MARCAR ENTREGADO Y DAR PUNTOS</Text>
+                      <Text style={styles.textoBoton}>✅ MARCAR ENTREGADO Y DAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
+                    
                   <TouchableOpacity
                     style={[styles.boton, styles.botonSecundario]}
                     onPress={() => pedirConfirmacion(
