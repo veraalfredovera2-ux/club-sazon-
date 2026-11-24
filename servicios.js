@@ -386,3 +386,8 @@ export async function liquidarEfectivoRiderAdmin(riderId) {
     { estado_rider: 'Liquidado en caja' }
   );
 }
+export async function liquidarPedidoIndividualAdmin(pedidoId) {
+  await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
+    estado_rider: 'Liquidado en caja'
+  });
+}
