@@ -133,14 +133,15 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
         </View>
       </Modal>
 
-      <View style={styles.barraSuperior}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Image source={LOGO} style={styles.logoBarra} />
-          <View>
+            <View style={styles.barraSuperior}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+          <Image source={LOGO} style={{ width: 44, height: 44, borderRadius: 10 }} resizeMode="contain" />
+          <View style={{ flex: 1 }}>
             <Text style={styles.tituloBarra}>PANEL ADMINISTRACIÓN</Text>
-            <Text style={{ color: DORADO, fontSize: 11, fontWeight: '700' }}>{usuario.nombre_completo}</Text>
+            <Text style={{ color: DORADO, fontSize: 11, fontWeight: '700' }} numberOfLines={1}>{usuario.nombre_completo}</Text>
           </View>
         </View>
+            
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <TouchableOpacity
             onPress={async () => {
