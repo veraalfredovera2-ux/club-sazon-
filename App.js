@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Platform, Modal, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
-import { LOGO, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar } from './pantallas';
+import * as Pantallas from './pantallas';
 import { VistaAdmin } from './admin';
 import { VistaRider } from './rider';
-import { VistaCanjes, VistaMas } from './vistas';
+import * as Vistas from './vistas';
 import { VentanaAviso, mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
 import * as PushWeb from './push';
 import {
@@ -16,6 +16,8 @@ import {
   actualizarEstadoPedidoAdmin, completarPedidoYDarPuntos, cancelarPedidoYDescontar,
   subirImagenGaleria
 } from './servicios';
+
+const LOGO = Pantallas.LOGO;
 
 function IconoTab({ tipo, activo }) {
   const color = activo ? ROJO : '#71717A';
@@ -46,6 +48,7 @@ function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [modoRiderActivo, setModoRiderActivo] = useState(true);
@@ -87,7 +90,7 @@ export default function App() {
   useEffect(() => {
     if (!usuario?.id) return;
     const fnInit = PushWeb.iniciarOneSignalWeb || PushWeb.iniciarPushWeb || PushWeb.default;
-if (typeof fnInit === 'function') fnInit(usuario);
+    if (typeof fnInit === 'function') fnInit(usuario);
     cargarTodoUsuario();
     const timer = setInterval(cargarTodoUsuario, 6000);
     return () => clearInterval(timer);
@@ -132,8 +135,7 @@ if (typeof fnInit === 'function') fnInit(usuario);
     await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(u));
     if (u?.id) {
       const fnInit = PushWeb.iniciarOneSignalWeb || PushWeb.iniciarPushWeb || PushWeb.default;
-if (typeof fnInit === 'function') fnInit(u);
-
+      if (typeof fnInit === 'function') fnInit(u);
     }
   }
 
@@ -183,7 +185,7 @@ if (typeof fnInit === 'function') fnInit(u);
       setCargando(false);
     }
   }
-    function agregarAlCarrito(item, esPromo = false) {
+  function agregarAlCarrito(item, esPromo = false) {
     if (cfgPagos.local_cerrado) {
       return mostrarAviso('Local cerrado', 'En este momento no estamos recibiendo pedidos. Vuelve pronto.');
     }
@@ -263,8 +265,7 @@ if (typeof fnInit === 'function') fnInit(u);
       setCalculandoRuta(false);
     }
   }
-
-  const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
+    const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), gpsCliente.lat, gpsCliente.lng)
     : 0;
@@ -308,7 +309,8 @@ if (typeof fnInit === 'function') fnInit(u);
       mostrarAviso('¡Pedido enviado!', 'Tu pedido fue recibido por El Sazón Oriental.');
     } catch (e) { mostrarAviso('Error al pedir', e.message); } finally { setCargando(false); }
   }
-    function clienteConfirmaRecepcion(ped) {
+
+  function clienteConfirmaRecepcion(ped) {
     pedirConfirmacion(
       'Confirmar recepción de pedido',
       `¿Confirmas que recibiste correctamente tu pedido ${ped.numero_pedido}? Se acreditarán tus puntos ganados y se habilitará el cierre al repartidor.`,
@@ -337,16 +339,19 @@ if (typeof fnInit === 'function') fnInit(u);
       }
     );
   }
-
-  if (!usuario) {
+    if (!usuario) {
+    const PWelcome = Pantallas.PantallaBienvenida;
+    const PLogin = Pantallas.PantallaLogin;
+    const PReg = Pantallas.PantallaRegistro;
+    const PRec = Pantallas.PantallaRecuperar;
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
-        {pantallaAuth === 'bienvenida' && (
-          <PantallaBienvenida irALogin={() => setPantallaAuth('login')} irARegistro={() => setPantallaAuth('registro')} />
+        {pantallaAuth === 'bienvenida' && PWelcome && (
+          <PWelcome irALogin={() => setPantallaAuth('login')} irARegistro={() => setPantallaAuth('registro')} />
         )}
-        {pantallaAuth === 'login' && (
-          <PantallaLogin
+        {pantallaAuth === 'login' && PLogin && (
+          <PLogin
             onIngresar={manejarLogin}
             irARegistro={() => setPantallaAuth('registro')}
             irARecuperar={() => setPantallaAuth('recuperar')}
@@ -354,11 +359,11 @@ if (typeof fnInit === 'function') fnInit(u);
             cargando={cargando}
           />
         )}
-        {pantallaAuth === 'registro' && (
-          <PantallaRegistro onRegistrar={manejarRegistro} irALogin={() => setPantallaAuth('login')} cargando={cargando} />
+        {pantallaAuth === 'registro' && PReg && (
+          <PReg onRegistrar={manejarRegistro} irALogin={() => setPantallaAuth('login')} cargando={cargando} />
         )}
-        {pantallaAuth === 'recuperar' && (
-          <PantallaRecuperar irALogin={() => setPantallaAuth('login')} />
+        {pantallaAuth === 'recuperar' && PRec && (
+          <PRec onRecuperar={manejarRecuperar} irALogin={() => setPantallaAuth('login')} cargando={cargando} />
         )}
       </SafeAreaView>
     );
@@ -405,7 +410,10 @@ if (typeof fnInit === 'function') fnInit(u);
 
   const promosList = promos.filter(pr => pr.tipo !== 'novedad');
   const novedadesList = promos.filter(pr => pr.tipo === 'novedad');
-              return (
+        const CompPuntos = Vistas.VistaCanjes || Vistas.VistaPuntos || Vistas.VistaRecompensas;
+  const CompMas = Vistas.VistaMas || Vistas.VistaPerfil || Vistas.VistaCuenta;
+
+  return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <VentanaAviso />
 
@@ -451,10 +459,10 @@ if (typeof fnInit === 'function') fnInit(u);
           <TouchableOpacity
             style={{ backgroundColor: '#1E1E28', borderWidth: 1, borderColor: DORADO, borderRadius: 12, padding: 10, marginBottom: 10, alignItems: 'center' }}
             onPress={async () => {
-                         const fnPedir = PushWeb.pedirPermisoPushWeb || PushWeb.pedirPermisoPush || PushWeb.default;
-           if (typeof fnPedir === 'function') await fnPedir(usuario);
-           else if (typeof Notification !== 'undefined') await Notification.requestPermission();
-           setPermisoPush(typeof Notification !== 'undefined' ? Notification.permission : 'granted') 
+              const fnPedir = PushWeb.pedirPermisoPushWeb || PushWeb.pedirPermisoPush || PushWeb.default;
+              if (typeof fnPedir === 'function') await fnPedir(usuario);
+              else if (typeof Notification !== 'undefined') await Notification.requestPermission();
+              setPermisoPush(typeof Notification !== 'undefined' ? Notification.permission : 'granted');
             }}
           >
             <Text style={{ color: DORADO, fontWeight: '900', fontSize: 12 }}>🔔 ACTIVAR NOTIFICACIONES DE TU PEDIDO</Text>
@@ -510,8 +518,7 @@ if (typeof fnInit === 'function') fnInit(u);
             ))}
           </View>
         )}
-
-        {vista === 'promos' && (
+                    {vista === 'promos' && (
           <View>
             <Text style={styles.titulo}>PROMOCIONES Y OFERTAS</Text>
             {promosList.length === 0 ? (
@@ -553,7 +560,8 @@ if (typeof fnInit === 'function') fnInit(u);
             )}
           </View>
         )}
-                    {vista === 'carrito' && (
+
+        {vista === 'carrito' && (
           <View>
             <Text style={styles.titulo}>TU CARRITO DE COMPRAS</Text>
             {carrito.length === 0 ? (
@@ -595,8 +603,7 @@ if (typeof fnInit === 'function') fnInit(u);
                     </TouchableOpacity>
                   ))}
                 </View>
-
-                {tipoEntrega === 'DELIVERY' && (
+                              {tipoEntrega === 'DELIVERY' && (
                   <View style={styles.tarjetaPedido}>
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 0, marginBottom: 8 }]} onPress={obtenerUbicacionCliente}>
                       <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL (GPS)</Text>
@@ -677,14 +684,6 @@ if (typeof fnInit === 'function') fnInit(u);
                   </View>
                 )}
 
-                <TextInput
-                  style={styles.campo}
-                  placeholder="Notas adicionales (sin ají, cubiertos, etc.)"
-                  placeholderTextColor="#6B7280"
-                  value={notas}
-                  onChangeText={setNotas}
-                />
-
                 <View style={styles.tarjetaPedido}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={styles.descripcionPedido}>Subtotal + Delivery</Text>
@@ -702,7 +701,7 @@ if (typeof fnInit === 'function') fnInit(u);
             )}
           </View>
         )}
-                      {vista === 'pedidos' && (
+                                        {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
             {pedidos.length === 0 ? (
@@ -737,12 +736,12 @@ if (typeof fnInit === 'function') fnInit(u);
           </View>
         )}
 
-        {vista === 'puntos' && (
-          <VistaCanjes usuario={usuario} recompensas={recompensas} historial={histPuntos} onCanjear={clienteCanjea} />
+        {vista === 'puntos' && CompPuntos && (
+          <CompPuntos usuario={usuario} recompensas={recompensas} historial={histPuntos} onCanjear={clienteCanjea} />
         )}
 
-        {vista === 'mas' && (
-          <VistaMas usuario={usuario} onCerrarSesion={cerrarSesion} />
+        {vista === 'mas' && CompMas && (
+          <CompMas usuario={usuario} onCerrarSesion={cerrarSesion} cerrarSesion={cerrarSesion} />
         )}
       </ScrollView>
 
@@ -762,4 +761,4 @@ if (typeof fnInit === 'function') fnInit(u);
       </View>
     </SafeAreaView>
   );
-                    }
+}
