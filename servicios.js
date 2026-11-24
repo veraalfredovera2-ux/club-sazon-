@@ -71,8 +71,6 @@ export async function guardarConfigPagos(cfg) {
   });
 }
 
-  
-}
 export async function obtenerCatalogo(soloDisp = false) {
   const q = soloDisp ? 'productos?select=*&disponible=eq.true&order=nombre.asc' : 'productos?select=*&order=nombre.asc';
   return (await apiRest(q)) || [];
