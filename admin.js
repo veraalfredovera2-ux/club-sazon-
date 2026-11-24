@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, Modal, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Platform, Modal } from 'react-native';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
-import { mostrarAviso } from './avisos';
+import { mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
 import {
   categorias, obtenerCatalogo, guardarProductoAdmin, eliminarProductoAdmin,
   obtenerPromociones, guardarPromocionAdmin, eliminarPromocionAdmin,
