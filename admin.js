@@ -46,7 +46,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [clavesNuevas, setClavesNuevas] = useState({});
   const [horariosEdit, setHorariosEdit] = useState({});
   const [nuevoRider, setNuevoRider] = useState({ nombre_completo: '', telefono: '', password: '', direccion_predeterminada: 'Lun a Dom: 12:00 pm - 10:00 pm' });
-  const [cfg, setCfg] = useState({ titularLimpio: 'Club Sazón', qr_yape: '', qr_plin: '', local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
+  const [cfg, setCfg] = useState({ titularLimpio: 'Club Sazón', qr_yape: '', qr_plin: '', local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false, puntos_rider: '10' });
   const [editProd, setEditProd] = useState(null);
   const [editPromo, setEditPromo] = useState(null);
   const [editRec, setEditRec] = useState(null);
@@ -261,7 +261,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-                {sec === 'pedidos' && (
+      {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
           {activos.length === 0 ? (
@@ -357,7 +357,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                       <Text style={styles.textoBoton}>✅ MARCAR ENTREGADO Y DAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
-                    
+
                   <TouchableOpacity
                     style={[styles.boton, styles.botonSecundario]}
                     onPress={() => pedirConfirmacion(
@@ -375,7 +375,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                        {sec === 'historial' && (
+                  {sec === 'historial' && (
         <View>
           <View style={styles.tarjetaPedido}>
             <Text style={styles.nombreProducto}>RESUMEN DE VENTAS COMPLETADAS</Text>
@@ -488,7 +488,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-                          {sec === 'platos' && (
+                            {sec === 'platos' && (
         <View>
           <TouchableOpacity style={styles.boton} onPress={() => setEditProd({ nombre: '', precio: '', stock: '20', categoria: 'Hamburguesas', turno: 'Ambos', ingredientes: '', imagen_url: '', disponible: true })}>
             <Text style={styles.textoBoton}>+ AGREGAR NUEVO PLATO</Text>
@@ -599,7 +599,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             ))}
         </View>
       )}
-                                  {sec === 'puntos' && (
+                                    {sec === 'puntos' && (
         <View>
           <TouchableOpacity style={styles.boton} onPress={() => setEditRec({ titulo: '', descripcion: '', puntos_requeridos: '500', stock: '10', imagen_url: '', activa: true })}>
             <Text style={styles.textoBoton}>+ NUEVO PREMIO CANJEABLE</Text>
@@ -667,7 +667,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-      {sec === 'clientes' && (
+                                               {sec === 'clientes' && (
         <View>
           <TextInput style={styles.campo} placeholder="Buscar cliente por nombre o teléfono..." placeholderTextColor="#6B7280" value={busqCli} onChangeText={setBusqCli} />
           {clientes.filter(c => (c.nombre_completo || '').toLowerCase().includes(busqCli.toLowerCase()) || (c.telefono || '').includes(busqCli)).map(c => (
@@ -711,7 +711,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
             <Text style={styles.textoBoton}>{cfg.local_cerrado ? '🔒 LOCAL CERRADO (TOCA PARA ABRIR)' : '🟢 LOCAL ABIERTO (TOCA PARA CERRAR)'}</Text>
           </TouchableOpacity>
 
-          <Text style={styles.nombreProducto}>UBICACIÓN Y TARIFAS DELIVERY</Text>
+          <Text style={styles.nombreProducto}>UBICACIÓN, TARIFAS Y BONO REPARTIDOR</Text>
           <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', marginBottom: 8 }]} onPress={capturarGpsLocal}>
             <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL COMO LOCAL</Text>
           </TouchableOpacity>
@@ -719,6 +719,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <TextInput style={styles.campo} placeholder="Longitud local" placeholderTextColor="#6B7280" value={String(cfg.local_lng)} onChangeText={v => setCfg({ ...cfg, local_lng: v })} />
           <TextInput style={styles.campo} placeholder="Tarifa base delivery (S/)" placeholderTextColor="#6B7280" keyboardType="decimal-pad" value={String(cfg.tarifa_base)} onChangeText={v => setCfg({ ...cfg, tarifa_base: v })} />
           <TextInput style={styles.campo} placeholder="Costo por kilómetro adicional (S/)" placeholderTextColor="#6B7280" keyboardType="decimal-pad" value={String(cfg.tarifa_km)} onChangeText={v => setCfg({ ...cfg, tarifa_km: v })} />
+          <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginTop: 4, marginBottom: 4 }}>Puntos regalo al repartidor por entrega:</Text>
+          <TextInput style={styles.campo} placeholder="Puntos regalo al repartidor (ej. 10)" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(cfg.puntos_rider ?? '10')} onChangeText={v => setCfg({ ...cfg, puntos_rider: v })} />
           <TouchableOpacity style={styles.boton} onPress={async () => { await guardarConfigPagos(cfg); mostrarAviso('Guardado', 'Configuración del negocio actualizada.'); }}>
             <Text style={styles.textoBoton}>GUARDAR CONFIGURACIÓN DEL NEGOCIO</Text>
           </TouchableOpacity>
@@ -726,5 +728,4 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       )}
     </ScrollView>
   );
-      }
-        
+        }
