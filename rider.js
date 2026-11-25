@@ -91,7 +91,7 @@ export function VistaRider({ usuario, pedidos, recargar, cerrarSesion, irAModoCl
           await fetch(`${SUPABASE_URL}/rest/v1/historial_puntos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-            body: JSON.stringify({ usuario_id: usuario.id, cantidad: bonoPts, descripcion: `Bono +${bonoPts} pts por entrega ${ped.numero_pedido}` })
+            body: JSON.stringify({ cliente_id: usuario.id, cantidad: bonoPts, descripcion: `Bono +${bonoPts} pts por entrega ${ped.numero_pedido}` })
           });
           await recargar();
           mostrarAviso('¡Entrega completada!', `Ganaste S/ ${Number(ped.costo_delivery || 0).toFixed(2)} y +${bonoPts} puntos Club Sazón.`);
