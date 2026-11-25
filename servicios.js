@@ -3,7 +3,7 @@ import { notificarPushPorRol, notificarPushUsuario } from './push';
 export const SUPABASE_URL = 'https://' + 'pripxtsriyxhafevokjg' + '.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
-export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas'];
+export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas', 'Combos'];
 
 const limpiarTel = (t) => {
   const n = String(t || '').replace(/\D/g, '');
@@ -31,14 +31,14 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
   const txt = await res.text();
   let datos = {};
   try { datos = txt ? JSON.parse(txt) : []; } catch (e) { throw new Error('Error de formato en servidor'); }
-  if (!res.ok) throw new Error(datos.message || datos.error || 'Error en la base de datos');
+  if (!res.ok) throw new Error(datos.message || datos.error || 'Error en servidor');
   return datos;
 }
 
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
   const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
-  const def = { titularLimpio, local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false, puntos_rider: '10' };
+  const def = { titularLimpio, local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: '0', puntos_rider: '10' };
   if (partes.length < 2) return def;
   const nums = partes.at(1).split('|');
   return {
@@ -47,14 +47,14 @@ export function extraerConfigDelivery(titularRaw) {
     local_lng: nums.at(1) || def.local_lng,
     tarifa_base: nums.at(2) || def.tarifa_base,
     tarifa_km: nums.at(3) || def.tarifa_km,
-    local_cerrado: nums.at(4) === '1',
+    local_cerrado: nums.at(4) || '0',
     puntos_rider: nums.at(5) !== undefined ? String(nums.at(5)) : '10'
   };
 }
 
 export async function obtenerConfigPagos() {
   const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  const raw = (Array.isArray(r) && r.length > 0 ? r.at(0) : null) || { id: 'principal', qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
+  const raw = (Array.isArray(r) && r.length > 0 ? r.at(0) : null) || { id: 1, titular: 'Club Sazón', qr_yape: '', qr_plin: '' };
   return { ...raw, ...extraerConfigDelivery(raw.titular) };
 }
 
@@ -64,7 +64,7 @@ export async function guardarConfigPagos(cfg) {
   const cerradoFlag = cfg.local_cerrado ? '1' : '0';
   const ptsRider = cfg.puntos_rider !== undefined ? String(cfg.puntos_rider) : del.puntos_rider;
   const titEmpacado = `${titBase.trim()}||DEL:${cfg.local_lat || del.local_lat}|${cfg.local_lng || del.local_lng}|${cfg.tarifa_base || del.tarifa_base}|${cfg.tarifa_km || del.tarifa_km}|${cerradoFlag}|${ptsRider}`;
-  await apiRest('configuracion_pagos?id=eq.principal', 'PATCH', {
+  await apiRest('configuracion_pagos?id=eq.1', 'PATCH', {
     titular: titEmpacado,
     qr_yape: (cfg.qr_yape || '').trim(),
     qr_plin: (cfg.qr_plin || '').trim()
@@ -106,7 +106,7 @@ export async function guardarPromocionAdmin(pr) {
     descripcion: (pr.descripcion || '').trim(),
     precio: Number(pr.precio || 0),
     imagen_url: (pr.imagen_url || '').trim(),
-    activa: Boolean(pr.activa),
+    activa: Boolean(pr.active),
     tipo: pr.tipo || 'promocion'
   };
   if (pr.id) return apiRest(`promociones?id=eq.${pr.id}`, 'PATCH', datos);
@@ -129,7 +129,7 @@ export async function guardarRecompensaAdmin(r) {
     puntos_requeridos: Number(r.puntos_requeridos || 0),
     stock: Number(r.stock ?? 10),
     imagen_url: (r.imagen_url || '').trim(),
-    activa: Boolean(r.activa)
+    activa: Boolean(r.active)
   };
   if (r.id) return apiRest(`recompensas?id=eq.${r.id}`, 'PATCH', datos);
   return apiRest('recompensas', 'POST', datos);
@@ -138,9 +138,13 @@ export async function guardarRecompensaAdmin(r) {
 export async function eliminarRecompensaAdmin(id) {
   await apiRest(`recompensas?id=eq.${id}`, 'DELETE');
 }
-
-export async function registrarUsuario({ nombreCompleto, telefono, password }) {
-  const tel = limpiarTel(telefono);
+export async function registrarUsuario(arg1, arg2, arg3) {
+  const datos = typeof arg1 === 'object' && arg1 !== null
+    ? arg1
+    : { nombreCompleto: arg1, telefono: arg2, password: arg3 };
+  const nombreCompleto = datos.nombreCompleto || datos.nombre_completo || '';
+  const tel = limpiarTel(datos.telefono);
+  const password = datos.password;
   if (tel.length < 6) throw new Error('Ingresa un número de teléfono válido.');
   if ((password || '').length < 4) throw new Error('La contraseña debe tener al menos 4 caracteres.');
   const existe = await apiRest(`perfiles?select=id&telefono=eq.${tel}`);
@@ -163,8 +167,12 @@ export async function registrarUsuario({ nombreCompleto, telefono, password }) {
   return { perfil, mensaje: 'Cuenta creada con éxito. Ganaste +100 puntos de bienvenida.' };
 }
 
-export async function ingresarUsuario({ telefono, password }) {
-  const tel = limpiarTel(telefono);
+export async function ingresarUsuario(arg1, arg2) {
+  const datos = typeof arg1 === 'object' && arg1 !== null
+    ? arg1
+    : { telefono: arg1, password: arg2 };
+  const tel = limpiarTel(datos.telefono);
+  const password = datos.password;
   const res = await apiRest(`perfiles?select=*&telefono=eq.${tel}&limit=1`);
   const perfil = Array.isArray(res) && res.length > 0 ? res.at(0) : null;
   if (!perfil) throw new Error('Número de teléfono no registrado.');
@@ -175,8 +183,9 @@ export async function ingresarUsuario({ telefono, password }) {
 }
 
 export async function actualizarFotoPerfilNube(perfilId, fotoUrl) {
-  await apiRest(`perfiles?id=eq.${perfilId}`, 'PATCH', { foto_url: fotoUrl || '' });
+  await apiRest(`perfiles?id=eq.${perfilId}`, 'PATCH', { foto_url: fotoUrl });
 }
+
 export async function subirImagenGaleria() {
   return new Promise((resolve, reject) => {
     if (typeof document === 'undefined') return resolve(null);
@@ -184,7 +193,7 @@ export async function subirImagenGaleria() {
     inp.type = 'file';
     inp.accept = 'image/*';
     inp.onchange = (e) => {
-      const file = e.target?.files?.item(0);
+      const file = e.target.files?.item(0);
       if (!file) return resolve(null);
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -201,7 +210,7 @@ export async function subirImagenGaleria() {
         img.onerror = () => resolve(ev.target?.result || null);
         img.src = ev.target?.result;
       };
-      reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+      reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
       reader.readAsDataURL(file);
     };
     inp.click();
@@ -211,11 +220,11 @@ export async function subirImagenGaleria() {
 export async function obtenerDatosCliente(clienteId) {
   const [perfs, hist, peds, canjes] = await Promise.all([
     apiRest(`perfiles?select=puntos,foto_url&id=eq.${clienteId}&limit=1`),
-    apiRest(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=id.desc`),
+    apiRest(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=creado_en.desc`),
     apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=creado_en.desc`),
     apiRest(`canjes?select=*&cliente_id=eq.${clienteId}&order=id.desc`)
   ]);
-  const filaCli = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : null;
+  const filaCli = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : {};
   return {
     puntos: Number(filaCli?.puntos || 0),
     foto_url: filaCli?.foto_url || '',
@@ -228,7 +237,6 @@ export async function obtenerDatosCliente(clienteId) {
 export async function obtenerPedidosAdmin() {
   return (await apiRest('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=creado_en.desc')) || [];
 }
-
 export async function crearNuevoPedido(cabecera, items) {
   const num = 'PED-' + Math.floor(100000 + Math.random() * 900000);
   const [ped] = await apiRest('pedidos', 'POST', {
@@ -260,8 +268,8 @@ export async function crearNuevoPedido(cabecera, items) {
   }
   await notificarPushPorRol(
     'administrador',
-    '🍔 ¡Nuevo pedido en Club Sazón!',
-    `Pedido ${num} por S/ ${Number(cabecera.total || 0).toFixed(2)} (${cabecera.tipo_entrega}).`
+    'Nuevo pedido en Club Sazón!',
+    `Pedido ${num} por S/ ${Number(cabecera.total || 0).toFixed(2)} (${cabecera.tipo_entrega})`
   );
   return ped;
 }
@@ -274,8 +282,8 @@ export async function actualizarEstadoPedidoAdmin(ped, nuevoEstado) {
   if (nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY') {
     await notificarPushPorRol(
       'repartidor',
-      '🛵 ¡Pedido listo para recoger!',
-      `${ped.numero_pedido} listo en cocina • Delivery: S/ ${Number(ped.costo_delivery || 0).toFixed(2)}.`
+      '¡Pedido listo para recoger!',
+      `${ped.numero_pedido} listo en cocina - Delivery: S/ ${Number(ped.costo_delivery || 0).toFixed(2)}`
     );
   }
   if (ped.cliente_id) {
@@ -330,7 +338,7 @@ export async function canjearRecompensaCliente(clienteId, rec) {
   const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`);
   const actual = Number(cli?.puntos || 0);
   const req = Number(rec.puntos_requeridos || 0);
-  if (actual < req) throw new Error(`Te faltan ${req - actual} puntos para este premio.`);
+  if (actual < req) throw new Error('Te faltan puntos para esta recompensa.');
   await apiRest(`perfiles?id=eq.${clienteId}`, 'PATCH', { puntos: actual - req });
   await apiRest('historial_puntos', 'POST', {
     cliente_id: clienteId,
@@ -371,24 +379,25 @@ export async function eliminarMotorizadoAdmin(id) {
 }
 
 export async function actualizarHorarioRiderAdmin(id, textoHorario) {
-  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { direccion_predeterminada: textoHorario });
+  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { direccion_predeterminada: textoHorario.trim() });
 }
 
 export async function obtenerClientesAdmin() {
-  return (await apiRest('perfiles?select=id,nombre_completo,telefono,puntos&rol=eq.cliente&order=nombre_completo.asc')) || [];
+  return (await apiRest('perfiles?select=id,nombre_completo,telefono,puntos,creado_en&rol=eq.cliente&order=nombre_completo.asc')) || [];
 }
 
 export async function cambiarClaveClienteAdmin(id, nuevaClave) {
-  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave });
+  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave.trim() });
 }
 
 export async function liquidarEfectivoRiderAdmin(riderId) {
   await apiRest(
-    `pedidos?rider_id=eq.${riderId}&metodo_pago=eq.Efectivo&estado=eq.Completado&estado_rider=neq.Liquidado en caja`,
+    `pedidos?rider_id=eq.${riderId}&metodo_pago=eq.Efectivo&estado=eq.Completado`,
     'PATCH',
     { estado_rider: 'Liquidado en caja' }
   );
 }
+
 export async function liquidarPedidoIndividualAdmin(pedidoId) {
   await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
     estado_rider: 'Liquidado en caja'
