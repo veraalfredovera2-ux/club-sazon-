@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { notificarPushPorRol, notificarPushUsuario } from './push';
 
 export const SUPABASE_URL = 'https://' + 'pripxtsriyxhafevokjg' + '.supabase.co';
@@ -186,6 +188,19 @@ export async function actualizarFotoPerfilNube(perfilId, fotoUrl) {
 }
 
 export async function subirImagenGaleria() {
+  if (Platform.OS !== 'web') {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) throw new Error('Permite el acceso a la galería para subir la imagen.');
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.65,
+      base64: true
+    });
+    if (res.canceled || !res.assets?.length) return null;
+    const asset = res.assets.at(0);
+    return asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+  }
   return new Promise((resolve, reject) => {
     if (typeof document === 'undefined') return resolve(null);
     const inp = document.createElement('input');
