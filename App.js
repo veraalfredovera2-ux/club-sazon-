@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { NavegacionSuperior, BarraInferiorCliente, PantallaBienvenida, PantallaLogin, PantallaRegistro, PantallaRecuperar, SiluetaBlanca, LOGO, BANNER_COMIDA } from './pantallas';
 import { VentanaAviso, mostrarAviso, pedirConfirmacion, reproducirTimbreAlerta } from './avisos';
 import { VistaAdmin } from './admin';
 import { VistaRider } from './rider';
-import { iniciarOneSignalWeb, pedirPermisoPushWeb } from './push';
+import { iniciarOneSignalWeb, pedirPermisoPushWeb, mostrarNotificacionLocalNativa } from './push';
 import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
   obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario, actualizarFotoPerfilNube,
-  crearNuevoPedido, actualizarEstadoPedidoAdmin, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar, canjearRecompensaCliente, subirImagenGaleria
+  crearNuevoPedido, actualizarEstadoPedidoAdmin, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar,
+  canjearRecompensaCliente, subirImagenGaleria
 } from './servicios';
 
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
@@ -22,14 +25,28 @@ function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function seleccionarYComprimirAvatar() {
+async function seleccionarYComprimirAvatar() {
+  if (Platform.OS !== 'web') {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) throw new Error('Permite el acceso a la galería para cambiar tu foto.');
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: new Array(1, 1),
+      quality: 0.65,
+      base64: true
+    });
+    if (res.canceled || !res.assets?.length) return null;
+    const asset = res.assets.at(0);
+    return asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+  }
   return new Promise((resolve) => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return resolve(null);
+    if (typeof document === 'undefined') return resolve(null);
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
     inp.onchange = (e) => {
-      const file = e.target?.files?.item(0);
+      const file = e.target.files?.item(0);
       if (!file) return resolve(null);
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -56,13 +73,13 @@ function seleccionarYComprimirAvatar() {
 function IconoRojo({ tipo }) {
   if (Platform.OS === 'web') {
     const paths = {
-      menu: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
-      promos: 'M12 2l2.39 1.65 2.89-.39.84 2.79 2.53 1.44-.88 2.78 1.24 2.63-2.29 1.81-.29 2.9-2.88.45-1.69 2.36-2.76-.94-2.76.94-1.69-2.36-2.88-.45-.29-2.9-2.29-1.81 1.24-2.63-.88-2.78 2.53-1.44.84-2.79 2.89.39L12 2zm-2.5 6.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm5 5a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm.3-5.8l-7.1 7.1 1.4 1.4 7.1-7.1-1.4-1.4z',
+      menu: 'M3 4h18v2H3V4zm2 4h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zm4 3v2h6v-2H9zm0 4v2h6v-2H9z',
+      promos: 'M12 2l2.39 4.84 5.34.78-3.86 3.77.91 5.32L12 14.2l-4.78 2.51.91-5.32-3.86-3.77 5.34-.78L12 2z',
       ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
       novedades: 'M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z',
       puntos: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
-      canjes: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 00-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
-      carrito: 'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0020 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
+      canjes: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
+      carrito: 'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0 0 20 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
       pedidos: 'M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z',
       cuenta: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
       salir: 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z'
@@ -88,7 +105,7 @@ export default function App() {
   const [recompensas, setRecompensas] = useState([]);
   const [promoDetalle, setPromoDetalle] = useState(null);
   const [verHistorialPts, setVerHistorialPts] = useState(false);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titularLimpio: 'Club Sazón', local_lat: '-12.089700', local_lng: '-77.003100', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
+  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titularLimpio: 'Club Sazón', local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
   const [datosCli, setDatosCli] = useState({ puntos: 0, historial: [], pedidos: [], canjes: [] });
   const [pedidosAdmin, setPedidosAdmin] = useState([]);
   const [carrito, setCarrito] = useState([]);
@@ -105,7 +122,7 @@ export default function App() {
   const puertaAvisadaRef = useRef({});
 
   useEffect(() => {
-    AsyncStorage.getItem('sesion_club_sazon').then(s => {
+    AsyncStorage.getItem('session_club_sazon').then(s => {
       if (s) {
         const parsed = JSON.parse(s);
         setUsuario(parsed.perfil);
@@ -136,6 +153,7 @@ export default function App() {
       if (p.estado_rider === 'En la puerta' && !p.recibido_cliente && !puertaAvisadaRef.current[p.id]) {
         puertaAvisadaRef.current[p.id] = true;
         reproducirTimbreAlerta();
+        mostrarNotificacionLocalNativa('¡Tu repartidor está en la puerta!', `${p.rider_nombre || 'Tu motorizado'} llegó con tu pedido ${p.numero_pedido}.`);
         mostrarAviso('🛵 ¡Tu repartidor está en la puerta!', `${p.rider_nombre || 'Tu motorizado'} ha llegado con tu pedido ${p.numero_pedido}. Por favor sal a recibirlo.`);
       }
     });
@@ -151,10 +169,12 @@ export default function App() {
         await actualizarFotoPerfilNube(usuario.id, dataUrl);
         const actualizado = { ...usuario, foto_url: dataUrl };
         setUsuario(actualizado);
-        await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify({ tipo: rol, perfil: actualizado }));
+        await AsyncStorage.setItem('session_club_sazon', JSON.stringify({ tipo: rol, perfil: actualizado }));
       }
       mostrarAviso('Foto actualizada', 'Tu foto de perfil se guardó en la nube para cualquier dispositivo.');
-    } catch (e) { mostrarAviso('Error al subir', 'Intenta con otra imagen más ligera.'); }
+    } catch (e) {
+      mostrarAviso('Error al subir', e.message || 'Intenta con otra imagen más ligera.');
+    }
   }
 
   async function cargarBase() {
@@ -190,9 +210,13 @@ export default function App() {
       setRol(res.tipo);
       setModoClienteRider(true);
       setFotoPerfil(res.perfil?.foto_url || null);
-      await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify(res));
+      await AsyncStorage.setItem('session_club_sazon', JSON.stringify(res));
       await pedirPermisoPushWeb({ ...res.perfil, rol: res.tipo });
-    } catch (e) { mostrarAviso('Error al ingresar', e.message); } finally { setCargando(false); }
+    } catch (e) {
+      mostrarAviso('Error al ingresar', e.message);
+    } finally {
+      setCargando(false);
+    }
   }
 
   async function manejarRegistro(datos) {
@@ -202,14 +226,18 @@ export default function App() {
       setUsuario(res.perfil);
       setRol('cliente');
       setFotoPerfil(null);
-      await AsyncStorage.setItem('sesion_club_sazon', JSON.stringify({ tipo: 'cliente', perfil: res.perfil }));
+      await AsyncStorage.setItem('session_club_sazon', JSON.stringify({ tipo: 'cliente', perfil: res.perfil }));
       await pedirPermisoPushWeb({ ...res.perfil, rol: 'cliente' });
       mostrarAviso('¡Bienvenido!', res.mensaje);
-    } catch (e) { mostrarAviso('Error al registrar', e.message); } finally { setCargando(false); }
+    } catch (e) {
+      mostrarAviso('Error al registrar', e.message);
+    } finally {
+      setCargando(false);
+    }
   }
 
   async function cerrarSesion() {
-    await AsyncStorage.removeItem('sesion_club_sazon');
+    await AsyncStorage.removeItem('session_club_sazon');
     setUsuario(null);
     setRol(null);
     setModoClienteRider(true);
@@ -217,7 +245,7 @@ export default function App() {
     setVista('inicio');
     setPantallaAuth('login');
   }
-    function agregarAlCarrito(item, esPromo = false) {
+  function agregarAlCarrito(item, esPromo = false) {
     if (cfgPagos.local_cerrado) return mostrarAviso('Local cerrado', 'En este momento el local se encuentra cerrado.');
     setCarrito(prev => {
       const idx = prev.findIndex(x => x.id === item.id && Boolean(x.es_promo) === esPromo);
@@ -245,8 +273,25 @@ export default function App() {
     setCarrito(prev => prev.filter((_, i) => i !== idx));
   }
 
-  function obtenerUbicacionCliente() {
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.geolocation) {
+  async function obtenerUbicacionCliente() {
+    if (Platform.OS !== 'web') {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          return mostrarAviso('Permiso GPS', 'Activa el permiso de ubicación en tu teléfono para calcular tu delivery.');
+        }
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setGpsCliente({ lat, lng });
+        if (!direccion.trim()) setDireccion(`Ubicación GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+        mostrarAviso('Ubicación actual capturada', 'Tu dirección GPS se usará para calcular el delivery y guiar al repartidor.');
+      } catch (e) {
+        mostrarAviso('GPS no disponible', 'Activa el GPS del teléfono o ingresa tu distrito y dirección manualmente.');
+      }
+      return;
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
       return mostrarAviso('GPS no disponible', 'Ingresa tu distrito y dirección manualmente.');
     }
     navigator.geolocation.getCurrentPosition(
@@ -264,7 +309,7 @@ export default function App() {
 
   async function calcularRutaDireccionManual() {
     const consulta = `${direccion.trim()} ${distrito.trim()} Peru`.trim();
-    if (consulta.length < 6) {
+    if (consulta.length < 8) {
       return mostrarAviso('Falta dirección', 'Escribe primero tu calle/avenida y distrito.');
     }
     setCalculandoRuta(true);
@@ -276,7 +321,7 @@ export default function App() {
         const lat = parseFloat(data.at(0).lat);
         const lng = parseFloat(data.at(0).lon);
         setGpsCliente({ lat, lng });
-        const km = calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), lat, lng);
+        const km = calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0697), Number(cfgPagos.local_lng || -77.0338), lat, lng);
         const costo = Number((Number(cfgPagos.tarifa_base || 4) + km * Number(cfgPagos.tarifa_km || 1.5)).toFixed(2));
         mostrarAviso('Distancia calculada', `Distancia estimada: ${km.toFixed(1)} km • Costo delivery: S/ ${costo.toFixed(2)}`);
       } else {
@@ -291,7 +336,7 @@ export default function App() {
 
   const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
-    ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0897), Number(cfgPagos.local_lng || -77.0031), gpsCliente.lat, gpsCliente.lng)
+    ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0697), Number(cfgPagos.local_lng || -77.0338), gpsCliente.lat, gpsCliente.lng)
     : 0;
   const costoDelivery = tipoEntrega === 'DELIVERY'
     ? Number((Number(cfgPagos.tarifa_base || 4) + distanciaKm * Number(cfgPagos.tarifa_km || 1.5)).toFixed(2))
@@ -308,12 +353,12 @@ export default function App() {
     }
     setCargando(true);
     try {
-      const textoDir = `${direccion.trim()}${distrito.trim() ? ', ' + distrito.trim() : ''}`.trim();
+      const textoDir = `${direccion.trim()}${distrito.trim() ? ' - ' + distrito.trim() : ''}`.trim();
       const mapsHost = 'https://google.com';
       const linkMaps = gpsCliente
-        ? ` | ${mapsHost}?q=${gpsCliente.lat},${gpsCliente.lng}`
-        : ` | ${mapsHost}/search/?api=1&query=${encodeURIComponent(textoDir)}`;
-      const dirCompleta = tipoEntrega === 'DELIVERY' ? `${direccion.trim() || 'Ubicación GPS'}${linkMaps}` : 'Recojo en local';
+        ? `${mapsHost}?q=${gpsCliente.lat},${gpsCliente.lng}`
+        : `${mapsHost}/search/?api=1&query=${encodeURIComponent(textoDir)}`;
+      const dirCompleta = tipoEntrega === 'DELIVERY' ? `${direccion.trim() || 'Ubicación GPS'}|${linkMaps}` : 'Recojo en local';
       await crearNuevoPedido({
         cliente_id: usuario.id,
         tipo_entrega: tipoEntrega,
@@ -331,7 +376,11 @@ export default function App() {
       await cargarTodoUsuario();
       setVista('pedidos');
       mostrarAviso('¡Pedido enviado!', 'Tu pedido fue recibido por El Sazón Oriental.');
-    } catch (e) { mostrarAviso('Error al pedir', e.message); } finally { setCargando(false); }
+    } catch (e) {
+      mostrarAviso('Error al pedir', e.message);
+    } finally {
+      setCargando(false);
+    }
   }
 
   function clienteConfirmaRecepcion(ped) {
@@ -363,7 +412,7 @@ export default function App() {
       }
     );
   }
-    if (!usuario) {
+  if (!usuario) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -441,7 +490,7 @@ export default function App() {
   const cantTotalCarrito = carrito.reduce((a, x) => a + x.cantidad, 0);
   const pedidosActivos = (datosCli.pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
   const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
-      return (
+  return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <VentanaAviso />
       <Modal transparent animationType="fade" visible={Boolean(promoDetalle)}>
@@ -457,12 +506,12 @@ export default function App() {
                 <Text style={{ color: '#FFF', fontSize: 19, fontWeight: '900', marginBottom: 6 }}>{promoDetalle.titulo}</Text>
                 <Text style={{ color: '#D1D5DB', fontSize: 13, marginBottom: 12 }}>{promoDetalle.descripcion || 'Especialidad preparada al momento en El Sazón Oriental.'}</Text>
                 {promoDetalle.tipo !== 'novedad' && (
-                  <>
+                  <View>
                     <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900', marginBottom: 14 }}>S/ {Number(promoDetalle.precio).toFixed(2)}</Text>
                     <TouchableOpacity style={styles.boton} onPress={() => { agregarAlCarrito(promoDetalle, true); setPromoDetalle(null); }}>
                       <Text style={styles.textoBoton}>Agregar al carrito</Text>
                     </TouchableOpacity>
-                  </>
+                  </View>
                 )}
                 <TouchableOpacity style={[styles.boton, styles.botonSecundario]} onPress={() => setPromoDetalle(null)}>
                   <Text style={styles.textoBoton}>Cerrar</Text>
@@ -486,7 +535,7 @@ export default function App() {
         {cfgPagos.local_cerrado && (
           <View style={[styles.tarjetaPedido, { borderColor: ROJO, backgroundColor: '#251216' }]}>
             <Text style={{ color: '#FFF', fontWeight: '900', textAlign: 'center', fontSize: 12 }}>
-              🔒 LOCAL CERRADO TEMPORALMENTE — Vuelve en nuestro horario de atención
+              🔒 LOCAL CERRADO TEMPORALMENTE - Vuelve en nuestro horario de atención
             </Text>
           </View>
         )}
@@ -512,7 +561,7 @@ export default function App() {
               </TouchableOpacity>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '800' }}>¡Bienvenido(a),</Text>
+                <Text style={{ color: '#FFF', fontSize: 14, fontWeight: '800' }}>Bienvenido(a),</Text>
                 <Text style={styles.nombreDoradoHero} numberOfLines={1}>{usuario.nombre_completo}!</Text>
                 <Text style={{ color: '#F3F4F6', fontSize: 11, marginTop: 2 }}>Gracias por ser parte del Club Sazón</Text>
                 <TouchableOpacity onPress={cambiarFotoPerfil}>
@@ -526,7 +575,6 @@ export default function App() {
                 <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800' }}>puntos</Text>
               </TouchableOpacity>
             </View>
-
             <TouchableOpacity style={{ width: '100%', height: 195, position: 'relative', marginBottom: 10, overflow: 'hidden' }} onPress={() => setVista('menu')}>
               <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
               {Platform.OS === 'web' && (
@@ -581,7 +629,7 @@ export default function App() {
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.nombreProducto}>{prod.nombre}</Text>
-                    {!!prod.ingredientes && <Text style={styles.descripcionPedido} numberOfLines={2}>{prod.ingredientes}</Text>}
+                    {!!prod.ingredientes && <Text style={styles.descripcionPedido}>{prod.ingredientes}</Text>}
                     <Text style={styles.precioProducto}>S/ {Number(prod.precio).toFixed(2)}</Text>
                   </View>
                   <TouchableOpacity style={styles.botonAgregar} onPress={() => agregarAlCarrito(prod, false)}>
@@ -592,7 +640,7 @@ export default function App() {
             )}
           </View>
         )}
-                          {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                                         {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -647,22 +695,21 @@ export default function App() {
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               {Platform.OS === 'web' && (
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #E50914 0%, #7A030B 60%, #2B0407 100%)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #E50914 0%, #7A030B 60%, #280407 100%)', pointerEvents: 'none' }} />
               )}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Text style={{ fontSize: 34, color: DORADO }}>★</Text>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ color: '#F3F4F6', fontSize: 13, fontWeight: '800' }}>Tus puntos</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', lineHeight: 40 }}>{datosCli.puntos} pts</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', lineHeight: 40 }}>{datosCli.puntos}</Text>
                 </View>
               </View>
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginTop: 8 }}>¡Sigue acumulando puntos!</Text>
             </View>
-
             <View style={styles.tarjetaPedido}>
               <Text style={[styles.nombreProducto, { fontSize: 15, marginBottom: 8 }]}>Cómo ganar puntos</Text>
-              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 4 }]}>🔴 10 puntos por cada S/ 1 en compras elegibles.</Text>
-              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 12 }]}>🔴 100 puntos de bienvenida (una sola vez).</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 4 }]}>★ 10 puntos por cada S/ 1 en compras elegibles.</Text>
+              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 12 }]}>★ 100 puntos de bienvenida (una sola vez).</Text>
               <TouchableOpacity style={[styles.boton, { marginTop: 0, paddingVertical: 11 }]} onPress={() => setVerHistorialPts(!verHistorialPts)}>
                 <Text style={styles.textoBoton}>{verHistorialPts ? 'Ocultar historial de puntos' : 'Ver historial de puntos'}</Text>
               </TouchableOpacity>
@@ -705,7 +752,7 @@ export default function App() {
                         <Text style={{ color: DORADO, fontSize: 13, fontWeight: '900', marginTop: 2 }}>{req} pts</Text>
                         {alcanza ? (
                           <TouchableOpacity style={{ backgroundColor: '#16A34A', paddingVertical: 8, borderRadius: 10, alignItems: 'center', marginTop: 8 }} onPress={() => clienteCanjea(rec)} disabled={cargando}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>✅ Canjear ahora</Text>
+                            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>★ Canjear ahora</Text>
                           </TouchableOpacity>
                         ) : (
                           <View style={{ backgroundColor: '#2A0D11', borderWidth: 1, borderColor: ROJO, paddingVertical: 7, paddingHorizontal: 6, borderRadius: 10, alignItems: 'center', marginTop: 8 }}>
@@ -720,7 +767,7 @@ export default function App() {
             )}
           </View>
         )}
-                                {vista === 'carrito' && (
+                            {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -734,13 +781,16 @@ export default function App() {
               <View>
                 {carrito.map((item, idx) => (
                   <View key={`${item.id}-${idx}`} style={[styles.producto, { padding: 12 }]}>
-                    <Image source={item.imagen_url && item.imagen_url.includes('http') ? { uri: item.imagen_url } : LOGO} style={{ width: 66, height: 66, borderRadius: 12, backgroundColor: '#1F1F28' }} />
+                    <Image
+                      source={item.imagen_url && item.imagen_url.includes('http') ? { uri: item.imagen_url } : LOGO}
+                      style={{ width: 66, height: 66, borderRadius: 12, backgroundColor: '#1F1F28' }}
+                    />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.nombreProducto}>{item.nombre}</Text>
                       <Text style={[styles.precioProducto, { color: '#D1D5DB', marginBottom: 6 }]}>S/ {(Number(item.precio) * item.cantidad).toFixed(2)}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                         <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, -1)}>
-                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>−</Text>
+                          <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 15 }}>-</Text>
                         </TouchableOpacity>
                         <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>{item.cantidad}</Text>
                         <TouchableOpacity style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: '#22222C', alignItems: 'center', justifyContent: 'center' }} onPress={() => cambiarCantidad(idx, 1)}>
@@ -757,7 +807,11 @@ export default function App() {
                 <Text style={styles.titulo}>Entrega y ubicación</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                   {['DELIVERY', 'RECOJO EN LOCAL'].map(tipo => (
-                    <TouchableOpacity key={tipo} style={[styles.opcionEntrega, tipoEntrega === tipo && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]} onPress={() => setTipoEntrega(tipo)}>
+                    <TouchableOpacity
+                      key={tipo}
+                      style={[styles.opcionEntrega, tipoEntrega === tipo && styles.opcionEntregaActiva, { flex: 1, alignItems: 'center' }]}
+                      onPress={() => setTipoEntrega(tipo)}
+                    >
                       <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>{tipo}</Text>
                     </TouchableOpacity>
                   ))}
@@ -770,37 +824,37 @@ export default function App() {
                     </TouchableOpacity>
                     <TextInput style={styles.campo} placeholder="Distrito (ej. San Borja, Surquillo...)" placeholderTextColor="#6B7280" value={distrito} onChangeText={setDistrito} />
                     <TextInput style={styles.campo} placeholder="Dirección exacta o referencia" placeholderTextColor="#6B7280" value={direccion} onChangeText={setDireccion} />
-                    {!!direccion.trim() && (
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                        <TouchableOpacity
-                          style={[styles.boton, { flex: 1, backgroundColor: '#7C3AED', marginTop: 0, paddingVertical: 10 }]}
-                          disabled={calculandoRuta}
-                          onPress={calcularRutaDireccionManual}
-                        >
-                          <Text style={[styles.textoBoton, { fontSize: 11 }]}>
-                            {calculandoRuta ? 'CALCULANDO...' : '📏 CALCULAR KM / COSTO'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.boton, { flex: 1, backgroundColor: '#0284C7', marginTop: 0, paddingVertical: 10 }]}
-                          onPress={() => {
-                            const q = encodeURIComponent(`${direccion.trim()} ${distrito.trim()}`.trim());
-                            const mapsBase = 'https://google.com';
-                            Linking.openURL(`${mapsBase}${q}`);
-                          }}
-                        >
-                          <Text style={[styles.textoBoton, { fontSize: 11 }]}>🗺️ VER EN MAPS</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                      <TouchableOpacity
+                        style={[styles.boton, { flex: 1, backgroundColor: '#7C3AED', marginTop: 0, paddingVertical: 10 }]}
+                        disabled={calculandoRuta}
+                        onPress={calcularRutaDireccionManual}
+                      >
+                        <Text style={[styles.textoBoton, { fontSize: 11 }]}>
+                          {calculandoRuta ? 'CALCULANDO...' : '📏 CALCULAR KM / COSTO'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.boton, { flex: 1, backgroundColor: '#0284C7', marginTop: 0, paddingVertical: 10 }]}
+                        onPress={() => {
+                          const q = encodeURIComponent(`${direccion.trim()} ${distrito.trim()}`.trim());
+                          const mapsHost = 'https://google.com';
+                          Linking.openURL(`${mapsHost}/search/?api=1&query=${q}`);
+                        }}
+                      >
+                        <Text style={[styles.textoBoton, { fontSize: 11 }]}>🗺️ VER EN MAPS</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12 }}>
+                      Costo delivery: S/ {costoDelivery.toFixed(2)} {gpsCliente ? `(${distanciaKm.toFixed(1)} km)` : '(Tarifa base)'}
+                    </Text>
                   </View>
                 )}
-                                  <Text style={styles.titulo}>Método de pago</Text>
+                <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
-                    { id: 'Plin', bg: '#00B2E3', tag: 'plin', label: 'Plin' },
+                    { id: 'Plin', bg: '#00D2E3', tag: 'plin', label: 'Plin' },
                     { id: 'Efectivo', bg: '#0D9488', tag: '💵', label: 'Efectivo' }
                   ].map(mp => {
                     const sel = metodoPago === mp.id;
@@ -823,7 +877,7 @@ export default function App() {
 
                   {(metodoPago === 'Yape' || metodoPago === 'Plin') && (
                     <View style={{ marginTop: 10, alignItems: 'center', width: '100%' }}>
-                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12, marginBottom: 4 }}>Titular: {cfgPagos.titularLimpio || 'Club Sazón'}</Text>
+                      <Text style={{ color: DORADO, fontWeight: '800', fontSize: 12, marginBottom: 4 }}>Titular: {cfgPagos.titularLimpio || 'Club Sazón'}</Text>
                       {!!(metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin) && (
                         <Image source={{ uri: metodoPago === 'Yape' ? cfgPagos.qr_yape : cfgPagos.qr_plin }} style={{ width: 150, height: 150, borderRadius: 10, marginVertical: 6 }} />
                       )}
@@ -839,7 +893,7 @@ export default function App() {
                         }}
                       >
                         <Text style={styles.textoBoton}>
-                          {subiendoComp ? 'SUBIENDO CAPTURA...' : comprobanteUrl ? '✅ CAPTURA DE PAGO ADJUNTADA' : `📸 ADJUNTAR CAPTURA DE PAGO ${metodoPago.toUpperCase()}`}
+                          {subiendoComp ? 'SUBIENDO CAPTURA...' : comprobanteUrl ? '✅ CAPTURA DE PAGO ADJUNTADA' : `📎 ADJUNTAR CAPTURA DE PAGO ${metodoPago.toUpperCase()}`}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -857,7 +911,7 @@ export default function App() {
                   )}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900' }}>Total</Text>
-                    <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
+                    <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
                   </View>
                   <TouchableOpacity style={[styles.boton, { marginTop: 0 }]} onPress={enviarPedido} disabled={cargando}>
                     <Text style={styles.textoBoton}>{cargando ? 'Enviando pedido...' : 'Realizar pedido'}</Text>
@@ -867,33 +921,31 @@ export default function App() {
             )}
           </View>
         )}
-                            {vista === 'pedidos' && (
+        {vista === 'pedidos' && (
           <View>
             <Text style={styles.titulo}>MIS PEDIDOS</Text>
-            {!(datosCli.pedidos || []).length ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>Aún no has realizado pedidos.</Text>
-              </View>
+            {(datosCli.pedidos || []).length === 0 ? (
+              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no has realizado pedidos.</Text></View>
             ) : (
               (datosCli.pedidos || []).map(p => (
                 <View key={p.id} style={[styles.tarjetaPedido, p.estado_rider === 'En la puerta' && !p.recibido_cliente && { borderColor: DORADO, borderWidth: 2 }]}>
                   <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
-                  <View style={styles.estadoPedido}>
+                  <Text style={styles.textoEstado}>
+                    Estado:{' '}
                     <Text style={styles.textoEstado}>
                       {p.recibido_cliente && p.estado !== 'Completado'
-                        ? 'Recibido por ti • Esperando cierre del repartidor'
+                        ? 'Recibido por ti - Esperando cierre del repartidor'
                         : p.estado_rider === 'En la puerta' && !p.recibido_cliente
                           ? '🛵 ¡REPARTIDOR EN LA PUERTA!'
                           : p.estado}
                     </Text>
-                  </View>
+                  </Text>
                   {(p.pedido_detalles || []).map(d => (
                     <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>
                   ))}
-                  {p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#38BDF8', fontWeight: '800' }]}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
+                  {!!p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#93C5FD', fontWeight: '800' }]}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
                   <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
                   {(p.estado_rider === 'En la puerta' || p.estado === 'En camino' || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Listo')) && !p.recibido_cliente && (
-                  
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
                       <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
                     </TouchableOpacity>
@@ -927,10 +979,8 @@ export default function App() {
         {vista === 'notificaciones' && (
           <View>
             <Text style={styles.titulo}>NOTIFICACIONES</Text>
-            {!(datosCli.pedidos || []).length ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>No tienes notificaciones recientes.</Text>
-              </View>
+            {(datosCli.pedidos || []).length === 0 ? (
+              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>No tienes notificaciones recientes.</Text></View>
             ) : (
               (datosCli.pedidos || []).slice(0, 10).map(p => (
                 <TouchableOpacity key={p.id} style={styles.tarjetaPedido} onPress={() => setVista('pedidos')}>
@@ -986,7 +1036,7 @@ export default function App() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity onPress={cambiarFotoPerfil} style={{ marginBottom: 10 }}>
-                <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800' }}>📷 Cambiar foto de perfil</Text>
+                <Text style={{ color: DORADO, fontWeight: '800' }}>📷 Cambiar foto de perfil</Text>
               </TouchableOpacity>
               <Text style={[styles.nombreProducto, { color: DORADO, fontSize: 18 }]}>{usuario.nombre_completo}</Text>
               <Text style={styles.descripcionPedido}>Teléfono: {usuario.telefono}</Text>
@@ -1000,7 +1050,7 @@ export default function App() {
                   ok ? '🔔 Notificaciones activadas' : 'Permiso pendiente',
                   ok
                     ? 'Recibirás alertas en tu teléfono incluso con la pantalla apagada.'
-                    : 'Permite las notificaciones en la barra de tu navegador Chrome o Safari.'
+                    : 'Permite las notificaciones en la barra de tu navegador o ajustes de la app.'
                 );
               }}
             >
@@ -1015,5 +1065,5 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-          }
-          
+                    }
+                    
