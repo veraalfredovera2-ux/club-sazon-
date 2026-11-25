@@ -18,7 +18,6 @@ const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g
 async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
   const op = {
     method: metodo,
-    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       apikey: SUPABASE_KEY,
