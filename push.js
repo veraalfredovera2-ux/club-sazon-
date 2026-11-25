@@ -21,7 +21,7 @@ async function configurarCanalAndroid() {
     await Notifications.setNotificationChannelAsync('pedidos-sazon', {
       name: 'Alertas Club Sazón',
       importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern:,
+      vibrationPattern: new Array(0, 250, 250, 250),
       sound: 'default'
     });
   }
