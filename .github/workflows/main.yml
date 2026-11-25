@@ -6,8 +6,6 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v4
@@ -23,6 +21,9 @@ jobs:
           npm install -g eas-cli
 
       - name: Vincular proyecto y generar APK
+        env:
+          RAW_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
+          export EXPO_TOKEN=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]()')
           eas init --non-interactive --force
           eas build --platform android --profile preview --non-interactive --no-wait
