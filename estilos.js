@@ -3,7 +3,7 @@ import { StyleSheet, Platform } from 'react-native';
 export const ROJO = '#FF1717';
 export const DORADO = '#FFD600';
 export const FONDO = '#070709';
-export const TARJETA = '#13131A';
+export const TARJETA = '#12131A';
 export const BORDE = '#242430';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -15,7 +15,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 export const styles = StyleSheet.create({
   pantallaCompleta: {
     flex: 1,
-    backgroundColor: FONDO
+    backgroundColor: FONDO,
+    ...(Platform.OS === 'web' ? { minHeight: '100dvh' } : {})
   },
   contenido: {
     flexGrow: 1,
@@ -95,7 +96,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 10
   },
-  boton: {
+    boton: {
     backgroundColor: ROJO,
     borderRadius: 14,
     paddingVertical: 14,
@@ -129,7 +130,7 @@ export const styles = StyleSheet.create({
     backgroundColor: ROJO,
     borderRadius: 16,
     paddingVertical: 7,
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     marginVertical: 5
   },
   textoPildoraRoja: {
@@ -228,7 +229,7 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900'
   },
-  producto: {
+    producto: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: TARJETA,
@@ -260,7 +261,7 @@ export const styles = StyleSheet.create({
     backgroundColor: ROJO,
     borderRadius: 12,
     paddingVertical: 8,
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -345,16 +346,17 @@ export const styles = StyleSheet.create({
     textAlign: 'center'
   },
   barraInferior: {
-    position: 'absolute',
+    position: Platform.OS === 'web' ? 'fixed' : 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 999,
     flexDirection: 'row',
     backgroundColor: '#0E0E14',
     borderTopWidth: 1,
     borderTopColor: BORDE,
     paddingVertical: 8,
-    paddingHorizontal: 6
+    paddingHorizontal: 0
   },
   tabInferior: {
     flex: 1,
