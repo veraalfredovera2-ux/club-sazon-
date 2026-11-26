@@ -336,7 +336,7 @@ export default function App() {
     } finally {
       setCalculandoRuta(false);
     }
-                              }
+  }
     const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0697), Number(cfgPagos.local_lng || -77.0338), gpsCliente.lat, gpsCliente.lng)
@@ -417,7 +417,7 @@ export default function App() {
       }
     );
   }
-  if (!usuario) {
+    if (!usuario) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -586,7 +586,7 @@ export default function App() {
                 <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800' }}>puntos</Text>
               </TouchableOpacity>
             </View>
-                                             <TouchableOpacity style={{ width: '100%', height: 195, position: 'relative', marginBottom: 10, overflow: 'hidden' }} onPress={() => setVista('menu')}>
+                        <TouchableOpacity style={{ width: '100%', height: 195, position: 'relative', marginBottom: 10, overflow: 'hidden' }} onPress={() => setVista('menu')}>
               <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
               {Platform.OS === 'web' && (
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 18%, rgba(7,7,9,0) 78%, #070709 100%)', pointerEvents: 'none' }} />
@@ -654,7 +654,7 @@ export default function App() {
             )}
           </View>
         )}
-        {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+                          {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -720,73 +720,7 @@ export default function App() {
               </View>
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginTop: 8 }}>¡Sigue acumulando puntos!</Text>
             </View>
-                                  {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
-          <View>
-            <Text style={[styles.titulo, { fontSize: 20 }]}>
-              {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
-            </Text>
-            {promos.filter(pr => vista === 'novedades' ? pr.tipo === 'novedad' : vista === 'promos' ? (pr.tipo !== 'oferta' && pr.tipo !== 'novedad') : pr.tipo === 'oferta').length === 0 ? (
-              <View style={styles.tarjetaVacia}>
-                <Text style={styles.textoVacio}>
-                  {vista === 'novedades' ? 'Pronto publicaremos novedades aquí.' : vista === 'promos' ? 'Pronto publicaremos promociones aquí.' : 'Pronto publicaremos ofertas aquí.'}
-                </Text>
-              </View>
-            ) : (
-              promos
-                .filter(pr => vista === 'novedades' ? pr.tipo === 'novedad' : vista === 'promos' ? (pr.tipo !== 'oferta' && pr.tipo !== 'novedad') : pr.tipo === 'oferta')
-                .map(pr => (
-                  <View key={pr.id} style={[styles.tarjetaPromo, { height: 215, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
-                    <Image
-                      source={pr.imagen_url && pr.imagen_url.includes('http') ? { uri: pr.imagen_url } : BANNER_COMIDA}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                    {Platform.OS === 'web' && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(7,7,9,0.5) 48%, rgba(7,7,9,0.96) 100%)', pointerEvents: 'none' }} />
-                    )}
-                    <View style={[styles.etiquetaPromo, { top: 12, left: 12, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12 }]}>
-                      <Text style={[styles.textoEtiquetaPromo, { fontSize: 11 }]}>
-                        {vista === 'novedades' ? 'NOVEDAD' : vista === 'promos' ? 'PROMOCIÓN' : 'OFERTA'}
-                      </Text>
-                    </View>
-                    <View style={{ position: 'absolute', bottom: 12, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginBottom: 2 }} numberOfLines={1}>{pr.titulo}</Text>
-                        {vista === 'novedades' ? (
-                          <Text style={{ color: '#D1D5DB', fontSize: 12 }} numberOfLines={2}>{pr.descripcion}</Text>
-                        ) : (
-                          <Text style={{ color: ROJO, fontSize: 21, fontWeight: '900' }}>S/ {Number(pr.precio).toFixed(2)}</Text>
-                        )}
-                      </View>
-                      <TouchableOpacity
-                        style={{ backgroundColor: ROJO, paddingVertical: 9, paddingHorizontal: 18, borderRadius: 20 }}
-                        onPress={() => setPromoDetalle(pr)}
-                      >
-                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>Ver más</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))
-            )}
-          </View>
-        )}
-
-        {(vista === 'puntos' || vista === 'canjes') && (
-          <View>
-            <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
-              {Platform.OS === 'web' && (
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #E50914 0%, #7A030B 60%, #280407 100%)', pointerEvents: 'none' }} />
-              )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ fontSize: 34, color: DORADO }}>★</Text>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ color: '#F3F4F6', fontSize: 13, fontWeight: '800' }}>Tus puntos</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 36, fontWeight: '900', lineHeight: 40 }}>{datosCli.puntos}</Text>
-                </View>
-              </View>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginTop: 8 }}>¡Sigue acumulando puntos!</Text>
-            </View>
-            <View style={styles.tarjetaPedido}>
+                                         <View style={styles.tarjetaPedido}>
               <Text style={[styles.nombreProducto, { fontSize: 15, marginBottom: 8 }]}>Cómo ganar puntos</Text>
               <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 4 }]}>★ 10 puntos por cada S/ 1 en compras elegibles.</Text>
               <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 12 }]}>★ 100 puntos de bienvenida (una sola vez).</Text>
@@ -847,68 +781,7 @@ export default function App() {
             )}
           </View>
         )}
-                            <View style={styles.tarjetaPedido}>
-              <Text style={[styles.nombreProducto, { fontSize: 15, marginBottom: 8 }]}>Cómo ganar puntos</Text>
-              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 4 }]}>★ 10 puntos por cada S/ 1 en compras elegibles.</Text>
-              <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 12 }]}>★ 100 puntos de bienvenida (una sola vez).</Text>
-              <TouchableOpacity style={[styles.boton, { marginTop: 0, paddingVertical: 11 }]} onPress={() => setVerHistorialPts(!verHistorialPts)}>
-                <Text style={styles.textoBoton}>{verHistorialPts ? 'Ocultar historial de puntos' : 'Ver historial de puntos'}</Text>
-              </TouchableOpacity>
-              {verHistorialPts && (
-                <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: BORDE, paddingTop: 8 }}>
-                  {(datosCli.historial || []).length === 0 ? (
-                    <Text style={styles.descripcionPedido}>Aún no tienes movimientos registrados.</Text>
-                  ) : (
-                    (datosCli.historial || []).slice(0, 10).map((h, i) => (
-                      <View key={h.id || i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1E1E28' }}>
-                        <Text style={[styles.descripcionPedido, { color: '#FFF', flex: 1 }]}>{h.descripcion}</Text>
-                        <Text style={{ color: Number(h.cantidad) >= 0 ? '#22C55E' : ROJO, fontWeight: '900' }}>
-                          {Number(h.cantidad) >= 0 ? `+${h.cantidad}` : h.cantidad} pts
-                        </Text>
-                      </View>
-                    ))
-                  )}
-                </View>
-              )}
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 }}>
-              <Text style={[styles.titulo, { marginVertical: 0 }]}>Canjea tus puntos</Text>
-              <Text style={{ color: ROJO, fontSize: 12, fontWeight: '800' }}>{recompensas.length} premios</Text>
-            </View>
-
-            {recompensas.length === 0 ? (
-              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>No hay premios disponibles por ahora.</Text></View>
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 }}>
-                {recompensas.map(rec => {
-                  const req = Number(rec.puntos_requeridos || 0);
-                  const alcanza = Number(datosCli.puntos || 0) >= req;
-                  const faltan = Math.max(0, req - Number(datosCli.puntos || 0));
-                  return (
-                    <View key={rec.id} style={{ width: '48%', backgroundColor: TARJETA, borderWidth: 1.5, borderColor: alcanza ? '#16A34A' : BORDE, borderRadius: 16, overflow: 'hidden', marginBottom: 4 }}>
-                      <Image source={rec.imagen_url && rec.imagen_url.includes('http') ? { uri: rec.imagen_url } : LOGO} style={{ width: '100%', height: 105, backgroundColor: '#0A0A0E' }} resizeMode="cover" />
-                      <View style={{ padding: 10 }}>
-                        <Text style={[styles.nombreProducto, { fontSize: 14 }]} numberOfLines={1}>{rec.titulo}</Text>
-                        <Text style={{ color: DORADO, fontSize: 13, fontWeight: '900', marginTop: 2 }}>{req} pts</Text>
-                        {alcanza ? (
-                          <TouchableOpacity style={{ backgroundColor: '#16A34A', paddingVertical: 8, borderRadius: 10, alignItems: 'center', marginTop: 8 }} onPress={() => clienteCanjea(rec)} disabled={cargando}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>★ Canjear ahora</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <View style={{ backgroundColor: '#2A0D11', borderWidth: 1, borderColor: ROJO, paddingVertical: 7, paddingHorizontal: 6, borderRadius: 10, alignItems: 'center', marginTop: 8 }}>
-                            <Text style={{ color: ROJO, fontSize: 11, fontWeight: '900', textAlign: 'center' }}>Te faltan {faltan} pts</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-        )}
-        {vista === 'carrito' && (
+                        {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -991,7 +864,7 @@ export default function App() {
                     </Text>
                   </View>
                 )}
-                                  <Text style={styles.titulo}>Método de pago</Text>
+                                                     <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
@@ -1206,5 +1079,4 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-              }
-                
+                                              }
