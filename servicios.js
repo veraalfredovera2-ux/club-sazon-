@@ -1,24 +1,21 @@
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { notificarPushPorRol, notificarPushUsuario } from './push';
+import { enviarPushNativo } from './push';
 
-export const SUPABASE_URL = 'https://' + 'pripxtsriyxhafevokjg' + '.supabase.co';
-export const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
+const SUPABASE_URL = 'https://' + 'pripxtsriyxhafevokjg' + '.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ShY2V3Oh7gB4ZHSBzI5o_Q_GSMxzmds';
 
-export const categorias = ['Todas', 'Empanadas', 'Arepas', 'Tequeños', 'Hamburguesas', 'Salchipapas', 'Bebidas', 'Combos'];
+export const categorias = [
+  'Todas', 'Hamburguesas', 'Salchipapas', 'Alitas', 'Broaster', 'Pollo a la brasa', 'Chaufa', 'Bebidas', 'Extras'
+];
 
-const limpiarTel = (t) => {
-  const n = String(t || '').replace(/\D/g, '');
-  return n.length === 11 && n.startsWith('51') ? n.slice(2) : n;
+export const limpiarTelefono = (tel) => {
+  const num = String(tel || '').replace(/\D/g, '');
+  return num.length === 11 && num.startsWith('51') ? num.slice(2) : num;
 };
 
-const generarUUID = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-  const r = Math.random() * 16 | 0;
-  return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-});
-
-async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
-  const op = {
+async function apiSupabase(ruta, metodo = 'GET', cuerpo = null) {
+  const opciones = {
     method: metodo,
     headers: {
       'Content-Type': 'application/json',
@@ -27,19 +24,33 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
       Prefer: 'return=representation'
     }
   };
-  if (cuerpo) op.body = JSON.stringify(cuerpo);
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${ruta}`, op);
-  const txt = await res.text();
+  if (cuerpo) opciones.body = JSON.stringify(cuerpo);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${ruta}`, opciones);
+  const texto = await res.text();
   let datos = {};
-  try { datos = txt ? JSON.parse(txt) : []; } catch (e) { throw new Error('Error de formato en servidor'); }
-  if (!res.ok) throw new Error(datos.message || datos.error || 'Error en servidor');
+  try {
+    datos = texto ? JSON.parse(texto) : [];
+  } catch (e) {
+    throw new Error('Respuesta inválida del servidor.');
+  }
+  if (!res.ok) throw new Error(datos.message || datos.error || 'Error en la base de datos.');
   return datos;
 }
 
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
   const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
-  const def = { titularLimpio, local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false , puntos_rider: '10' };
+  const def = {
+    titularLimpio,
+    local_lat: '-12.069706',
+    local_lng: '-77.033827',
+    tarifa_base: '4.00',
+    tarifa_km: '1.50',
+    local_cerrado: false,
+    puntos_rider: '10',
+    hora_apertura: '12:00',
+    hora_cierre: '23:00'
+  };
   if (partes.length < 2) return def;
   const nums = partes.at(1).split('|');
   return {
@@ -49,159 +60,50 @@ export function extraerConfigDelivery(titularRaw) {
     tarifa_base: nums.at(2) || def.tarifa_base,
     tarifa_km: nums.at(3) || def.tarifa_km,
     local_cerrado: nums.at(4) === '1',
-    puntos_rider: nums.at(5) !== undefined ? String(nums.at(5)) : '10'
+    puntos_rider: nums.at(5) !== undefined ? String(nums.at(5)) : '10',
+    hora_apertura: nums.at(6) || '12:00',
+    hora_cierre: nums.at(7) || '23:00'
   };
 }
 
 export async function obtenerConfigPagos() {
-  const r = await apiRest('configuracion_pagos?select=*&limit=1');
-  const raw = (Array.isArray(r) && r.length > 0 ? r.at(0) : null) || { id: 1, titular: 'Club Sazón', qr_yape: '', qr_plin: '' };
-  return { ...raw, ...extraerConfigDelivery(raw.titular) };
-}
-
-export async function guardarConfigPagos(cfg) {
-  const del = extraerConfigDelivery(cfg.titular);
-  const titBase = (cfg.titularLimpio !== undefined ? cfg.titularLimpio : del.titularLimpio) || 'Club Sazón';
-  const cerradoFlag = cfg.local_cerrado ? '1' : '0';
-  const ptsRider = cfg.puntos_rider !== undefined ? String(cfg.puntos_rider) : del.puntos_rider;
-  const titEmpacado = `${titBase.trim()}||DEL:${cfg.local_lat || del.local_lat}|${cfg.local_lng || del.local_lng}|${cfg.tarifa_base || del.tarifa_base}|${cfg.tarifa_km || del.tarifa_km}|${cerradoFlag}|${ptsRider}`;
-  await apiRest('configuracion_pagos?id=eq.1', 'PATCH', {
-    titular: titEmpacado,
-    qr_yape: (cfg.qr_yape || '').trim(),
-    qr_plin: (cfg.qr_plin || '').trim()
-  });
-}
-
-export async function obtenerCatalogo(soloDisp = false) {
-  const q = soloDisp ? 'productos?select=*&disponible=eq.true&order=nombre.asc' : 'productos?select=*&order=nombre.asc';
-  return (await apiRest(q)) || [];
-}
-
-export async function guardarProductoAdmin(p) {
-  const datos = {
-    nombre: (p.nombre || '').trim(),
-    precio: Number(p.precio || 0),
-    stock: Number(p.stock ?? 20),
-    categoria: p.categoria || 'Hamburguesas',
-    turno: p.turno || 'Ambos',
-    ingredientes: (p.ingredientes || '').trim(),
-    imagen_url: (p.imagen_url || '').trim(),
-    disponible: Boolean(p.disponible)
-  };
-  if (p.id) return apiRest(`productos?id=eq.${p.id}`, 'PATCH', datos);
-  return apiRest('productos', 'POST', datos);
-}
-
-export async function eliminarProductoAdmin(id) {
-  await apiRest(`productos?id=eq.${id}`, 'DELETE');
-}
-
-export async function obtenerPromociones(soloAct = false) {
-  const q = soloAct ? 'promociones?select=*&activa=eq.true&order=id.desc' : 'promociones?select=*&order=id.desc';
-  return (await apiRest(q)) || [];
-}
-
-export async function guardarPromocionAdmin(pr) {
-  const datos = {
-    titulo: (pr.titulo || '').trim(),
-    descripcion: (pr.descripcion || '').trim(),
-    precio: Number(pr.precio || 0),
-    imagen_url: (pr.imagen_url || '').trim(),
-    activa: Boolean(pr.active),
-    tipo: pr.tipo || 'promocion'
-  };
-  if (pr.id) return apiRest(`promociones?id=eq.${pr.id}`, 'PATCH', datos);
-  return apiRest('promociones', 'POST', datos);
-}
-
-export async function eliminarPromocionAdmin(id) {
-  await apiRest(`promociones?id=eq.${id}`, 'DELETE');
-}
-
-export async function obtenerRecompensas(soloAct = false) {
-  const q = soloAct ? 'recompensas?select=*&activa=eq.true&order=puntos_requeridos.asc' : 'recompensas?select=*&order=puntos_requeridos.asc';
-  return (await apiRest(q)) || [];
-}
-
-export async function guardarRecompensaAdmin(r) {
-  const datos = {
-    titulo: (r.titulo || '').trim(),
-    descripcion: (r.descripcion || '').trim(),
-    puntos_requeridos: Number(r.puntos_requeridos || 0),
-    stock: Number(r.stock ?? 10),
-    imagen_url: (r.imagen_url || '').trim(),
-    activa: Boolean(r.active)
-  };
-  if (r.id) return apiRest(`recompensas?id=eq.${r.id}`, 'PATCH', datos);
-  return apiRest('recompensas', 'POST', datos);
-}
-
-export async function eliminarRecompensaAdmin(id) {
-  await apiRest(`recompensas?id=eq.${id}`, 'DELETE');
-}
-export async function registrarUsuario(arg1, arg2, arg3) {
-  const datos = typeof arg1 === 'object' && arg1 !== null
-    ? arg1
-    : { nombreCompleto: arg1, telefono: arg2, password: arg3 };
-  const nombreCompleto = datos.nombreCompleto || datos.nombre_completo || '';
-  const tel = limpiarTel(datos.telefono);
-  const password = datos.password;
-  if (tel.length < 6) throw new Error('Ingresa un número de teléfono válido.');
-  if ((password || '').length < 4) throw new Error('La contraseña debe tener al menos 4 caracteres.');
-  const existe = await apiRest(`perfiles?select=id&telefono=eq.${tel}`);
-  if (existe.length > 0) throw new Error('Ese número de teléfono ya está registrado.');
-  const id = generarUUID();
-  const [perfil] = await apiRest('perfiles', 'POST', {
-    id,
-    nombre_completo: nombreCompleto.trim(),
-    telefono: tel,
-    password_hash: password.trim(),
-    rol: 'cliente',
-    puntos: 100,
-    foto_url: ''
-  });
-  await apiRest('historial_puntos', 'POST', {
-    cliente_id: id,
-    cantidad: 100,
-    descripcion: 'Bono de bienvenida Club Sazón'
-  });
-  return { perfil, mensaje: 'Cuenta creada con éxito. Ganaste +100 puntos de bienvenida.' };
-}
-
-export async function ingresarUsuario(arg1, arg2) {
-  const datos = typeof arg1 === 'object' && arg1 !== null
-    ? arg1
-    : { telefono: arg1, password: arg2 };
-  const tel = limpiarTel(datos.telefono);
-  const password = datos.password;
-  const res = await apiRest(`perfiles?select=*&telefono=eq.${tel}&limit=1`);
-  const perfil = Array.isArray(res) && res.length > 0 ? res.at(0) : null;
-  if (!perfil) throw new Error('Número de teléfono no registrado.');
-  if (String(perfil.password_hash || '') !== String(password || '').trim()) {
-    throw new Error('Contraseña incorrecta.');
+  try {
+    const res = await apiSupabase('configuracion_pagos?select=*&limit=1');
+    const fila = Array.isArray(res) && res.length > 0 ? res.at(0) : { qr_yape: '', qr_plin: '', titular: 'Club Sazón' };
+    return { ...fila, ...extraerConfigDelivery(fila.titular) };
+  } catch (e) {
+    return { qr_yape: '', qr_plin: '', titular: 'Club Sazón', ...extraerConfigDelivery('Club Sazón') };
   }
-  return { tipo: perfil.rol || 'cliente', perfil };
 }
-
-export async function actualizarFotoPerfilNube(perfilId, fotoUrl) {
-  await apiRest(`perfiles?id=eq.${perfilId}`, 'PATCH', { foto_url: fotoUrl });
+export async function guardarConfigPagos(cfg) {
+  const actual = await apiSupabase('configuracion_pagos?select=id&limit=1');
+  const cadenaDelivery = `${cfg.titularLimpio || 'Club Sazón'}||DEL:${cfg.local_lat || '-12.069706'}|${cfg.local_lng || '-77.033827'}|${cfg.tarifa_base || '4.00'}|${cfg.tarifa_km || '1.50'}|${cfg.local_cerrado ? '1' : '0'}|${cfg.puntos_rider ?? '10'}|${cfg.hora_apertura || '12:00'}|${cfg.hora_cierre || '23:00'}`;
+  const payload = {
+    titular: cadenaDelivery,
+    qr_yape: cfg.qr_yape || '',
+    qr_plin: cfg.qr_plin || ''
+  };
+  if (Array.isArray(actual) && actual.length > 0) {
+    return apiSupabase(`configuracion_pagos?id=eq.${actual.at(0).id}`, 'PATCH', payload);
+  }
+  return apiSupabase('configuracion_pagos', 'POST', payload);
 }
 
 export async function subirImagenGaleria() {
   if (Platform.OS !== 'web') {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) throw new Error('Permite el acceso a la galería para subir la imagen.');
+    if (!perm.granted) throw new Error('Permite el acceso a la galería para subir imágenes.');
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 0.65,
+      quality: 0.7,
       base64: true
     });
     if (res.canceled || !res.assets?.length) return null;
     const asset = res.assets.at(0);
     return asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
   }
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (typeof document === 'undefined') return resolve(null);
     const inp = document.createElement('input');
     inp.type = 'file';
@@ -218,202 +120,293 @@ export async function subirImagenGaleria() {
           const scale = Math.min(max / img.width, max / img.height, 1);
           canvas.width = Math.round(img.width * scale);
           canvas.height = Math.round(img.height * scale);
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           resolve(canvas.toDataURL('image/jpeg', 0.8));
         };
         img.onerror = () => resolve(ev.target?.result || null);
         img.src = ev.target?.result;
       };
-      reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
       reader.readAsDataURL(file);
     };
     inp.click();
   });
 }
 
+export async function registrarUsuario({ nombre, telefono, password }) {
+  const telLimpio = limpiarTelefono(telefono);
+  if (!nombre || nombre.trim().length < 2) throw new Error('Ingresa tu nombre completo.');
+  if (telLimpio.length < 6) throw new Error('Ingresa un número de teléfono válido.');
+  if (!password || password.length < 4) throw new Error('La contraseña debe tener al menos 4 caracteres.');
+
+  const existe = await apiSupabase(`perfiles?select=id&telefono=eq.${telLimpio}&limit=1`);
+  if (Array.isArray(existe) && existe.length > 0) throw new Error('Este teléfono ya está registrado.');
+
+  const creados = await apiSupabase('perfiles', 'POST', {
+    nombre_completo: nombre.trim(),
+    telefono: telLimpio,
+    password_hash: password.trim(),
+    rol: 'cliente',
+    puntos: 100
+  });
+  const perfil = Array.isArray(creados) ? creados.at(0) : creados;
+  if (perfil?.id) {
+    await apiSupabase('historial_puntos', 'POST', {
+      cliente_id: perfil.id,
+      tipo: 'bono',
+      cantidad: 100,
+      descripcion: 'Bono de bienvenida Club Sazón'
+    });
+  }
+  return { perfil, mensaje: '¡Registro exitoso! Ganaste 100 puntos de bienvenida.' };
+}
+export async function ingresarUsuario({ telefono, password }) {
+  const telLimpio = limpiarTelefono(telefono);
+  if (telLimpio.length < 6 || !password) throw new Error('Ingresa tu teléfono y contraseña.');
+  const res = await apiSupabase(`perfiles?select=*&telefono=eq.${telLimpio}&limit=1`);
+  const perfil = Array.isArray(res) && res.length > 0 ? res.at(0) : null;
+  if (!perfil) throw new Error('No existe una cuenta con ese teléfono.');
+  if (String(perfil.password_hash || '') !== password.trim()) throw new Error('Contraseña incorrecta.');
+  return { tipo: perfil.rol || 'cliente', perfil };
+}
+
+export async function actualizarFotoPerfilNube(usuarioId, fotoUrl) {
+  return apiSupabase(`perfiles?id=eq.${usuarioId}`, 'PATCH', { foto_url: fotoUrl });
+}
+
+export async function obtenerCatalogo(soloDisponibles = true) {
+  const filtro = soloDisponibles ? '&disponible=eq.true' : '';
+  const res = await apiSupabase(`productos?select=*${filtro}&order=nombre.asc`);
+  return Array.isArray(res) ? res : [];
+}
+
+export async function guardarProductoAdmin(prod) {
+  const payload = {
+    nombre: prod.nombre.trim(),
+    precio: Number(prod.precio || 0),
+    stock: Number(prod.stock || 0),
+    categoria: prod.categoria || 'Hamburguesas',
+    turno: prod.turno || 'Ambos',
+    ingredientes: prod.ingredientes || '',
+    imagen_url: prod.imagen_url || '',
+    disponible: prod.disponible !== false
+  };
+  if (prod.id) return apiSupabase(`productos?id=eq.${prod.id}`, 'PATCH', payload);
+  return apiSupabase('productos', 'POST', payload);
+}
+
+export async function eliminarProductoAdmin(id) {
+  return apiSupabase(`productos?id=eq.${id}`, 'DELETE');
+}
+
+export async function obtenerPromociones(soloActivas = true) {
+  const filtro = soloActivas ? '&activa=eq.true' : '';
+  const res = await apiSupabase(`promociones?select=*${filtro}&order=creado_en.desc`);
+  return Array.isArray(res) ? res : [];
+}
+
+export async function guardarPromocionAdmin(pr) {
+  const payload = {
+    titulo: pr.titulo.trim(),
+    descripcion: pr.descripcion || '',
+    precio: Number(pr.precio || 0),
+    imagen_url: pr.imagen_url || '',
+    activa: pr.activa !== false,
+    tipo: pr.tipo || 'promocion'
+  };
+  if (pr.id) return apiSupabase(`promociones?id=eq.${pr.id}`, 'PATCH', payload);
+  return apiSupabase('promociones', 'POST', payload);
+}
+
+export async function eliminarPromocionAdmin(id) {
+  return apiSupabase(`promociones?id=eq.${id}`, 'DELETE');
+}
+
+export async function obtenerRecompensas(soloActivas = true) {
+  const filtro = soloActivas ? '&activa=eq.true' : '';
+  const res = await apiSupabase(`recompensas?select=*${filtro}&order=puntos_requeridos.asc`);
+  return Array.isArray(res) ? res : [];
+}
+
+export async function guardarRecompensaAdmin(rec) {
+  const payload = {
+    titulo: rec.titulo.trim(),
+    descripcion: rec.descripcion || '',
+    puntos_requeridos: Number(rec.puntos_requeridos || 500),
+    stock: Number(rec.stock || 10),
+    imagen_url: rec.imagen_url || '',
+    activa: rec.activa !== false
+  };
+  if (rec.id) return apiSupabase(`recompensas?id=eq.${rec.id}`, 'PATCH', payload);
+  return apiSupabase('recompensas', 'POST', payload);
+}
+
+export async function eliminarRecompensaAdmin(id) {
+  return apiSupabase(`recompensas?id=eq.${id}`, 'DELETE');
+}
+export async function obtenerMotorizados() {
+  const res = await apiSupabase('perfiles?select=*&rol=eq.repartidor&order=nombre_completo.asc');
+  return Array.isArray(res) ? res : [];
+}
+
+export async function crearMotorizadoAdmin({ nombre_completo, telefono, password, direccion_predeterminada }) {
+  const telLimpio = limpiarTelefono(telefono);
+  if (!nombre_completo?.trim() || telLimpio.length < 6 || !password?.trim()) {
+    throw new Error('Completa nombre, teléfono y contraseña del motorizado.');
+  }
+  return apiSupabase('perfiles', 'POST', {
+    nombre_completo: nombre_completo.trim(),
+    telefono: telLimpio,
+    password_hash: password.trim(),
+    rol: 'repartidor',
+    direccion_predeterminada: direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm',
+    puntos: 0
+  });
+}
+
+export async function eliminarMotorizadoAdmin(id) {
+  return apiSupabase(`perfiles?id=eq.${id}`, 'DELETE');
+}
+
+export async function actualizarHorarioRiderAdmin(id, horario) {
+  return apiSupabase(`perfiles?id=eq.${id}`, 'PATCH', { direccion_predeterminada: horario });
+}
+
+export async function obtenerClientesAdmin() {
+  const res = await apiSupabase('perfiles?select=*&rol=eq.cliente&order=nombre_completo.asc');
+  return Array.isArray(res) ? res : [];
+}
+
+export async function cambiarClaveClienteAdmin(id, nuevaClave) {
+  return apiSupabase(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave });
+}
+
 export async function obtenerDatosCliente(clienteId) {
   const [perfs, hist, peds, canjes] = await Promise.all([
-    apiRest(`perfiles?select=puntos,foto_url&id=eq.${clienteId}&limit=1`),
-    apiRest(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=creado_en.desc`),
-    apiRest(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=creado_en.desc`),
-    apiRest(`canjes?select=*&cliente_id=eq.${clienteId}&order=id.desc`)
+    apiSupabase(`perfiles?select=puntos,foto_url&id=eq.${clienteId}&limit=1`),
+    apiSupabase(`historial_puntos?select=*&cliente_id=eq.${clienteId}&order=creado_en.desc&limit=30`),
+    apiSupabase(`pedidos?select=*,pedido_detalles(*)&cliente_id=eq.${clienteId}&order=creado_en.desc&limit=50`),
+    apiSupabase(`canjes?select=*,recompensas(titulo,puntos_requeridos)&cliente_id=eq.${clienteId}&order=creado_en.desc&limit=30`)
   ]);
-  const filaCli = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : {};
+  const perfil = Array.isArray(perfs) && perfs.length > 0 ? perfs.at(0) : {};
   return {
-    puntos: Number(filaCli?.puntos || 0),
-    foto_url: filaCli?.foto_url || '',
-    historial: hist || [],
-    pedidos: peds || [],
-    canjes: canjes || []
+    puntos: Number(perfil.puntos || 0),
+    foto_url: perfil.foto_url || null,
+    historial: Array.isArray(hist) ? hist : [],
+    pedidos: Array.isArray(peds) ? peds : [],
+    canjes: Array.isArray(canjes) ? canjes : []
   };
 }
 
 export async function obtenerPedidosAdmin() {
-  return (await apiRest('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=creado_en.desc')) || [];
+  const res = await apiSupabase('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=creado_en.desc&limit=250');
+  return Array.isArray(res) ? res : [];
 }
-export async function crearNuevoPedido(cabecera, items) {
-  const num = 'PED-' + Math.floor(100000 + Math.random() * 900000);
-  const [ped] = await apiRest('pedidos', 'POST', {
-    ...cabecera,
-    numero_pedido: num,
+
+export async function crearNuevoPedido(pedido, items) {
+  const numPed = 'PED-' + Math.floor(100000 + Math.random() * 900000);
+  const creados = await apiSupabase('pedidos', 'POST', {
+    ...pedido,
+    numero_pedido: numPed,
     estado: 'Pendiente',
+    estado_rider: 'Sin asignar',
     recibido_cliente: false
   });
-  for (const it of items) {
-    await apiRest('pedido_detalles', 'POST', {
-      pedido_id: ped.id,
-      producto_id: it.es_promo ? null : it.id,
-      nombre_producto: it.nombre,
-      cantidad: Number(it.cantidad),
-      precio_unitario: Number(it.precio),
-      subtotal: Number(it.precio) * Number(it.cantidad)
-    });
-    if (!it.es_promo && it.id) {
-      const prodRes = await apiRest(`productos?select=stock&id=eq.${it.id}&limit=1`);
-      const prodActual = Array.isArray(prodRes) && prodRes.length > 0 ? prodRes.at(0) : null;
-      if (prodActual && prodActual.stock !== null && prodActual.stock !== undefined) {
-        const nuevoStock = Math.max(0, Number(prodActual.stock) - Number(it.cantidad));
-        await apiRest(`productos?id=eq.${it.id}`, 'PATCH', {
-          stock: nuevoStock,
-          disponible: nuevoStock > 0
-        });
+  const ped = Array.isArray(creados) ? creados.at(0) : creados;
+  if (ped?.id && Array.isArray(items)) {
+    for (const item of items) {
+      await apiSupabase('pedido_detalles', 'POST', {
+        pedido_id: ped.id,
+        producto_id: item.es_promo ? null : item.id,
+        nombre_producto: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio,
+        subtotal: Number((item.precio * item.cantidad).toFixed(2))
+      });
+      if (!item.es_promo && item.stock !== undefined && item.stock !== null) {
+        const nuevoStock = Math.max(0, Number(item.stock) - Number(item.cantidad));
+        await apiSupabase(`productos?id=eq.${item.id}`, 'PATCH', { stock: nuevoStock });
       }
     }
   }
-  await notificarPushPorRol(
-    'administrador',
-    'Nuevo pedido en Club Sazón!',
-    `Pedido ${num} por S/ ${Number(cabecera.total || 0).toFixed(2)} (${cabecera.tipo_entrega})`
-  );
+  await enviarPushNativo('¡Nuevo pedido en Club Sazón!', `Pedido ${numPed} por S/ ${Number(pedido.total || 0).toFixed(2)}`, 'administrador');
   return ped;
 }
 
 export async function actualizarEstadoPedidoAdmin(ped, nuevoEstado) {
-  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', {
-    estado: nuevoEstado,
-    ...(nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY' ? { estado_rider: 'Disponible' } : {})
-  });
-  if (nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY') {
-    await notificarPushPorRol(
-      'repartidor',
-      '¡Pedido listo para recoger!',
-      `${ped.numero_pedido} listo en cocina - Delivery: S/ ${Number(ped.costo_delivery || 0).toFixed(2)}`
-    );
-  }
+  await apiSupabase(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: nuevoEstado });
   if (ped.cliente_id) {
-    await notificarPushUsuario(
-      ped.cliente_id,
-      `Actualización de tu pedido ${ped.numero_pedido}`,
-      `Tu pedido ahora está: ${nuevoEstado}`
-    );
+    await enviarPushNativo(`Pedido ${ped.numero_pedido}: ${nuevoEstado}`, 'Actualización en tiempo real de tu pedido en El Sazón Oriental.', null, ped.cliente_id);
+  }
+  if (nuevoEstado === 'Listo' && ped.tipo_entrega === 'DELIVERY') {
+    await enviarPushNativo('🛵 Nuevo pedido listo para recoger', `Pedido ${ped.numero_pedido} disponible en cocina.`, 'repartidor');
   }
 }
 
 export async function confirmarRecepcionYDarPuntos(ped) {
   if (ped.recibido_cliente) return 0;
-  const pts = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
-  const nuevoEstado = ped.tipo_entrega === 'DELIVERY' ? ped.estado : 'Completado';
-  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', {
-    recibido_cliente: true,
-    estado: nuevoEstado
-  });
-  if (pts > 0 && ped.cliente_id) {
-    const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${ped.cliente_id}&limit=1`);
-    const actual = Number(cli?.puntos || 0);
-    await apiRest(`perfiles?id=eq.${ped.cliente_id}`, 'PATCH', { puntos: actual + pts });
-    await apiRest('historial_puntos', 'POST', {
+  await apiSupabase(`pedidos?id=eq.${ped.id}`, 'PATCH', { recibido_cliente: true });
+  const puntosGanados = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
+  if (puntosGanados > 0 && ped.cliente_id) {
+    const perfs = await apiSupabase(`perfiles?select=puntos&id=eq.${ped.cliente_id}&limit=1`);
+    const actual = Array.isArray(perfs) && perfs.length > 0 ? Number(perfs.at(0).puntos || 0) : 0;
+    await apiSupabase(`perfiles?id=eq.${ped.cliente_id}`, 'PATCH', { puntos: actual + puntosGanados });
+    await apiSupabase('historial_puntos', 'POST', {
       cliente_id: ped.cliente_id,
-      cantidad: pts,
+      tipo: 'compra',
+      cantidad: puntosGanados,
       descripcion: `Compra ${ped.numero_pedido}`
     });
   }
-  return pts;
+  return puntosGanados;
 }
 
 export async function cancelarPedidoYDescontar(ped) {
-  await apiRest(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: 'Cancelado' });
-  if (ped.cliente_id && ped.recibido_cliente) {
-    const ptsGanados = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
-    if (ptsGanados > 0) {
-      const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${ped.cliente_id}&limit=1`);
-      const actual = Number(cli?.puntos || 0);
-      const nuevoSaldo = Math.max(0, actual - ptsGanados);
-      await apiRest(`perfiles?id=eq.${ped.cliente_id}`, 'PATCH', { puntos: nuevoSaldo });
-      await apiRest('historial_puntos', 'POST', {
+  await apiSupabase(`pedidos?id=eq.${ped.id}`, 'PATCH', { estado: 'Cancelado' });
+  if (ped.recibido_cliente && ped.cliente_id) {
+    const puntosDescontar = Math.floor(Number(ped.subtotal || ped.total || 0) * 10);
+    if (puntosDescontar > 0) {
+      const perfs = await apiSupabase(`perfiles?select=puntos&id=eq.${ped.cliente_id}&limit=1`);
+      const actual = Array.isArray(perfs) && perfs.length > 0 ? Number(perfs.at(0).puntos || 0) : 0;
+      await apiSupabase(`perfiles?id=eq.${ped.cliente_id}`, 'PATCH', { puntos: Math.max(0, actual - puntosDescontar) });
+      await apiSupabase('historial_puntos', 'POST', {
         cliente_id: ped.cliente_id,
-        cantidad: -ptsGanados,
-        descripcion: `Cancelación ${ped.numero_pedido}`
+        tipo: 'anulacion',
+        cantidad: -puntosDescontar,
+        descripcion: `Anulación ${ped.numero_pedido}`
       });
     }
   }
 }
 
-export async function canjearRecompensaCliente(clienteId, rec) {
-  const [cli] = await apiRest(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`);
-  const actual = Number(cli?.puntos || 0);
-  const req = Number(rec.puntos_requeridos || 0);
-  if (actual < req) throw new Error('Te faltan puntos para esta recompensa.');
-  await apiRest(`perfiles?id=eq.${clienteId}`, 'PATCH', { puntos: actual - req });
-  await apiRest('historial_puntos', 'POST', {
-    cliente_id: clienteId,
-    cantidad: -req,
-    descripcion: `Canje: ${rec.titulo}`
-  });
-  await apiRest('canjes', 'POST', {
-    cliente_id: clienteId,
-    recompensa_id: rec.id,
-    puntos_usados: req,
-    estado: 'Pendiente'
-  });
-}
-
-export async function obtenerMotorizados() {
-  return (await apiRest('perfiles?select=*&rol=eq.repartidor&order=nombre_completo.asc')) || [];
-}
-
-export async function crearMotorizadoAdmin({ nombre_completo, telefono, password, direccion_predeterminada }) {
-  const tel = limpiarTel(telefono);
-  if (!nombre_completo?.trim() || tel.length < 6 || !password?.trim()) {
-    throw new Error('Completa nombre, teléfono válido y contraseña.');
-  }
-  const [res] = await apiRest('perfiles', 'POST', {
-    id: generarUUID(),
-    nombre_completo: nombre_completo.trim(),
-    telefono: tel,
-    password_hash: password.trim(),
-    rol: 'repartidor',
-    puntos: 0,
-    direccion_predeterminada: (direccion_predeterminada || 'Lun a Dom: 12:00 pm - 10:00 pm').trim()
-  });
-  return res;
-}
-
-export async function eliminarMotorizadoAdmin(id) {
-  await apiRest(`perfiles?id=eq.${id}`, 'DELETE');
-}
-
-export async function actualizarHorarioRiderAdmin(id, textoHorario) {
-  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { direccion_predeterminada: textoHorario.trim() });
-}
-
-export async function obtenerClientesAdmin() {
-  return (await apiRest('perfiles?select=id,nombre_completo,telefono,puntos,creado_en&rol=eq.cliente&order=nombre_completo.asc')) || [];
-}
-
-export async function cambiarClaveClienteAdmin(id, nuevaClave) {
-  await apiRest(`perfiles?id=eq.${id}`, 'PATCH', { password_hash: nuevaClave.trim() });
-}
-
 export async function liquidarEfectivoRiderAdmin(riderId) {
-  await apiRest(
-    `pedidos?rider_id=eq.${riderId}&metodo_pago=eq.Efectivo&estado=eq.Completado`,
-    'PATCH',
-    { estado_rider: 'Liquidado en caja' }
-  );
+  return apiSupabase(`pedidos?rider_id=eq.${riderId}&metodo_pago=eq.Efectivo&estado=eq.Completado`, 'PATCH', {
+    estado_rider: 'Liquidado en caja'
+  });
 }
 
 export async function liquidarPedidoIndividualAdmin(pedidoId) {
-  await apiRest(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
+  return apiSupabase(`pedidos?id=eq.${pedidoId}`, 'PATCH', {
     estado_rider: 'Liquidado en caja'
+  });
+}
+
+export async function canjearRecompensaCliente(clienteId, rec) {
+  const req = Number(rec.puntos_requeridos || 0);
+  const perfs = await apiSupabase(`perfiles?select=puntos&id=eq.${clienteId}&limit=1`);
+  const actual = Array.isArray(perfs) && perfs.length > 0 ? Number(perfs.at(0).puntos || 0) : 0;
+  if (actual < req) throw new Error('No tienes puntos suficientes para este premio.');
+  await apiSupabase(`perfiles?id=eq.${clienteId}`, 'PATCH', { puntos: actual - req });
+  await apiSupabase('canjes', 'POST', {
+    cliente_id: clienteId,
+    recompensa_id: rec.id,
+    puntos_usados: req,
+    estado: 'Solicitado'
+  });
+  await apiSupabase('historial_puntos', 'POST', {
+    cliente_id: clienteId,
+    tipo: 'canje',
+    cantidad: -req,
+    descripcion: `Canje: ${rec.titulo}`
   });
 }
