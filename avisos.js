@@ -15,17 +15,17 @@ export function pedirConfirmacion(titulo, mensaje, onConfirmar) {
 export function reproducirTimbreAlerta() {
   try {
     if (Platform.OS !== 'web') {
-      Vibration.vibrate();
+      Vibration.vibrate(new Array(0, 350, 150, 350, 150, 450));
       return;
     }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate();
+      navigator.vibrate(new Array(350, 150, 350, 150, 450));
     }
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const ahora = ctx.currentTime;
-    [880, 1174.66].forEach((freq, i) => {
+    new Array(880, 1174.66).forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -50,16 +50,18 @@ export function VentanaAviso() {
   if (!dato) return null;
 
   return (
-    <Modal transparent animationType="fade" visible>
+    <Modal transparent animationType="fade" visible={Boolean(dato)}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.82)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <View style={{ width: '100%', maxWidth: 350, backgroundColor: TARJETA, borderWidth: 1.5, borderColor: dato.tipo === 'confirmar' ? DORADO : ROJO, borderRadius: 18, padding: 20 }}>
-          {dato.tipo === 'confirmar' && (
-            <Text style={{ color: DORADO, fontSize: 11, fontWeight: '900', textAlign: 'center', letterSpacing: 1, marginBottom: 4 }}>
-              CONFIRMAR ACCIÓN
-            </Text>
-          )}
-          <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 8 }}>{dato.titulo}</Text>
-          <Text style={{ color: '#D1D5DB', fontSize: 14, textAlign: 'center', marginBottom: 18 }}>{dato.mensaje}</Text>
+        <View style={{ width: '100%', maxWidth: 360, backgroundColor: TARJETA, borderWidth: 1.5, borderColor: dato.tipo === 'confirmar' ? DORADO : ROJO, borderRadius: 18, padding: 20 }}>
+          <Text style={{ color: DORADO, fontSize: 11, fontWeight: '900', textAlign: 'center', letterSpacing: 1, marginBottom: 4 }}>
+            {dato.tipo === 'confirmar' ? 'CONFIRMAR ACCIÓN' : 'EL SAZÓN ORIENTAL'}
+          </Text>
+          <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 8 }}>
+            {dato.titulo}
+          </Text>
+          <Text style={{ color: '#D1D5DB', fontSize: 14, textAlign: 'center', marginBottom: 18 }}>
+            {dato.mensaje}
+          </Text>
           {dato.tipo === 'confirmar' ? (
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
