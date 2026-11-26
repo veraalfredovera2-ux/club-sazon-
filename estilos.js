@@ -1,4 +1,4 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, StatusBar } from 'react-native';
 
 export const ROJO = '#FF1717';
 export const DORADO = '#FFD600';
@@ -16,6 +16,7 @@ export const styles = StyleSheet.create({
   pantallaCompleta: {
     flex: 1,
     backgroundColor: FONDO,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 0,
     ...(Platform.OS === 'web' ? { minHeight: '100dvh' } : {})
   },
   contenido: {
@@ -89,14 +90,14 @@ export const styles = StyleSheet.create({
     backgroundColor: TARJETA,
     borderWidth: 1,
     borderColor: BORDE,
-    borderRadius: 12,
+    borderRadius: 14,
     color: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
     marginBottom: 10
   },
-    boton: {
+  boton: {
     backgroundColor: ROJO,
     borderRadius: 14,
     paddingVertical: 14,
@@ -135,7 +136,7 @@ export const styles = StyleSheet.create({
   },
   textoPildoraRoja: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 14,
     fontWeight: '900'
   },
   tarjetaPerfilHero: {
@@ -154,7 +155,7 @@ export const styles = StyleSheet.create({
     height: 62,
     borderRadius: 31,
     borderWidth: 2,
-    borderColor: ROJO,
+    borderColor: DORADO,
     backgroundColor: '#1E1E28',
     alignItems: 'center',
     justifyContent: 'center',
@@ -176,7 +177,7 @@ export const styles = StyleSheet.create({
   },
   numeroPuntosDorado: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900'
   },
   cuadricula3: {
@@ -229,14 +230,14 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900'
   },
-    producto: {
+  producto: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: TARJETA,
     borderWidth: 1,
     borderColor: BORDE,
     borderRadius: 16,
-    padding: 12,
+    padding: 10,
     marginBottom: 10,
     gap: 12
   },
@@ -267,7 +268,7 @@ export const styles = StyleSheet.create({
   },
   textoAgregar: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900'
   },
   tarjetaPromo: {
@@ -282,6 +283,7 @@ export const styles = StyleSheet.create({
   },
   textoEtiquetaPromo: {
     color: '#FFFFFF',
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.5
   },
@@ -309,7 +311,7 @@ export const styles = StyleSheet.create({
     backgroundColor: '#261418',
     borderWidth: 1,
     borderColor: ROJO,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingVertical: 4,
     paddingHorizontal: 10,
     marginVertical: 6
