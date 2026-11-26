@@ -212,7 +212,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </View>
         )}
         <TouchableOpacity
-          onPress={() => {
+          onPress={async () => {
             const nuevoEstado = !sonidoActivo;
             setSonidoActivo(nuevoEstado);
             if (nuevoEstado) {
