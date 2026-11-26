@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -15,6 +16,24 @@ import {
   crearNuevoPedido, actualizarEstadoPedidoAdmin, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar,
   canjearRecompensaCliente, subirImagenGaleria
 } from './servicios';
+
+function DegradadoOscuroCard() {
+  const capas = new Array(
+    'rgba(7,7,9,0.00)',
+    'rgba(7,7,9,0.12)',
+    'rgba(7,7,9,0.34)',
+    'rgba(7,7,9,0.62)',
+    'rgba(7,7,9,0.86)',
+    'rgba(7,7,9,0.97)'
+  );
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
+      {capas.map((bg, idx) => (
+        <View key={idx} style={{ flex: 1, backgroundColor: bg }} />
+      ))}
+    </View>
+  );
+}
 
 function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
   const toRad = (v) => (v * Math.PI) / 180;
@@ -71,31 +90,32 @@ async function seleccionarYComprimirAvatar() {
 }
 
 function IconoRojo({ tipo }) {
-  if (Platform.OS === 'web') {
-    const paths = {
-      menu: 'M3 4h18v2H3V4zm2 4h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zm4 3v2h6v-2H9zm0 4v2h6v-2H9z',
-      promos: 'M12 2l2.39 4.84 5.34.78-3.86 3.77.91 5.32L12 14.2l-4.78 2.51.91-5.32-3.86-3.77 5.34-.78L12 2z',
-      ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
-      novedades: 'M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z',
-      puntos: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
-      canjes: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
-      carrito: 'M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0 0 20 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z',
-      pedidos: 'M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z',
-      cuenta: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-      salir: 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z'
-    };
-    return (
-      <svg width="28" height="28" viewBox="0 0 24 24" fill={ROJO}>
-        <path d={paths[tipo] || paths.menu} />
-      </svg>
-    );
-  }
-  const iconosNativos = {
-    menu: '🍴', promos: '🎁', ofertas: '🏷️', novedades: '📢',
-    puntos: '⭐', canjes: '🏆', carrito: '🛒', pedidos: '📋',
-    cuenta: '👤', salir: '🚪'
+  const mapaIconos = {
+    menu: 'restaurant-outline',
+    promos: 'gift-outline',
+    ofertas: 'pricetag-outline',
+    novedades: 'megaphone-outline',
+    puntos: 'star-outline',
+    canjes: 'trophy-outline',
+    carrito: 'cart-outline',
+    pedidos: 'receipt-outline',
+    cuenta: 'person-outline',
+    salir: 'log-out-outline'
   };
-  return <Text style={{ fontSize: 24 }}>{iconosNativos[tipo] || '🍴'}</Text>;
+  return (
+    <View style={{
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: '#22090C',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255, 23, 23, 0.45)',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <Ionicons name={mapaIconos[tipo] || 'apps-outline'} size={24} color={ROJO} />
+    </View>
+  );
 }
 export default function App() {
   const [pantallaAuth, setPantallaAuth] = useState('bienvenida');
@@ -104,13 +124,19 @@ export default function App() {
   const [modoClienteRider, setModoClienteRider] = useState(true);
   const [fotoPerfil, setFotoPerfil] = useState(null);
   const [vista, setVista] = useState('inicio');
+  const [filtroPedCli, setFiltroPedCli] = useState('Activos');
   const [catActiva, setCatActiva] = useState('Todas');
   const [catalogo, setCatalogo] = useState([]);
   const [promos, setPromos] = useState([]);
   const [recompensas, setRecompensas] = useState([]);
   const [promoDetalle, setPromoDetalle] = useState(null);
   const [verHistorialPts, setVerHistorialPts] = useState(false);
-  const [cfgPagos, setCfgPagos] = useState({ qr_yape: '', qr_plin: '', titularLimpio: 'Club Sazón', local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false });
+  const [cfgPagos, setCfgPagos] = useState({
+    qr_yape: '', qr_plin: '', titularLimpio: 'Club Sazón',
+    local_lat: '-12.069706', local_lng: '-77.033827',
+    tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false,
+    hora_apertura: '12:00', hora_cierre: '23:00'
+  });
   const [datosCli, setDatosCli] = useState({ puntos: 0, historial: [], pedidos: [], canjes: [] });
   const [pedidosAdmin, setPedidosAdmin] = useState([]);
   const [carrito, setCarrito] = useState([]);
@@ -251,7 +277,6 @@ export default function App() {
   }
 
   function agregarAlCarrito(item, esPromo = false) {
-    if (cfgPagos.local_cerrado) return mostrarAviso('Local cerrado', 'En este momento el local se encuentra cerrado.');
     setCarrito(prev => {
       const idx = prev.findIndex(x => x.id === item.id && Boolean(x.es_promo) === esPromo);
       if (idx >= 0) {
@@ -261,7 +286,12 @@ export default function App() {
       }
       return [...prev, { id: item.id, nombre: item.nombre || item.titulo, precio: Number(item.precio), cantidad: 1, stock: item.stock, es_promo: esPromo, imagen_url: item.imagen_url || '' }];
     });
-    mostrarAviso('Agregado', `${item.nombre || item.titulo} añadido al carrito.`);
+    mostrarAviso(
+      cfgPagos.local_cerrado ? 'Guardado en carrito' : 'Agregado',
+      cfgPagos.local_cerrado
+        ? `${item.nombre || item.titulo} se guardó en tu carrito para cuando abramos (${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}).`
+        : `${item.nombre || item.titulo} añadido al carrito.`
+    );
   }
     function cambiarCantidad(idx, delta) {
     setCarrito(prev => {
@@ -337,7 +367,8 @@ export default function App() {
       setCalculandoRuta(false);
     }
   }
-    const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
+
+  const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0697), Number(cfgPagos.local_lng || -77.0338), gpsCliente.lat, gpsCliente.lng)
     : 0;
@@ -347,8 +378,14 @@ export default function App() {
   const totalFinal = subtotal + costoDelivery;
 
   async function enviarPedido() {
+    if (cfgPagos.local_cerrado) {
+      return mostrarAviso(
+        '🔴 Local cerrado',
+        `En este momento estamos cerrados. Nuestro horario de atención es de ${cfgPagos.hora_apertura || '12:00'} a ${cfgPagos.hora_cierre || '23:00'}. ¡Tu carrito queda guardado!`
+      );
+    }
     if (!carrito.length) return mostrarAviso('Carrito vacío', 'Agrega productos antes de pedir.');
-    if (tipoEntrega === 'DELIVERY' && !direccion.trim() && !gpsCliente) {
+        if (tipoEntrega === 'DELIVERY' && !direccion.trim() && !gpsCliente) {
       return mostrarAviso('Falta dirección', 'Usa tu ubicación GPS actual o escribe tu dirección de entrega.');
     }
     if ((metodoPago === 'Yape' || metodoPago === 'Plin') && !comprobanteUrl) {
@@ -417,7 +454,8 @@ export default function App() {
       }
     );
   }
-    if (!usuario) {
+
+  if (!usuario) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -441,8 +479,7 @@ export default function App() {
         )}
       </SafeAreaView>
     );
-  }
-
+}
   if (rol === 'administrador') {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
@@ -480,12 +517,12 @@ export default function App() {
     { id: 'menu', tipo: 'menu', titulo: 'Menú' },
     { id: 'promos', tipo: 'promos', titulo: 'Promociones' },
     { id: 'ofertas', tipo: 'ofertas', titulo: 'Ofertas' },
+    { id: 'novedades', tipo: 'novedades', titulo: 'Novedades' },
     { id: 'puntos', tipo: 'puntos', titulo: 'Puntos' },
     { id: 'canjes', tipo: 'canjes', titulo: 'Canjes' },
     { id: 'carrito', tipo: 'carrito', titulo: 'Carrito' },
     { id: 'pedidos', tipo: 'pedidos', titulo: 'Pedidos' },
-    { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' },
-    { id: 'salir', tipo: 'salir', titulo: 'Cerrar sesión' }
+    { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' }
   ];
 
   const horaAhora = new Date().getHours();
@@ -501,7 +538,8 @@ export default function App() {
   const cantTotalCarrito = carrito.reduce((a, x) => a + x.cantidad, 0);
   const pedidosActivos = (datosCli.pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
   const fuenteElegante = Platform.OS === 'web' ? 'Georgia, "Times New Roman", serif' : 'serif';
-            return (
+
+  return (
     <SafeAreaView style={styles.pantallaCompleta}>
       <VentanaAviso />
       <Modal transparent animationType="fade" visible={Boolean(promoDetalle)}>
@@ -532,7 +570,6 @@ export default function App() {
           )}
         </View>
       </Modal>
-
       <ScrollView contentContainerStyle={styles.contenido}>
         <NavegacionSuperior
           regresar={vista !== 'inicio' ? () => setVista('inicio') : null}
@@ -543,13 +580,24 @@ export default function App() {
           abrirCarrito={() => setVista('carrito')}
         />
 
-        {cfgPagos.local_cerrado && (
-          <View style={[styles.tarjetaPedido, { borderColor: ROJO, backgroundColor: '#251216' }]}>
-            <Text style={{ color: '#FFF', fontWeight: '900', textAlign: 'center', fontSize: 12 }}>
-              🔒 LOCAL CERRADO TEMPORALMENTE - Vuelve en nuestro horario de atención
-            </Text>
-          </View>
-        )}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: cfgPagos.local_cerrado ? '#261013' : '#0E2417',
+          borderWidth: 1,
+          borderColor: cfgPagos.local_cerrado ? ROJO : '#16A34A',
+          borderRadius: 12,
+          paddingVertical: 7,
+          paddingHorizontal: 12,
+          marginBottom: 10
+        }}>
+          <Text style={{ color: cfgPagos.local_cerrado ? '#FCA5A5' : '#86EFAC', fontWeight: '900', fontSize: 11, textAlign: 'center' }}>
+            {cfgPagos.local_cerrado
+              ? `🔴 LOCAL CERRADO • Horario: ${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}`
+              : `🟢 LOCAL ABIERTO • Horario: ${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}`}
+          </Text>
+        </View>
 
         {vista === 'inicio' && (
           <View>
@@ -586,12 +634,11 @@ export default function App() {
                 <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800' }}>puntos</Text>
               </TouchableOpacity>
             </View>
-                        <TouchableOpacity style={{ width: '100%', height: 195, position: 'relative', marginBottom: 10, overflow: 'hidden' }} onPress={() => setVista('menu')}>
+
+            <TouchableOpacity style={{ width: '100%', height: 195, position: 'relative', marginBottom: 12, overflow: 'hidden', borderRadius: 16 }} onPress={() => setVista('menu')}>
               <Image source={BANNER_COMIDA} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-              {Platform.OS === 'web' && (
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #070709 0%, rgba(7,7,9,0) 18%, rgba(7,7,9,0) 78%, #070709 100%)', pointerEvents: 'none' }} />
-              )}
-              <Text style={{ position: 'absolute', bottom: 4, left: 0, right: 0, textAlign: 'center', color: '#FFFFFF', fontSize: 21, fontStyle: 'italic', fontWeight: '600', fontFamily: fuenteElegante }}>
+              <DegradadoOscuroCard />
+              <Text style={{ position: 'absolute', bottom: 8, left: 0, right: 0, textAlign: 'center', color: '#FFFFFF', fontSize: 21, fontStyle: 'italic', fontWeight: '600', fontFamily: fuenteElegante }}>
                 ¡Sabor que enamora!
               </Text>
             </TouchableOpacity>
@@ -601,10 +648,7 @@ export default function App() {
                 <TouchableOpacity
                   key={item.id}
                   style={styles.itemCuadricula}
-                  onPress={() => {
-                    if (item.id === 'salir') return cerrarSesion();
-                    setVista(item.id);
-                  }}
+                  onPress={() => setVista(item.id)}
                 >
                   <View style={styles.iconoCuadriculaBox}>
                     <IconoRojo tipo={item.tipo} />
@@ -615,8 +659,7 @@ export default function App() {
             </View>
           </View>
         )}
-
-        {vista === 'menu' && (
+                      {vista === 'menu' && (
           <View>
             <Text style={styles.titulo}>MENÚ DE PRODUCTOS</Text>
             <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginBottom: 8 }}>
@@ -654,7 +697,8 @@ export default function App() {
             )}
           </View>
         )}
-                          {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
+
+        {(vista === 'promos' || vista === 'ofertas' || vista === 'novedades') && (
           <View>
             <Text style={[styles.titulo, { fontSize: 20 }]}>
               {vista === 'novedades' ? 'Novedades' : vista === 'promos' ? 'Promociones' : 'Ofertas'}
@@ -669,31 +713,29 @@ export default function App() {
               promos
                 .filter(pr => vista === 'novedades' ? pr.tipo === 'novedad' : vista === 'promos' ? (pr.tipo !== 'oferta' && pr.tipo !== 'novedad') : pr.tipo === 'oferta')
                 .map(pr => (
-                  <View key={pr.id} style={[styles.tarjetaPromo, { height: 215, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
+                  <View key={pr.id} style={[styles.tarjetaPromo, { height: 220, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
                     <Image
                       source={pr.imagen_url && pr.imagen_url.includes('http') ? { uri: pr.imagen_url } : BANNER_COMIDA}
                       style={{ width: '100%', height: '100%' }}
                       resizeMode="cover"
                     />
-                    {Platform.OS === 'web' && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(7,7,9,0.5) 48%, rgba(7,7,9,0.96) 100%)', pointerEvents: 'none' }} />
-                    )}
+                    <DegradadoOscuroCard />
                     <View style={[styles.etiquetaPromo, { top: 12, left: 12, paddingHorizontal: 14, paddingVertical: 5, borderRadius: 12 }]}>
                       <Text style={[styles.textoEtiquetaPromo, { fontSize: 11 }]}>
                         {vista === 'novedades' ? 'NOVEDAD' : vista === 'promos' ? 'PROMOCIÓN' : 'OFERTA'}
                       </Text>
                     </View>
-                    <View style={{ position: 'absolute', bottom: 12, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginBottom: 2 }} numberOfLines={1}>{pr.titulo}</Text>
+                    <View style={{ position: 'absolute', bottom: 14, left: 14, right: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                      <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginBottom: 3 }} numberOfLines={2}>{pr.titulo}</Text>
                         {vista === 'novedades' ? (
-                          <Text style={{ color: '#D1D5DB', fontSize: 12 }} numberOfLines={2}>{pr.descripcion}</Text>
+                          <Text style={{ color: '#E5E7EB', fontSize: 12 }} numberOfLines={2}>{pr.descripcion}</Text>
                         ) : (
-                          <Text style={{ color: ROJO, fontSize: 21, fontWeight: '900' }}>S/ {Number(pr.precio).toFixed(2)}</Text>
+                          <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900' }}>S/ {Number(pr.precio).toFixed(2)}</Text>
                         )}
                       </View>
                       <TouchableOpacity
-                        style={{ backgroundColor: ROJO, paddingVertical: 9, paddingHorizontal: 18, borderRadius: 20 }}
+                        style={{ backgroundColor: ROJO, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 20 }}
                         onPress={() => setPromoDetalle(pr)}
                       >
                         <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900' }}>Ver más</Text>
@@ -704,13 +746,9 @@ export default function App() {
             )}
           </View>
         )}
-
         {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
-              {Platform.OS === 'web' && (
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #E50914 0%, #7A030B 60%, #280407 100%)', pointerEvents: 'none' }} />
-              )}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Text style={{ fontSize: 34, color: DORADO }}>★</Text>
                 <View style={{ alignItems: 'center' }}>
@@ -720,7 +758,8 @@ export default function App() {
               </View>
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginTop: 8 }}>¡Sigue acumulando puntos!</Text>
             </View>
-                                         <View style={styles.tarjetaPedido}>
+
+            <View style={styles.tarjetaPedido}>
               <Text style={[styles.nombreProducto, { fontSize: 15, marginBottom: 8 }]}>Cómo ganar puntos</Text>
               <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 4 }]}>★ 10 puntos por cada S/ 1 en compras elegibles.</Text>
               <Text style={[styles.descripcionPedido, { color: '#E5E7EB', marginBottom: 12 }]}>★ 100 puntos de bienvenida (una sola vez).</Text>
@@ -732,9 +771,12 @@ export default function App() {
                   {(datosCli.historial || []).length === 0 ? (
                     <Text style={styles.descripcionPedido}>Aún no tienes movimientos registrados.</Text>
                   ) : (
-                    (datosCli.historial || []).slice(0, 10).map((h, i) => (
-                      <View key={h.id || i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#1E1E28' }}>
-                        <Text style={[styles.descripcionPedido, { color: '#FFF', flex: 1 }]}>{h.descripcion}</Text>
+                    (datosCli.historial || []).slice(0, 15).map((h, i) => (
+                      <View key={h.id || i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1E1E28' }}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <Text style={[styles.descripcionPedido, { color: '#FFF', fontWeight: '700' }]}>{h.descripcion}</Text>
+                          {!!h.creado_en && <Text style={{ color: '#6B7280', fontSize: 10 }}>{new Date(h.creado_en).toLocaleString()}</Text>}
+                        </View>
                         <Text style={{ color: Number(h.cantidad) >= 0 ? '#22C55E' : ROJO, fontWeight: '900' }}>
                           {Number(h.cantidad) >= 0 ? `+${h.cantidad}` : h.cantidad} pts
                         </Text>
@@ -779,9 +821,26 @@ export default function App() {
                 })}
               </View>
             )}
+
+            <Text style={[styles.titulo, { marginTop: 16 }]}>HISTORIAL DE CANJES ({(datosCli.canjes || []).length})</Text>
+            {(datosCli.canjes || []).length === 0 ? (
+              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no has canjeado ningún premio.</Text></View>
+            ) : (
+              (datosCli.canjes || []).map(cj => (
+                <View key={cj.id} style={styles.tarjetaPedido}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.nombreProducto}>🎁 {cj.recompensas?.titulo || 'Premio canjeado'}</Text>
+                    <Text style={{ color: ROJO, fontWeight: '900', fontSize: 13 }}>-{cj.puntos_usados} pts</Text>
+                  </View>
+                  <Text style={styles.descripcionPedido}>
+                    {new Date(cj.creado_en).toLocaleString()} • Estado: {cj.estado || 'Solicitado'}
+                  </Text>
+                </View>
+              ))
+            )}
           </View>
         )}
-                        {vista === 'carrito' && (
+                                                  {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -864,7 +923,7 @@ export default function App() {
                     </Text>
                   </View>
                 )}
-                                                     <Text style={styles.titulo}>Método de pago</Text>
+                                  <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
@@ -927,68 +986,119 @@ export default function App() {
                     <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '900' }}>Total</Text>
                     <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
                   </View>
-                  <TouchableOpacity style={[styles.boton, { marginTop: 0 }]} onPress={enviarPedido} disabled={cargando}>
-                    <Text style={styles.textoBoton}>{cargando ? 'Enviando pedido...' : 'Realizar pedido'}</Text>
+                  <TouchableOpacity
+                    style={[styles.boton, { marginTop: 0 }, cfgPagos.local_cerrado && { backgroundColor: '#374151' }]}
+                    onPress={enviarPedido}
+                    disabled={cargando}
+                  >
+                    <Text style={styles.textoBoton}>
+                      {cfgPagos.local_cerrado
+                        ? `🔴 LOCAL CERRADO (ABRE ${cfgPagos.hora_apertura || '12:00'})`
+                        : cargando ? 'Enviando pedido...' : 'Realizar pedido'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
           </View>
         )}
-                            {vista === 'pedidos' && (
-          <View>
-            <Text style={styles.titulo}>MIS PEDIDOS</Text>
-            {(datosCli.pedidos || []).length === 0 ? (
-              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no has realizado pedidos.</Text></View>
-            ) : (
-              (datosCli.pedidos || []).map(p => (
-                <View key={p.id} style={[styles.tarjetaPedido, p.estado_rider === 'En la puerta' && !p.recibido_cliente && { borderColor: DORADO, borderWidth: 2 }]}>
-                  <Text style={styles.nombreProducto}>Pedido {p.numero_pedido}</Text>
-                  <Text style={styles.textoEstado}>
-                    Estado:{' '}
-                    <Text style={styles.textoEstado}>
-                      {p.recibido_cliente && p.estado !== 'Completado'
-                        ? 'Recibido por ti - Esperando cierre del repartidor'
-                        : p.estado_rider === 'En la puerta' && !p.recibido_cliente
-                          ? '🛵 ¡REPARTIDOR EN LA PUERTA!'
-                          : p.estado}
-                    </Text>
-                  </Text>
-                  {(p.pedido_detalles || []).map(d => (
-                    <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>
-                  ))}
-                  {!!p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#93C5FD', fontWeight: '800' }]}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
-                  <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
-                  {(p.estado_rider === 'En la puerta' || p.estado === 'En camino' || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Listo')) && !p.recibido_cliente && (
-                    <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
-                    </TouchableOpacity>
-                  )}
-                  {(p.estado === 'Completado' || p.estado === 'Cancelado') && (p.pedido_detalles || []).length > 0 && (
-                    <TouchableOpacity
-                      style={[styles.boton, { backgroundColor: '#1E293B', marginTop: 8 }]}
-                      onPress={() => {
-                        const itemsReorden = (p.pedido_detalles || []).map(d => ({
-                          id: d.producto_id || d.id,
-                          nombre: d.nombre_producto,
-                          precio: Number(d.precio_unitario || 0),
-                          cantidad: Number(d.cantidad || 1),
-                          es_promo: !d.producto_id,
-                          imagen_url: ''
-                        }));
-                        setCarrito(itemsReorden);
-                        setVista('carrito');
-                        mostrarAviso('Pedido cargado', 'Los productos de este pedido se añadieron a tu carrito.');
-                      }}
-                    >
-                      <Text style={styles.textoBoton}>🔄 VOLVER A PEDIR</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))
-            )}
-          </View>
-        )}
+        {vista === 'pedidos' && (() => {
+          const listaTodos = datosCli.pedidos || [];
+          const listaComp = listaTodos.filter(p => p.estado === 'Completado');
+          const listaCanc = listaTodos.filter(p => p.estado === 'Cancelado');
+          const listaFiltrada = filtroPedCli === 'Activos'
+            ? pedidosActivos
+            : filtroPedCli === 'Completados'
+              ? listaComp
+              : filtroPedCli === 'Cancelados'
+                ? listaCanc
+                : listaTodos;
+
+          return (
+            <View>
+              <Text style={styles.titulo}>MIS PEDIDOS ({listaTodos.length})</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
+                {[
+                  { id: 'Activos', label: `Activos (${pedidosActivos.length})` },
+                  { id: 'Completados', label: `Completados (${listaComp.length})` },
+                  { id: 'Cancelados', label: `Cancelados (${listaCanc.length})` },
+                  { id: 'Todos', label: `Todos (${listaTodos.length})` }
+                ].map(f => (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={[styles.categoria, filtroPedCli === f.id && styles.categoriaActiva]}
+                    onPress={() => setFiltroPedCli(f.id)}
+                  >
+                    <Text style={styles.textoCategoria}>{f.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {listaFiltrada.length === 0 ? (
+                <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>No hay pedidos en esta sección.</Text></View>
+              ) : (
+                listaFiltrada.map(p => (
+                  <View
+                    key={p.id}
+                    style={[
+                      styles.tarjetaPedido,
+                      p.estado === 'Completado' && { borderColor: '#16A34A' },
+                      p.estado === 'Cancelado' && { borderColor: '#991B1B' },
+                      p.estado_rider === 'En la puerta' && !p.recibido_cliente && { borderColor: DORADO, borderWidth: 2 }
+                    ]}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <Text style={styles.nombreProducto}>{p.numero_pedido}</Text>
+                      <View style={[
+                        styles.estadoPedido,
+                        p.estado === 'Completado' && { backgroundColor: '#14532D', borderColor: '#22C55E' },
+                        p.estado === 'Cancelado' && { backgroundColor: '#450A0A', borderColor: '#EF4444' }
+                      ]}>
+                        <Text style={styles.textoEstado}>
+                          {p.estado === 'Completado' ? '✅ Pedido completado' : p.estado === 'Cancelado' ? '❌ Pedido cancelado' : p.estado}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.descripcionPedido}>{new Date(p.creado_en).toLocaleString()}</Text>
+                    {p.estado_rider === 'En la puerta' && !p.recibido_cliente && (
+                      <Text style={{ color: DORADO, fontWeight: '900', fontSize: 12, marginTop: 4 }}>🛵 ¡REPARTIDOR EN LA PUERTA!</Text>
+                    )}
+                    {(p.pedido_detalles || []).map(d => (
+                      <Text key={d.id} style={styles.descripcionPedido}>• {d.cantidad}x {d.nombre_producto}</Text>
+                    ))}
+                    {!!p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#93C5FD', fontWeight: '800' }]}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
+                    <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
+                                              {(p.estado_rider === 'En la puerta' || p.estado === 'En camino' || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Listo')) && !p.recibido_cliente && (
+                      <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
+                        <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
+                      </TouchableOpacity>
+                    )}
+                    {(p.estado === 'Completado' || p.estado === 'Cancelado') && (p.pedido_detalles || []).length > 0 && (
+                      <TouchableOpacity
+                        style={[styles.boton, { backgroundColor: '#1E293B', marginTop: 8 }]}
+                        onPress={() => {
+                          const itemsReorden = (p.pedido_detalles || []).map(d => ({
+                            id: d.producto_id || d.id,
+                            nombre: d.nombre_producto,
+                            precio: Number(d.precio_unitario || 0),
+                            cantidad: Number(d.cantidad || 1),
+                            es_promo: !d.producto_id,
+                            imagen_url: ''
+                          }));
+                          setCarrito(itemsReorden);
+                          setVista('carrito');
+                          mostrarAviso('Pedido cargado', 'Los productos de este pedido se añadieron a tu carrito.');
+                        }}
+                      >
+                        <Text style={styles.textoBoton}>🔄 VOLVER A PEDIR</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
+          );
+        })()}
 
         {vista === 'notificaciones' && (
           <View>
@@ -1079,4 +1189,5 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-                                              }
+                                                }
+          
