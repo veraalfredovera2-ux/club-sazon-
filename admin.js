@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Platform, Modal, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { styles, ROJO, DORADO, TARJETA, BORDE } from './estilos';
 import { LOGO } from './pantallas';
@@ -16,35 +17,38 @@ import {
 } from './servicios';
 
 function IconoAdminGrid({ tipo }) {
-  if (Platform.OS === 'web') {
-    const paths = {
-      pedidos: 'M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
-      platos: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
-      promos: 'M12 2l2.39 4.84 5.34.78-3.86 3.77.91 5.32L12 14.2l-4.78 2.51.91-5.32-3.86-3.77 5.34-.78L12 2z',
-      ofertas: 'M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z',
-      novedades: 'M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z',
-      puntos: 'M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z',
-      riders: 'M19 7c0-1.1-.9-2-2-2h-3v2h3v2.65L13.52 14H10V9H6c-2.21 0-4 1.79-4 4v3h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4.48L19 10.35V7zM7 17c-.55 0-1-.45-1-1h2c0 .55-.45 1-1 1zm12-1c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zM11 6H6v2h5V6z',
-      clientes: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-      pagos: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
-      config: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
-      historial: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z'
-    };
-    return (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill={ROJO}>
-        <path d={paths[tipo] || paths.pedidos} />
-      </svg>
-    );
-  }
-  const iconosNativos = {
-    pedidos: '📦', platos: '🍔', promos: '🎁', ofertas: '🏷️', novedades: '📢',
-    puntos: '🏆', riders: '🛵', clientes: '👥', pagos: '💳', config: '⚙️', historial: '📊'
+  const mapaIconos = {
+    pedidos: 'receipt-outline',
+    platos: 'restaurant-outline',
+    promos: 'gift-outline',
+    ofertas: 'pricetag-outline',
+    novedades: 'megaphone-outline',
+    puntos: 'trophy-outline',
+    riders: 'bicycle-outline',
+    clientes: 'people-outline',
+    pagos: 'qr-code-outline',
+    config: 'settings-outline',
+    historial: 'stats-chart-outline'
   };
-  return <Text style={{ fontSize: 22 }}>{iconosNativos[tipo] || '📦'}</Text>;
+  return (
+    <View style={{
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: '#22090C',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255, 23, 23, 0.45)',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <Ionicons name={mapaIconos[tipo] || 'apps-outline'} size={24} color={ROJO} />
+    </View>
+  );
 }
 
 export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCompletar, onCancelar, cerrarSesion, cargando }) {
   const [sec, setSec] = useState('inicio');
+  const [filtroHist, setFiltroHist] = useState('Todos');
   const [catalogo, setCatalogo] = useState([]);
   const [promos, setPromos] = useState([]);
   const [recompensas, setRecompensas] = useState([]);
@@ -54,7 +58,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [clavesNuevas, setClavesNuevas] = useState({});
   const [horariosEdit, setHorariosEdit] = useState({});
   const [nuevoRider, setNuevoRider] = useState({ nombre_completo: '', telefono: '', password: '', direccion_predeterminada: 'Lun a Dom: 12:00 pm - 10:00 pm' });
-  const [cfg, setCfg] = useState({ titularLimpio: 'Club Sazón', qr_yape: '', qr_plin: '', local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false, puntos_rider: '10' });
+  const [cfg, setCfg] = useState({
+    titularLimpio: 'Club Sazón', qr_yape: '', qr_plin: '',
+    local_lat: '-12.069706', local_lng: '-77.033827',
+    tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false,
+    puntos_rider: '10', hora_apertura: '12:00', hora_cierre: '23:00'
+  });
   const [editProd, setEditProd] = useState(null);
   const [editPromo, setEditPromo] = useState(null);
   const [editRec, setEditRec] = useState(null);
@@ -234,7 +243,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <Text style={{ color: '#9CA3AF', fontSize: 11, fontWeight: '800' }}>PANEL DE ADMINISTRACIÓN • {horaActual}</Text>
           <Text style={{ color: DORADO, fontSize: 22, fontWeight: '900', marginVertical: 2 }} numberOfLines={1}>{usuario.nombre_completo}</Text>
           <Text style={{ color: cfg.local_cerrado ? '#EF4444' : '#22C55E', fontSize: 11, fontWeight: '900' }}>
-            {cfg.local_cerrado ? '🔴 LOCAL CERRADO TEMPORALMENTE' : '🟢 LOCAL ABIERTO Y RECIBIENDO PEDIDOS'}
+            {cfg.local_cerrado ? '🔴 LOCAL CERRADO TEMPORALMENTE' : `🟢 LOCAL ABIERTO (${cfg.hora_apertura || '12:00'} - ${cfg.hora_cierre || '23:00'})`}
           </Text>
         </View>
         <TouchableOpacity
@@ -245,7 +254,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800' }}>Activos</Text>
         </TouchableOpacity>
       </View>
-                    {sec === 'inicio' && (
+                {sec === 'inicio' && (
         <View>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
             <View style={{ flex: 1, backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
@@ -328,7 +337,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                       <Text style={styles.textoBoton}>💬 WHATSAPP AL CLIENTE</Text>
                     </TouchableOpacity>
                   )}
-                                        {p.estado === 'Pendiente' && (
+                              {p.estado === 'Pendiente' && (
                     <TouchableOpacity
                       style={styles.boton}
                       onPress={async () => {
@@ -398,116 +407,175 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                              {sec === 'historial' && (
-        <View>
-          <View style={styles.tarjetaPedido}>
-            <Text style={styles.nombreProducto}>RESUMEN DE VENTAS COMPLETADAS</Text>
-            <Text style={[styles.precioProducto, { fontSize: 22, color: '#22C55E', marginTop: 4 }]}>S/ {ventasTotales.toFixed(2)}</Text>
-            <Text style={styles.descripcionPedido}>Pedidos completados: {completados.length} • Cancelados: {historial.length - completados.length}</Text>
-          </View>
+                              {sec === 'historial' && (() => {
+        const histFiltrado = filtroHist === 'Todos'
+          ? historial
+          : historial.filter(p => p.estado === filtroHist);
 
-          <Text style={styles.titulo}>DESGLOSE DE EFECTIVO POR MOTORIZADO</Text>
-          {riders.map(r => {
-            const pedsEfectivoPendientes = completados.filter(
-              p => p.rider_id === r.id && p.metodo_pago === 'Efectivo' && p.estado_rider !== 'Liquidado en caja'
-            );
-            const totalPendiente = pedsEfectivoPendientes.reduce((a, p) => a + Number(p.total || 0), 0);
-            return (
-              <View key={r.id} style={styles.tarjetaPedido}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
-                  <Text style={{ color: totalPendiente > 0 ? '#EF4444' : '#22C55E', fontWeight: '900', fontSize: 15 }}>
-                    {totalPendiente > 0 ? `Debe: S/ ${totalPendiente.toFixed(2)}` : 'Al día ✅'}
-                  </Text>
-                </View>
-                <Text style={styles.descripcionPedido}>Pedidos en efectivo sin liquidar: {pedsEfectivoPendientes.length}</Text>
+        const gruposDia = {};
+        histFiltrado.forEach(p => {
+          const fechaObj = new Date(p.creado_en);
+          const claveDia = fechaObj.toLocaleDateString('es-PE', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+          if (!gruposDia[claveDia]) {
+            gruposDia[claveDia] = { fecha: claveDia, lista: [], totalDia: 0, ok: 0, canc: 0 };
+          }
+          gruposDia[claveDia].lista.push(p);
+          if (p.estado === 'Completado') {
+            gruposDia[claveDia].totalDia += Number(p.total || 0);
+            gruposDia[claveDia].ok += 1;
+          } else {
+            gruposDia[claveDia].canc += 1;
+          }
+        });
+        const diasOrdenados = Object.values(gruposDia);
 
-                {pedsEfectivoPendientes.map(pe => (
-                  <View
-                    key={pe.id}
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      backgroundColor: '#13131A',
-                      borderWidth: 1,
-                      borderColor: BORDE,
-                      borderRadius: 10,
-                      padding: 10,
-                      marginTop: 8
-                    }}
-                  >
-                    <View style={{ flex: 1, paddingRight: 8 }}>
-                      <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>
-                        {pe.numero_pedido} • S/ {Number(pe.total || 0).toFixed(2)}
-                      </Text>
-                      <Text style={{ color: '#9CA3AF', fontSize: 11 }}>
-                        Cliente: {pe.perfiles?.nombre_completo || 'Cliente'} • {new Date(pe.creado_en).toLocaleDateString()}
-                      </Text>
+        return (
+          <View>
+            <View style={styles.tarjetaPedido}>
+              <Text style={styles.nombreProducto}>RESUMEN DE VENTAS COMPLETADAS</Text>
+              <Text style={[styles.precioProducto, { fontSize: 22, color: '#22C55E', marginTop: 4 }]}>S/ {ventasTotales.toFixed(2)}</Text>
+              <Text style={styles.descripcionPedido}>Pedidos completados: {completados.length} • Cancelados: {historial.length - completados.length}</Text>
+            </View>
+
+            <Text style={styles.titulo}>DESGLOSE DE EFECTIVO POR MOTORIZADO</Text>
+            {riders.map(r => {
+              const pedsEfectivoPendientes = completados.filter(
+                p => p.rider_id === r.id && p.metodo_pago === 'Efectivo' && p.estado_rider !== 'Liquidado en caja'
+              );
+              const totalPendiente = pedsEfectivoPendientes.reduce((a, p) => a + Number(p.total || 0), 0);
+              return (
+                <View key={r.id} style={styles.tarjetaPedido}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
+                    <Text style={{ color: totalPendiente > 0 ? '#EF4444' : '#22C55E', fontWeight: '900', fontSize: 15 }}>
+                      {totalPendiente > 0 ? `Debe: S/ ${totalPendiente.toFixed(2)}` : 'Al día ✅'}
+                    </Text>
+                  </View>
+                  <Text style={styles.descripcionPedido}>Pedidos en efectivo sin liquidar: {pedsEfectivoPendientes.length}</Text>
+
+                  {pedsEfectivoPendientes.map(pe => (
+                    <View
+                      key={pe.id}
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: '#13131A',
+                        borderWidth: 1,
+                        borderColor: BORDE,
+                        borderRadius: 10,
+                        padding: 10,
+                        marginTop: 8
+                      }}
+                    >
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 13 }}>
+                          {pe.numero_pedido} • S/ {Number(pe.total || 0).toFixed(2)}
+                        </Text>
+                        <Text style={{ color: '#9CA3AF', fontSize: 11 }}>
+                          Cliente: {pe.perfiles?.nombre_completo || 'Cliente'} • {new Date(pe.creado_en).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#16A34A', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 }}
+                        onPress={() => pedirConfirmacion(
+                          'Liquidar pedido individual',
+                          `¿Confirmas que ${r.nombre_completo} entregó los S/ ${Number(pe.total || 0).toFixed(2)} del pedido ${pe.numero_pedido}?`,
+                          async () => {
+                            await liquidarPedidoIndividualAdmin(pe.id);
+                            await recargar();
+                            mostrarAviso('Liquidado', `Pedido ${pe.numero_pedido} marcado como recibido en caja.`);
+                          }
+                        )}
+                      >
+                        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 11 }}>💵 Recibido</Text>
+                      </TouchableOpacity>
                     </View>
+                  ))}
+
+                  {totalPendiente > 0 && (
                     <TouchableOpacity
-                      style={{ backgroundColor: '#16A34A', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 }}
+                      style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 10, paddingVertical: 9 }]}
                       onPress={() => pedirConfirmacion(
-                        'Liquidar pedido individual',
-                        `¿Confirmas que ${r.nombre_completo} entregó los S/ ${Number(pe.total || 0).toFixed(2)} del pedido ${pe.numero_pedido}?`,
+                        'Liquidar todo el efectivo del repartidor',
+                        `¿Confirmas que ${r.nombre_completo} entregó el total completo de S/ ${totalPendiente.toFixed(2)}?`,
                         async () => {
-                          await liquidarPedidoIndividualAdmin(pe.id);
+                          await liquidarEfectivoRiderAdmin(r.id);
                           await recargar();
-                          mostrarAviso('Liquidado', `Pedido ${pe.numero_pedido} marcado como recibido en caja.`);
+                          mostrarAviso('Caja al día', `Se liquidó todo el efectivo pendiente de ${r.nombre_completo}.`);
                         }
                       )}
                     >
-                      <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 11 }}>💵 Recibido</Text>
+                      <Text style={styles.textoBoton}>💵 LIQUIDAR TODO EL BLOQUE (S/ {totalPendiente.toFixed(2)})</Text>
                     </TouchableOpacity>
-                  </View>
-                ))}
-
-                {totalPendiente > 0 && (
-                  <TouchableOpacity
-                    style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 10, paddingVertical: 9 }]}
-                    onPress={() => pedirConfirmacion(
-                      'Liquidar todo el efectivo del repartidor',
-                      `¿Confirmas que ${r.nombre_completo} entregó el total completo de S/ ${totalPendiente.toFixed(2)}?`,
-                      async () => {
-                        await liquidarEfectivoRiderAdmin(r.id);
-                        await recargar();
-                        mostrarAviso('Caja al día', `Se liquidó todo el efectivo pendiente de ${r.nombre_completo}.`);
-                      }
-                    )}
-                  >
-                    <Text style={styles.textoBoton}>💵 LIQUIDAR TODO EL BLOQUE (S/ {totalPendiente.toFixed(2)})</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
-                                  <Text style={styles.titulo}>HISTORIAL DE VENTAS ({historial.length})</Text>
-          {historial.map(p => (
-            <View key={p.id} style={styles.tarjetaPedido}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'}</Text>
-                <View style={[styles.estadoPedido, p.estado === 'Cancelado' && { backgroundColor: '#471D1D' }]}><Text style={styles.textoEstado}>{p.estado}</Text></View>
-              </View>
-              <Text style={styles.descripcionPedido}>{new Date(p.creado_en).toLocaleString()} • {p.metodo_pago} ({p.tipo_entrega})</Text>
-              {!!p.rider_nombre && <Text style={[styles.descripcionPedido, { color: DORADO }]}>Motorizado: {p.rider_nombre} ({p.estado_rider})</Text>}
-              <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)}</Text>
-              {p.estado === 'Completado' && (
-                <TouchableOpacity
-                  style={[styles.boton, styles.botonSecundario, { marginTop: 8 }]}
-                  onPress={() => pedirConfirmacion(
-                    'Anular venta y descontar puntos',
-                    `¿El cliente devolvió el pedido ${p.numero_pedido}? Se cambiará a Cancelado y se le descontarán los puntos ganados en esta compra.`,
-                    () => onCancelar(p)
                   )}
-                  disabled={cargando}
+                </View>
+              );
+            })}
+                                <Text style={styles.titulo}>REGISTRO DIARIO DE PEDIDOS Y VENTAS</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+              {[
+                { id: 'Todos', label: `Todos (${historial.length})` },
+                { id: 'Completado', label: `Completados (${completados.length})` },
+                { id: 'Cancelado', label: `Cancelados (${historial.length - completados.length})` }
+              ].map(f => (
+                <TouchableOpacity
+                  key={f.id}
+                  onPress={() => setFiltroHist(f.id)}
+                  style={[styles.categoria, filtroHist === f.id && styles.categoriaActiva, { flex: 1, alignItems: 'center', marginRight: 0 }]}
                 >
-                  <Text style={styles.textoBoton}>❌ ANULAR PEDIDO Y DESCONTAR PUNTOS</Text>
+                  <Text style={styles.textoCategoria}>{f.label}</Text>
                 </TouchableOpacity>
-              )}
+              ))}
             </View>
-          ))}
-        </View>
-      )}
+
+            {diasOrdenados.length === 0 ? (
+              <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>No hay registros en este filtro.</Text></View>
+            ) : (
+              diasOrdenados.map(dia => (
+                <View key={dia.fecha} style={[styles.tarjetaPedido, { borderColor: DORADO }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: BORDE, paddingBottom: 8, marginBottom: 8 }}>
+                    <View>
+                      <Text style={{ color: DORADO, fontWeight: '900', fontSize: 14 }}>📅 {dia.fecha.toUpperCase()}</Text>
+                      <Text style={{ color: '#9CA3AF', fontSize: 11 }}>Completados: {dia.ok} • Cancelados: {dia.canc}</Text>
+                    </View>
+                    <Text style={{ color: '#22C55E', fontWeight: '900', fontSize: 17 }}>S/ {dia.totalDia.toFixed(2)}</Text>
+                  </View>
+
+                  {dia.lista.map(p => (
+                    <View key={p.id} style={{ backgroundColor: '#0D0E13', borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: BORDE }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'}</Text>
+                        <View style={[styles.estadoPedido, p.estado === 'Cancelado' && { backgroundColor: '#471D1D', borderColor: '#EF4444' }]}>
+                          <Text style={styles.textoEstado}>{p.estado}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.descripcionPedido}>
+                        {new Date(p.creado_en).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {p.metodo_pago} ({p.tipo_entrega})
+                      </Text>
+                      {!!p.rider_nombre && <Text style={[styles.descripcionPedido, { color: DORADO }]}>Motorizado: {p.rider_nombre} ({p.estado_rider})</Text>}
+                      <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)}</Text>
+                      {p.estado === 'Completado' && (
+                        <TouchableOpacity
+                          style={[styles.boton, styles.botonSecundario, { marginTop: 6, paddingVertical: 8 }]}
+                          onPress={() => pedirConfirmacion(
+                            'Anular venta y descontar puntos',
+                            `¿El cliente devolvió el pedido ${p.numero_pedido}? Se cambiará a Cancelado y se le descontarán los puntos ganados en esta compra.`,
+                            () => onCancelar(p)
+                          )}
+                          disabled={cargando}
+                        >
+                          <Text style={[styles.textoBoton, { fontSize: 12 }]}>❌ ANULAR PEDIDO Y DESCONTAR PUNTOS</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
+          </View>
+        );
+      })()}
 
       {sec === 'platos' && (
         <View>
@@ -576,7 +644,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-              {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
+
+      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
           <TouchableOpacity
             style={styles.boton}
@@ -612,7 +681,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </TouchableOpacity>
             </View>
           )}
-          {promos
+                            {promos
             .filter(pr => sec === 'novedades' ? pr.tipo === 'novedad' : sec === 'ofertas' ? pr.tipo === 'oferta' : (pr.tipo !== 'oferta' && pr.tipo !== 'novedad'))
             .map(pr => (
               <View key={pr.id} style={styles.tarjetaPedido}>
@@ -654,7 +723,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </TouchableOpacity>
             </View>
           )}
-                      {recompensas.map(r => (
+          {recompensas.map(r => (
             <View key={r.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{r.titulo}</Text>
               <Text style={[styles.precioProducto, { color: DORADO }]}>{r.puntos_requeridos} puntos</Text>
@@ -683,7 +752,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <Text style={styles.textoBoton}>CREAR MOTORIZADO</Text>
             </TouchableOpacity>
           </View>
-          {riders.map(r => (
+                                                                        {riders.map(r => (
             <View key={r.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
               <Text style={styles.descripcionPedido}>Tel: {r.telefono} • Clave: {r.password_hash}</Text>
@@ -737,9 +806,9 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
       {sec === 'config' && (
         <View style={styles.tarjetaPedido}>
-          <Text style={styles.nombreProducto}>ESTADO DEL LOCAL</Text>
+          <Text style={styles.nombreProducto}>ESTADO Y HORARIO DEL LOCAL</Text>
           <TouchableOpacity
-            style={[styles.boton, { backgroundColor: cfg.local_cerrado ? '#991B1B' : '#16A34A', marginBottom: 14 }]}
+            style={[styles.boton, { backgroundColor: cfg.local_cerrado ? '#991B1B' : '#16A34A', marginBottom: 12 }]}
             onPress={async () => {
               const nuevoEstadoCerrado = !cfg.local_cerrado;
               const cfgActualizada = { ...cfg, local_cerrado: nuevoEstadoCerrado };
@@ -748,12 +817,25 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               await recargar();
               mostrarAviso(
                 nuevoEstadoCerrado ? '🔴 Local cerrado' : '🟢 Local abierto',
-                nuevoEstadoCerrado ? 'Los clientes ahora verán el local cerrado.' : 'El local está abierto y recibiendo pedidos al instante.'
+                nuevoEstadoCerrado ? 'Los clientes ahora verán el local cerrado en tiempo real.' : 'El local está abierto y recibiendo pedidos al instante.'
               );
             }}
           >
             <Text style={styles.textoBoton}>{cfg.local_cerrado ? '🔴 LOCAL CERRADO (TOCA PARA ABRIR)' : '🟢 LOCAL ABIERTO (TOCA PARA CERRAR)'}</Text>
           </TouchableOpacity>
+
+          <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginBottom: 6 }}>Horario de atención (visible para el cliente):</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 4 }}>Hora apertura:</Text>
+              <TextInput style={[styles.campo, { marginBottom: 0 }]} placeholder="Ej. 12:00" placeholderTextColor="#6B7280" value={String(cfg.hora_apertura || '12:00')} onChangeText={v => setCfg({ ...cfg, hora_apertura: v })} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 4 }}>Hora cierre:</Text>
+              <TextInput style={[styles.campo, { marginBottom: 0 }]} placeholder="Ej. 23:00" placeholderTextColor="#6B7280" value={String(cfg.hora_cierre || '23:00')} onChangeText={v => setCfg({ ...cfg, hora_cierre: v })} />
+            </View>
+          </View>
+
           <Text style={styles.nombreProducto}>UBICACIÓN, TARIFAS Y BONO REPARTIDOR</Text>
           <TouchableOpacity style={[styles.boton, { backgroundColor: '#0284C7', marginBottom: 8 }]} onPress={capturarGpsLocal}>
             <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL COMO LOCAL</Text>
@@ -764,11 +846,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <TextInput style={styles.campo} placeholder="Costo por kilómetro adicional (S/)" placeholderTextColor="#6B7280" keyboardType="decimal-pad" value={String(cfg.tarifa_km)} onChangeText={v => setCfg({ ...cfg, tarifa_km: v })} />
           <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginTop: 4, marginBottom: 4 }}>Puntos regalo al repartidor por entrega:</Text>
           <TextInput style={styles.campo} placeholder="Puntos regalo al repartidor (ej. 10)" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(cfg.puntos_rider ?? '10')} onChangeText={v => setCfg({ ...cfg, puntos_rider: v })} />
-          <TouchableOpacity style={styles.boton} onPress={async () => { await guardarConfigPagos(cfg); await recargar(); mostrarAviso('Guardado', 'Configuración del negocio actualizada.'); }}>
+          <TouchableOpacity style={styles.boton} onPress={async () => { await guardarConfigPagos(cfg); await recargar(); mostrarAviso('Guardado', 'Horario y configuración del negocio actualizados.'); }}>
             <Text style={styles.textoBoton}>GUARDAR CONFIGURACIÓN DEL NEGOCIO</Text>
           </TouchableOpacity>
         </View>
       )}
     </ScrollView>
   );
-                                                                                                                                                                                                                                                                                                                                                           }
+}
