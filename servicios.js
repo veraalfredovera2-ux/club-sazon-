@@ -39,7 +39,7 @@ async function apiRest(ruta, metodo = 'GET', cuerpo = null) {
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
   const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
-  const def = { titularLimpio, local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: '0', puntos_rider: '10' };
+  const def = { titularLimpio, local_lat: '-12.069706', local_lng: '-77.033827', tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false , puntos_rider: '10' };
   if (partes.length < 2) return def;
   const nums = partes.at(1).split('|');
   return {
@@ -48,7 +48,7 @@ export function extraerConfigDelivery(titularRaw) {
     local_lng: nums.at(1) || def.local_lng,
     tarifa_base: nums.at(2) || def.tarifa_base,
     tarifa_km: nums.at(3) || def.tarifa_km,
-    local_cerrado: nums.at(4) || '0',
+    local_cerrado: nums.at(4) === '1',
     puntos_rider: nums.at(5) !== undefined ? String(nums.at(5)) : '10'
   };
 }
