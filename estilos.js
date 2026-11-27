@@ -17,13 +17,13 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: FONDO,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 0,
-    ...(Platform.OS === 'web' ? { minHeight: '100dvh' } : {})
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {})
   },
   contenido: {
     flexGrow: 1,
     backgroundColor: FONDO,
     padding: 16,
-    paddingBottom: 95
+    paddingBottom: 135
   },
   cabeceraTop: {
     flexDirection: 'row',
@@ -66,8 +66,7 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '900',
-    marginTop: 12,
-    marginBottom: 10,
+    marginVertical: 10,
     letterSpacing: 0.4
   },
   cajaInput: {
@@ -163,7 +162,7 @@ export const styles = StyleSheet.create({
   },
   nombreDoradoHero: {
     color: DORADO,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900'
   },
   badgePuntosHero: {
@@ -175,7 +174,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 74
   },
-  numeroPuntosDorado: {
+    numeroPuntosDorado: {
     color: '#FFFFFF',
     fontSize: 19,
     fontWeight: '900'
@@ -192,7 +191,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDE,
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center'
@@ -216,7 +215,7 @@ export const styles = StyleSheet.create({
     backgroundColor: TARJETA,
     borderWidth: 1,
     borderColor: BORDE,
-    borderRadius: 20,
+    borderRadius: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginRight: 8
@@ -352,12 +351,13 @@ export const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 999,
+    zIndex: 99,
     flexDirection: 'row',
     backgroundColor: '#0E0E14',
     borderTopWidth: 1,
     borderTopColor: BORDE,
-    paddingVertical: 8,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'android' ? 44 : 16,
     paddingHorizontal: 0
   },
   tabInferior: {
