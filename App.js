@@ -14,23 +14,25 @@ import {
   categorias, obtenerCatalogo, obtenerPromociones, obtenerRecompensas, obtenerConfigPagos,
   obtenerDatosCliente, obtenerPedidosAdmin, registrarUsuario, ingresarUsuario, actualizarFotoPerfilNube,
   crearNuevoPedido, actualizarEstadoPedidoAdmin, confirmarRecepcionYDarPuntos, cancelarPedidoYDescontar,
-  canjearRecompensaCliente, subirImagenGaleria
+  canjearRecompensaCliente, subirImagenGaleria, verificarEstadoLocalPeru, obtenerHoraPeru
 } from './servicios';
 
 function DegradadoOscuroCard() {
-  const capas = new Array(
-    'rgba(7,7,9,0.00)',
-    'rgba(7,7,9,0.12)',
-    'rgba(7,7,9,0.34)',
-    'rgba(7,7,9,0.62)',
-    'rgba(7,7,9,0.86)',
-    'rgba(7,7,9,0.97)'
+  const capasInferiores = new Array(
+    'rgba(7,7,9,0.08)',
+    'rgba(7,7,9,0.28)',
+    'rgba(7,7,9,0.56)',
+    'rgba(7,7,9,0.82)',
+    'rgba(7,7,9,0.94)'
   );
   return (
     <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
-      {capas.map((bg, idx) => (
-        <View key={idx} style={{ flex: 1, backgroundColor: bg }} />
-      ))}
+      <View style={{ flex: 65, backgroundColor: 'transparent' }} />
+      <View style={{ flex: 35 }}>
+        {capasInferiores.map((bg, idx) => (
+          <View key={idx} style={{ flex: 1, backgroundColor: bg }} />
+        ))}
+      </View>
     </View>
   );
 }
@@ -277,6 +279,7 @@ export default function App() {
   }
 
   function agregarAlCarrito(item, esPromo = false) {
+    const estadoLocal = verificarEstadoLocalPeru(cfgPagos);
     setCarrito(prev => {
       const idx = prev.findIndex(x => x.id === item.id && Boolean(x.es_promo) === esPromo);
       if (idx >= 0) {
@@ -287,13 +290,13 @@ export default function App() {
       return [...prev, { id: item.id, nombre: item.nombre || item.titulo, precio: Number(item.precio), cantidad: 1, stock: item.stock, es_promo: esPromo, imagen_url: item.imagen_url || '' }];
     });
     mostrarAviso(
-      cfgPagos.local_cerrado ? 'Guardado en carrito' : 'Agregado',
-      cfgPagos.local_cerrado
-        ? `${item.nombre || item.titulo} se guardó en tu carrito para cuando abramos (${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}).`
+      estadoLocal.cerrado ? 'Guardado en carrito' : 'Agregado',
+      estadoLocal.cerrado
+        ? `${item.nombre || item.titulo} se guardó en tu carrito. Abrimos de ${cfgPagos.hora_apertura || '12:00'} a ${cfgPagos.hora_cierre || '23:00'} (hora Perú).`
         : `${item.nombre || item.titulo} añadido al carrito.`
     );
   }
-    function cambiarCantidad(idx, delta) {
+  function cambiarCantidad(idx, delta) {
     setCarrito(prev => {
       const copia = [...prev];
       const nueva = copia[idx].cantidad + delta;
@@ -376,12 +379,13 @@ export default function App() {
     ? Number((Number(cfgPagos.tarifa_base || 4) + distanciaKm * Number(cfgPagos.tarifa_km || 1.5)).toFixed(2))
     : 0;
   const totalFinal = subtotal + costoDelivery;
+  const estadoLocalActual = verificarEstadoLocalPeru(cfgPagos);
 
   async function enviarPedido() {
-    if (cfgPagos.local_cerrado) {
+    if (estadoLocalActual.cerrado) {
       return mostrarAviso(
         '🔴 Local cerrado',
-        `En este momento estamos cerrados. Nuestro horario de atención es de ${cfgPagos.hora_apertura || '12:00'} a ${cfgPagos.hora_cierre || '23:00'}. ¡Tu carrito queda guardado!`
+        `En este momento estamos cerrados (hora Perú: ${estadoLocalActual.horaPeru}). Nuestro horario de atención es de ${cfgPagos.hora_apertura || '12:00'} a ${cfgPagos.hora_cierre || '23:00'}. ¡Tu carrito queda guardado!`
       );
     }
     if (!carrito.length) return mostrarAviso('Carrito vacío', 'Agrega productos antes de pedir.');
@@ -525,8 +529,8 @@ export default function App() {
     { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' }
   ];
 
-  const horaAhora = new Date().getHours();
-  const turnoActual = (horaAhora >= 6 && horaAhora < 18) ? 'Día' : 'Noche';
+  const horaPeruAhora = obtenerHoraPeru().horas;
+  const turnoActual = (horaPeruAhora >= 6 && horaPeruAhora < 18) ? 'Día' : 'Noche';
   const prodPorTurno = catalogo.filter(p => {
     const t = (p.turno || 'Ambos').trim();
     return t === 'Ambos' || t === turnoActual;
@@ -570,7 +574,7 @@ export default function App() {
           )}
         </View>
       </Modal>
-      <ScrollView contentContainerStyle={styles.contenido}>
+                        <ScrollView contentContainerStyle={styles.contenido}>
         <NavegacionSuperior
           regresar={vista !== 'inicio' ? () => setVista('inicio') : null}
           irAInicio={() => setVista('inicio')}
@@ -584,18 +588,18 @@ export default function App() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: cfgPagos.local_cerrado ? '#261013' : '#0E2417',
+          backgroundColor: estadoLocalActual.cerrado ? '#261013' : '#0E2417',
           borderWidth: 1,
-          borderColor: cfgPagos.local_cerrado ? ROJO : '#16A34A',
+          borderColor: estadoLocalActual.cerrado ? ROJO : '#16A34A',
           borderRadius: 12,
           paddingVertical: 7,
           paddingHorizontal: 12,
           marginBottom: 10
         }}>
-          <Text style={{ color: cfgPagos.local_cerrado ? '#FCA5A5' : '#86EFAC', fontWeight: '900', fontSize: 11, textAlign: 'center' }}>
-            {cfgPagos.local_cerrado
-              ? `🔴 LOCAL CERRADO • Horario: ${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}`
-              : `🟢 LOCAL ABIERTO • Horario: ${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}`}
+          <Text style={{ color: estadoLocalActual.cerrado ? '#FCA5A5' : '#86EFAC', fontWeight: '900', fontSize: 11, textAlign: 'center' }}>
+            {estadoLocalActual.cerrado
+              ? `🔴 LOCAL CERRADO • Horario Perú: ${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}`
+              : `🟢 LOCAL ABIERTO • Horario Perú: ${cfgPagos.hora_apertura || '12:00'} - ${cfgPagos.hora_cierre || '23:00'}`}
           </Text>
         </View>
 
@@ -659,11 +663,11 @@ export default function App() {
             </View>
           </View>
         )}
-                      {vista === 'menu' && (
+                    {vista === 'menu' && (
           <View>
             <Text style={styles.titulo}>MENÚ DE PRODUCTOS</Text>
             <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginBottom: 8 }}>
-              {turnoActual === 'Día' ? '☀️ Horario Turno Día (06:00 - 18:00)' : '🌙 Horario Turno Noche (18:00 - 06:00)'}
+              {turnoActual === 'Día' ? '☀️ Horario Turno Día (06:00 - 18:00 Perú)' : '🌙 Horario Turno Noche (18:00 - 06:00 Perú)'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
               {categorias.map(c => (
@@ -713,7 +717,7 @@ export default function App() {
               promos
                 .filter(pr => vista === 'novedades' ? pr.tipo === 'novedad' : vista === 'promos' ? (pr.tipo !== 'oferta' && pr.tipo !== 'novedad') : pr.tipo === 'oferta')
                 .map(pr => (
-                  <View key={pr.id} style={[styles.tarjetaPromo, { height: 220, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
+                  <View key={pr.id} style={[styles.tarjetaPromo, { height: 225, position: 'relative', borderWidth: 1.5, borderColor: BORDE }]}>
                     <Image
                       source={pr.imagen_url && pr.imagen_url.includes('http') ? { uri: pr.imagen_url } : BANNER_COMIDA}
                       style={{ width: '100%', height: '100%' }}
@@ -746,7 +750,7 @@ export default function App() {
             )}
           </View>
         )}
-        {(vista === 'puntos' || vista === 'canjes') && (
+                      {(vista === 'puntos' || vista === 'canjes') && (
           <View>
             <View style={{ borderRadius: 18, padding: 20, alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: ROJO, backgroundColor: '#9E0611', position: 'relative', overflow: 'hidden' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -840,7 +844,7 @@ export default function App() {
             )}
           </View>
         )}
-                                                  {vista === 'carrito' && (
+        {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
             {carrito.length === 0 ? (
@@ -923,7 +927,7 @@ export default function App() {
                     </Text>
                   </View>
                 )}
-                                  <Text style={styles.titulo}>Método de pago</Text>
+                                      <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
@@ -987,12 +991,12 @@ export default function App() {
                     <Text style={{ color: ROJO, fontSize: 22, fontWeight: '900' }}>S/ {totalFinal.toFixed(2)}</Text>
                   </View>
                   <TouchableOpacity
-                    style={[styles.boton, { marginTop: 0 }, cfgPagos.local_cerrado && { backgroundColor: '#374151' }]}
+                    style={[styles.boton, { marginTop: 0 }, estadoLocalActual.cerrado && { backgroundColor: '#374151' }]}
                     onPress={enviarPedido}
                     disabled={cargando}
                   >
                     <Text style={styles.textoBoton}>
-                      {cfgPagos.local_cerrado
+                      {estadoLocalActual.cerrado
                         ? `🔴 LOCAL CERRADO (ABRE ${cfgPagos.hora_apertura || '12:00'})`
                         : cargando ? 'Enviando pedido...' : 'Realizar pedido'}
                     </Text>
@@ -1002,7 +1006,7 @@ export default function App() {
             )}
           </View>
         )}
-        {vista === 'pedidos' && (() => {
+                            {vista === 'pedidos' && (() => {
           const listaTodos = datosCli.pedidos || [];
           const listaComp = listaTodos.filter(p => p.estado === 'Completado');
           const listaCanc = listaTodos.filter(p => p.estado === 'Cancelado');
@@ -1068,7 +1072,7 @@ export default function App() {
                     ))}
                     {!!p.rider_nombre && <Text style={[styles.descripcionPedido, { color: '#93C5FD', fontWeight: '800' }]}>Repartidor: {p.rider_nombre} ({p.estado_rider})</Text>}
                     <Text style={styles.totalPedidoTexto}>Total: S/ {Number(p.total).toFixed(2)} ({p.metodo_pago})</Text>
-                                              {(p.estado_rider === 'En la puerta' || p.estado === 'En camino' || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Listo')) && !p.recibido_cliente && (
+                    {(p.estado_rider === 'En la puerta' || p.estado === 'En camino' || (p.tipo_entrega !== 'DELIVERY' && p.estado === 'Listo')) && !p.recibido_cliente && (
                       <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 10 }]} onPress={() => clienteConfirmaRecepcion(p)} disabled={cargando}>
                         <Text style={styles.textoBoton}>✅ PEDIDO RECIBIDO (ACREDITAR PUNTOS)</Text>
                       </TouchableOpacity>
@@ -1189,5 +1193,5 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-                                                }
+          }
           
