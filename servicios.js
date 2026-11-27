@@ -14,6 +14,44 @@ export const limpiarTelefono = (tel) => {
   return num.length === 11 && num.startsWith('51') ? num.slice(2) : num;
 };
 
+export function obtenerHoraPeru() {
+  const ahoraUtc = Date.now();
+  const limaDate = new Date(ahoraUtc - 5 * 3600 * 1000);
+  const horas = limaDate.getUTCHours();
+  const minutos = limaDate.getUTCMinutes();
+  const texto = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+  return { horas, minutos, totalMinutos: horas * 60 + minutos, texto };
+}
+
+function parsearMinutosHora(horaStr, defMin) {
+  const m = String(horaStr || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return defMin;
+  const h = Math.min(23, Math.max(0, Number(m[1])));
+  const min = Math.min(59, Math.max(0, Number(m[2])));
+  return h * 60 + min;
+}
+
+export function verificarEstadoLocalPeru(cfg) {
+  const peru = obtenerHoraPeru();
+  if (cfg?.local_cerrado) {
+    return { cerrado: true, motivo: 'manual', horaPeru: peru.texto };
+  }
+  const minAp = parsearMinutosHora(cfg?.hora_apertura || '12:00', 12 * 60);
+  const minCi = parsearMinutosHora(cfg?.hora_cierre || '23:00', 23 * 60);
+  const actual = peru.totalMinutos;
+  let dentroHorario = false;
+  if (minAp <= minCi) {
+    dentroHorario = actual >= minAp && actual < minCi;
+  } else {
+    dentroHorario = actual >= minAp || actual < minCi;
+  }
+  return {
+    cerrado: !dentroHorario,
+    motivo: dentroHorario ? 'abierto' : 'horario',
+    horaPeru: peru.texto
+  };
+}
+
 async function apiSupabase(ruta, metodo = 'GET', cuerpo = null) {
   const opciones = {
     method: metodo,
@@ -36,7 +74,6 @@ async function apiSupabase(ruta, metodo = 'GET', cuerpo = null) {
   if (!res.ok) throw new Error(datos.message || datos.error || 'Error en la base de datos.');
   return datos;
 }
-
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
   const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
@@ -75,6 +112,7 @@ export async function obtenerConfigPagos() {
     return { qr_yape: '', qr_plin: '', titular: 'Club Sazón', ...extraerConfigDelivery('Club Sazón') };
   }
 }
+
 export async function guardarConfigPagos(cfg) {
   const actual = await apiSupabase('configuracion_pagos?select=id&limit=1');
   const cadenaDelivery = `${cfg.titularLimpio || 'Club Sazón'}||DEL:${cfg.local_lat || '-12.069706'}|${cfg.local_lng || '-77.033827'}|${cfg.tarifa_base || '4.00'}|${cfg.tarifa_km || '1.50'}|${cfg.local_cerrado ? '1' : '0'}|${cfg.puntos_rider ?? '10'}|${cfg.hora_apertura || '12:00'}|${cfg.hora_cierre || '23:00'}`;
@@ -132,7 +170,6 @@ export async function subirImagenGaleria() {
     inp.click();
   });
 }
-
 export async function registrarUsuario({ nombre, telefono, password }) {
   const telLimpio = limpiarTelefono(telefono);
   if (!nombre || nombre.trim().length < 2) throw new Error('Ingresa tu nombre completo.');
@@ -160,6 +197,7 @@ export async function registrarUsuario({ nombre, telefono, password }) {
   }
   return { perfil, mensaje: '¡Registro exitoso! Ganaste 100 puntos de bienvenida.' };
 }
+
 export async function ingresarUsuario({ telefono, password }) {
   const telLimpio = limpiarTelefono(telefono);
   if (telLimpio.length < 6 || !password) throw new Error('Ingresa tu teléfono y contraseña.');
@@ -221,7 +259,6 @@ export async function guardarPromocionAdmin(pr) {
 export async function eliminarPromocionAdmin(id) {
   return apiSupabase(`promociones?id=eq.${id}`, 'DELETE');
 }
-
 export async function obtenerRecompensas(soloActivas = true) {
   const filtro = soloActivas ? '&activa=eq.true' : '';
   const res = await apiSupabase(`recompensas?select=*${filtro}&order=puntos_requeridos.asc`);
@@ -244,6 +281,7 @@ export async function guardarRecompensaAdmin(rec) {
 export async function eliminarRecompensaAdmin(id) {
   return apiSupabase(`recompensas?id=eq.${id}`, 'DELETE');
 }
+
 export async function obtenerMotorizados() {
   const res = await apiSupabase('perfiles?select=*&rol=eq.repartidor&order=nombre_completo.asc');
   return Array.isArray(res) ? res : [];
@@ -302,7 +340,6 @@ export async function obtenerPedidosAdmin() {
   const res = await apiSupabase('pedidos?select=*,perfiles(nombre_completo,telefono),pedido_detalles(*)&order=creado_en.desc&limit=250');
   return Array.isArray(res) ? res : [];
 }
-
 export async function crearNuevoPedido(pedido, items) {
   const numPed = 'PED-' + Math.floor(100000 + Math.random() * 900000);
   const creados = await apiSupabase('pedidos', 'POST', {
