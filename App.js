@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Modal, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -18,22 +19,13 @@ import {
 } from './servicios';
 
 function DegradadoOscuroCard() {
-  const capasInferiores = new Array(
-    'rgba(7,7,9,0.08)',
-    'rgba(7,7,9,0.28)',
-    'rgba(7,7,9,0.56)',
-    'rgba(7,7,9,0.82)',
-    'rgba(7,7,9,0.94)'
-  );
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
-      <View style={{ flex: 65, backgroundColor: 'transparent' }} />
-      <View style={{ flex: 35 }}>
-        {capasInferiores.map((bg, idx) => (
-          <View key={idx} style={{ flex: 1, backgroundColor: bg }} />
-        ))}
-      </View>
-    </View>
+    <LinearGradient
+      pointerEvents="none"
+      colors={['transparent', 'rgba(7,7,9,0.22)', 'rgba(7,7,9,0.78)', 'rgba(7,7,9,0.96)']}
+      locations={[0.42, 0.62, 0.84, 1]}
+      style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+    />
   );
 }
 
@@ -90,7 +82,6 @@ async function seleccionarYComprimirAvatar() {
     inp.click();
   });
 }
-
 function IconoRojo({ tipo }) {
   const mapaIconos = {
     menu: 'restaurant-outline',
@@ -119,6 +110,7 @@ function IconoRojo({ tipo }) {
     </View>
   );
 }
+
 export default function App() {
   const [pantallaAuth, setPantallaAuth] = useState('bienvenida');
   const [usuario, setUsuario] = useState(null);
@@ -137,7 +129,8 @@ export default function App() {
     qr_yape: '', qr_plin: '', titularLimpio: 'Club Sazón',
     local_lat: '-12.069706', local_lng: '-77.033827',
     tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false,
-    hora_apertura: '12:00', hora_cierre: '23:00'
+    hora_apertura: '12:00', hora_cierre: '23:00',
+    categorias_lista: categorias.filter(c => c !== 'Todas')
   });
   const [datosCli, setDatosCli] = useState({ puntos: 0, historial: [], pedidos: [], canjes: [] });
   const [pedidosAdmin, setPedidosAdmin] = useState([]);
@@ -153,8 +146,7 @@ export default function App() {
   const [subiendoComp, setSubiendoComp] = useState(false);
   const [cargando, setCargando] = useState(false);
   const puertaAvisadaRef = useRef({});
-
-  useEffect(() => {
+    useEffect(() => {
     AsyncStorage.getItem('session_club_sazon').then(s => {
       if (s) {
         const parsed = JSON.parse(s);
@@ -209,7 +201,8 @@ export default function App() {
       mostrarAviso('Error al subir', e.message || 'Intenta con otra imagen más ligera.');
     }
   }
-    async function cargarBase() {
+
+  async function cargarBase() {
     try {
       const [cat, pr, rec, cfg] = await Promise.all([obtenerCatalogo(true), obtenerPromociones(true), obtenerRecompensas(true), obtenerConfigPagos()]);
       setCatalogo(cat || []);
@@ -218,15 +211,14 @@ export default function App() {
       if (cfg) setCfgPagos(prev => ({ ...prev, ...cfg }));
     } catch (e) {}
   }
-
-  async function cargarTodoUsuario() {
+    async function cargarTodoUsuario() {
     try {
       await cargarBase();
       if (rol === 'administrador' || rol === 'repartidor') {
         const pAdm = await obtenerPedidosAdmin();
         setPedidosAdmin(pAdm || []);
       }
-      if (usuario?.id && (rol === 'cliente' || modoClienteRider)) {
+      if (usuario?.id) {
         const d = await obtenerDatosCliente(usuario.id);
         setDatosCli(d);
         if (d.foto_url) setFotoPerfil(d.foto_url);
@@ -296,7 +288,7 @@ export default function App() {
         : `${item.nombre || item.titulo} añadido al carrito.`
     );
   }
-  function cambiarCantidad(idx, delta) {
+    function cambiarCantidad(idx, delta) {
     setCarrito(prev => {
       const copia = [...prev];
       const nueva = copia[idx].cantidad + delta;
@@ -370,8 +362,7 @@ export default function App() {
       setCalculandoRuta(false);
     }
   }
-
-  const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
+    const subtotal = carrito.reduce((acc, x) => acc + Number(x.precio) * x.cantidad, 0);
   const distanciaKm = (tipoEntrega === 'DELIVERY' && gpsCliente)
     ? calcularDistanciaKm(Number(cfgPagos.local_lat || -12.0697), Number(cfgPagos.local_lng || -77.0338), gpsCliente.lat, gpsCliente.lng)
     : 0;
@@ -389,7 +380,7 @@ export default function App() {
       );
     }
     if (!carrito.length) return mostrarAviso('Carrito vacío', 'Agrega productos antes de pedir.');
-        if (tipoEntrega === 'DELIVERY' && !direccion.trim() && !gpsCliente) {
+    if (tipoEntrega === 'DELIVERY' && !direccion.trim() && !gpsCliente) {
       return mostrarAviso('Falta dirección', 'Usa tu ubicación GPS actual o escribe tu dirección de entrega.');
     }
     if ((metodoPago === 'Yape' || metodoPago === 'Plin') && !comprobanteUrl) {
@@ -403,7 +394,7 @@ export default function App() {
         ? `${mapsHost}?q=${gpsCliente.lat},${gpsCliente.lng}`
         : `${mapsHost}/search/?api=1&query=${encodeURIComponent(textoDir)}`;
       const dirCompleta = tipoEntrega === 'DELIVERY' ? `${direccion.trim() || 'Ubicación GPS'}|${linkMaps}` : 'Recojo en local';
-      await crearNuevoPedido({
+      const pedCreado = await crearNuevoPedido({
         cliente_id: usuario.id,
         tipo_entrega: tipoEntrega,
         metodo_pago: metodoPago,
@@ -417,17 +408,23 @@ export default function App() {
       setCarrito([]);
       setNotas('');
       setComprobanteUrl('');
-      await cargarTodoUsuario();
+      setFiltroPedCli('Activos');
+      if (pedCreado?.id) {
+        setDatosCli(prev => ({
+          ...prev,
+          pedidos: [pedCreado, ...(prev.pedidos || []).filter(x => x.id !== pedCreado.id)]
+        }));
+      }
       setVista('pedidos');
-      mostrarAviso('¡Pedido enviado!', 'Tu pedido fue recibido por El Sazón Oriental.');
+      cargarTodoUsuario();
+      mostrarAviso('¡Pedido enviado!', `Tu pedido ${pedCreado?.numero_pedido || ''} fue recibido y ya aparece en Mis Pedidos.`);
     } catch (e) {
       mostrarAviso('Error al pedir', e.message);
     } finally {
       setCargando(false);
     }
   }
-
-  function clienteConfirmaRecepcion(ped) {
+    function clienteConfirmaRecepcion(ped) {
     pedirConfirmacion(
       'Confirmar recepción de pedido',
       `¿Confirmas que recibiste correctamente tu pedido ${ped.numero_pedido}? Se acreditarán tus puntos ganados y se habilitará el cierre al repartidor.`,
@@ -483,7 +480,8 @@ export default function App() {
         )}
       </SafeAreaView>
     );
-}
+  }
+
   if (rol === 'administrador') {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
@@ -500,9 +498,8 @@ export default function App() {
         />
       </SafeAreaView>
     );
-  }
-
-  if (rol === 'repartidor' && !modoClienteRider) {
+          }
+            if (rol === 'repartidor' && !modoClienteRider) {
     return (
       <SafeAreaView style={styles.pantallaCompleta}>
         <VentanaAviso />
@@ -529,6 +526,7 @@ export default function App() {
     { id: 'cuenta', tipo: 'cuenta', titulo: 'Mi cuenta' }
   ];
 
+  const listaCatsCliente = ['Todas', ...(Array.isArray(cfgPagos.categorias_lista) ? cfgPagos.categorias_lista : categorias.filter(c => c !== 'Todas'))];
   const horaPeruAhora = obtenerHoraPeru().horas;
   const turnoActual = (horaPeruAhora >= 6 && horaPeruAhora < 18) ? 'Día' : 'Noche';
   const prodPorTurno = catalogo.filter(p => {
@@ -574,7 +572,7 @@ export default function App() {
           )}
         </View>
       </Modal>
-                        <ScrollView contentContainerStyle={styles.contenido}>
+      <ScrollView contentContainerStyle={styles.contenido}>
         <NavegacionSuperior
           regresar={vista !== 'inicio' ? () => setVista('inicio') : null}
           irAInicio={() => setVista('inicio')}
@@ -663,14 +661,14 @@ export default function App() {
             </View>
           </View>
         )}
-                    {vista === 'menu' && (
+        {vista === 'menu' && (
           <View>
             <Text style={styles.titulo}>MENÚ DE PRODUCTOS</Text>
             <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginBottom: 8 }}>
               {turnoActual === 'Día' ? '☀️ Horario Turno Día (06:00 - 18:00 Perú)' : '🌙 Horario Turno Noche (18:00 - 06:00 Perú)'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listaCategorias}>
-              {categorias.map(c => (
+              {listaCatsCliente.map(c => (
                 <TouchableOpacity key={c} style={[styles.categoria, catActiva === c && styles.categoriaActiva]} onPress={() => setCatActiva(c)}>
                   <Text style={styles.textoCategoria}>{c}</Text>
                 </TouchableOpacity>
@@ -825,8 +823,7 @@ export default function App() {
                 })}
               </View>
             )}
-
-            <Text style={[styles.titulo, { marginTop: 16 }]}>HISTORIAL DE CANJES ({(datosCli.canjes || []).length})</Text>
+                          <Text style={[styles.titulo, { marginTop: 16 }]}>HISTORIAL DE CANJES ({(datosCli.canjes || []).length})</Text>
             {(datosCli.canjes || []).length === 0 ? (
               <View style={styles.tarjetaVacia}><Text style={styles.textoVacio}>Aún no has canjeado ningún premio.</Text></View>
             ) : (
@@ -844,6 +841,7 @@ export default function App() {
             )}
           </View>
         )}
+
         {vista === 'carrito' && (
           <View>
             <Text style={[styles.titulo, { fontSize: 19 }]}>Carrito</Text>
@@ -893,8 +891,7 @@ export default function App() {
                     </TouchableOpacity>
                   ))}
                 </View>
-
-                {tipoEntrega === 'DELIVERY' && (
+                                      {tipoEntrega === 'DELIVERY' && (
                   <View style={styles.tarjetaPedido}>
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginBottom: 10, paddingVertical: 11 }]} onPress={obtenerUbicacionCliente}>
                       <Text style={styles.textoBoton}>📍 USAR MI UBICACIÓN ACTUAL (GPS)</Text>
@@ -927,7 +924,8 @@ export default function App() {
                     </Text>
                   </View>
                 )}
-                                      <Text style={styles.titulo}>Método de pago</Text>
+
+                <Text style={styles.titulo}>Método de pago</Text>
                 <View style={styles.tarjetaPedido}>
                   {[
                     { id: 'Yape', bg: '#742284', tag: 'yape', label: 'Yape' },
@@ -976,7 +974,6 @@ export default function App() {
                     </View>
                   )}
                 </View>
-
                 <TextInput style={styles.campo} placeholder="Notas adicionales (sin ají, cubiertos, etc.)" placeholderTextColor="#6B7280" value={notas} onChangeText={setNotas} />
 
                 <View style={styles.tarjetaPedido}>
@@ -1006,7 +1003,8 @@ export default function App() {
             )}
           </View>
         )}
-                            {vista === 'pedidos' && (() => {
+
+        {vista === 'pedidos' && (() => {
           const listaTodos = datosCli.pedidos || [];
           const listaComp = listaTodos.filter(p => p.estado === 'Completado');
           const listaCanc = listaTodos.filter(p => p.estado === 'Cancelado');
@@ -1051,7 +1049,7 @@ export default function App() {
                       p.estado_rider === 'En la puerta' && !p.recibido_cliente && { borderColor: DORADO, borderWidth: 2 }
                     ]}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <Text style={styles.nombreProducto}>{p.numero_pedido}</Text>
                       <View style={[
                         styles.estadoPedido,
@@ -1103,8 +1101,7 @@ export default function App() {
             </View>
           );
         })()}
-
-        {vista === 'notificaciones' && (
+                                    {vista === 'notificaciones' && (
           <View>
             <Text style={styles.titulo}>NOTIFICACIONES</Text>
             {(datosCli.pedidos || []).length === 0 ? (
@@ -1193,5 +1190,4 @@ export default function App() {
       <BarraInferiorCliente vistaActual={vista} cambiarVista={setVista} />
     </SafeAreaView>
   );
-          }
-          
+              }
