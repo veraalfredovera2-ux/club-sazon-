@@ -9,11 +9,6 @@ export const categorias = [
   'Todas', 'Hamburguesas', 'Salchipapas', 'Alitas', 'Broaster', 'Pollo a la brasa', 'Chaufa', 'Bebidas', 'Extras'
 ];
 
-export const limpiarTelefono = (tel) => {
-  const num = String(tel || '').replace(/\D/g, '');
-  return num.length === 11 && num.startsWith('51') ? num.slice(2) : num;
-};
-
 export function obtenerHoraPeru() {
   const ahoraUtc = Date.now();
   const limaDate = new Date(ahoraUtc - 5 * 3600 * 1000);
@@ -26,8 +21,8 @@ export function obtenerHoraPeru() {
 function parsearMinutosHora(horaStr, defMin) {
   const m = String(horaStr || '').trim().match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return defMin;
-  const h = Math.min(23, Math.max(0, Number(m[1])));
-  const min = Math.min(59, Math.max(0, Number(m[2])));
+  const h = Math.min(23, Math.max(0, Number(m.at(1))));
+  const min = Math.min(59, Math.max(0, Number(m.at(2))));
   return h * 60 + min;
 }
 
@@ -51,6 +46,11 @@ export function verificarEstadoLocalPeru(cfg) {
     horaPeru: peru.texto
   };
 }
+
+export const limpiarTelefono = (tel) => {
+  const num = String(tel || '').replace(/\D/g, '');
+  return num.length === 11 && num.startsWith('51') ? num.slice(2) : num;
+};
 
 async function apiSupabase(ruta, metodo = 'GET', cuerpo = null) {
   const opciones = {
@@ -77,6 +77,7 @@ async function apiSupabase(ruta, metodo = 'GET', cuerpo = null) {
 export function extraerConfigDelivery(titularRaw) {
   const partes = String(titularRaw || 'Club Sazón').split('||DEL:');
   const titularLimpio = (partes.at(0) || 'Club Sazón').trim();
+  const defCats = categorias.filter(c => c !== 'Todas');
   const def = {
     titularLimpio,
     local_lat: '-12.069706',
@@ -86,10 +87,13 @@ export function extraerConfigDelivery(titularRaw) {
     local_cerrado: false,
     puntos_rider: '10',
     hora_apertura: '12:00',
-    hora_cierre: '23:00'
+    hora_cierre: '23:00',
+    categorias_lista: defCats
   };
   if (partes.length < 2) return def;
   const nums = partes.at(1).split('|');
+  const catsRaw = nums.at(8);
+  const catsParsed = catsRaw ? catsRaw.split('~').map(x => x.trim()).filter(Boolean) : defCats;
   return {
     titularLimpio,
     local_lat: nums.at(0) || def.local_lat,
@@ -99,7 +103,8 @@ export function extraerConfigDelivery(titularRaw) {
     local_cerrado: nums.at(4) === '1',
     puntos_rider: nums.at(5) !== undefined ? String(nums.at(5)) : '10',
     hora_apertura: nums.at(6) || '12:00',
-    hora_cierre: nums.at(7) || '23:00'
+    hora_cierre: nums.at(7) || '23:00',
+    categorias_lista: catsParsed.length > 0 ? catsParsed : defCats
   };
 }
 
@@ -115,7 +120,10 @@ export async function obtenerConfigPagos() {
 
 export async function guardarConfigPagos(cfg) {
   const actual = await apiSupabase('configuracion_pagos?select=id&limit=1');
-  const cadenaDelivery = `${cfg.titularLimpio || 'Club Sazón'}||DEL:${cfg.local_lat || '-12.069706'}|${cfg.local_lng || '-77.033827'}|${cfg.tarifa_base || '4.00'}|${cfg.tarifa_km || '1.50'}|${cfg.local_cerrado ? '1' : '0'}|${cfg.puntos_rider ?? '10'}|${cfg.hora_apertura || '12:00'}|${cfg.hora_cierre || '23:00'}`;
+  const catsStr = Array.isArray(cfg.categorias_lista) && cfg.categorias_lista.length > 0
+    ? cfg.categorias_lista.map(c => String(c).replace(/[|~]/g, '').trim()).filter(Boolean).join('~')
+    : categorias.filter(c => c !== 'Todas').join('~');
+  const cadenaDelivery = `${cfg.titularLimpio || 'Club Sazón'}||DEL:${cfg.local_lat || '-12.069706'}|${cfg.local_lng || '-77.033827'}|${cfg.tarifa_base || '4.00'}|${cfg.tarifa_km || '1.50'}|${cfg.local_cerrado ? '1' : '0'}|${cfg.puntos_rider ?? '10'}|${cfg.hora_apertura || '12:00'}|${cfg.hora_cierre || '23:00'}|${catsStr}`;
   const payload = {
     titular: cadenaDelivery,
     qr_yape: cfg.qr_yape || '',
@@ -350,9 +358,10 @@ export async function crearNuevoPedido(pedido, items) {
     recibido_cliente: false
   });
   const ped = Array.isArray(creados) ? creados.at(0) : creados;
+  const detallesGuardados = [];
   if (ped?.id && Array.isArray(items)) {
     for (const item of items) {
-      await apiSupabase('pedido_detalles', 'POST', {
+      const detRes = await apiSupabase('pedido_detalles', 'POST', {
         pedido_id: ped.id,
         producto_id: item.es_promo ? null : item.id,
         nombre_producto: item.nombre,
@@ -360,6 +369,8 @@ export async function crearNuevoPedido(pedido, items) {
         precio_unitario: item.precio,
         subtotal: Number((item.precio * item.cantidad).toFixed(2))
       });
+      const detFila = Array.isArray(detRes) ? detRes.at(0) : detRes;
+      if (detFila) detallesGuardados.push(detFila);
       if (!item.es_promo && item.stock !== undefined && item.stock !== null) {
         const nuevoStock = Math.max(0, Number(item.stock) - Number(item.cantidad));
         await apiSupabase(`productos?id=eq.${item.id}`, 'PATCH', { stock: nuevoStock });
@@ -367,7 +378,7 @@ export async function crearNuevoPedido(pedido, items) {
     }
   }
   await enviarPushNativo('¡Nuevo pedido en Club Sazón!', `Pedido ${numPed} por S/ ${Number(pedido.total || 0).toFixed(2)}`, 'administrador');
-  return ped;
+  return { ...ped, creado_en: ped?.creado_en || new Date().toISOString(), pedido_detalles: detallesGuardados };
 }
 
 export async function actualizarEstadoPedidoAdmin(ped, nuevoEstado) {
