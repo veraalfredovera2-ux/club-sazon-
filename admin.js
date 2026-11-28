@@ -13,7 +13,7 @@ import {
   obtenerMotorizados, crearMotorizadoAdmin, eliminarMotorizadoAdmin, actualizarHorarioRiderAdmin,
   obtenerClientesAdmin, cambiarClaveClienteAdmin, liquidarEfectivoRiderAdmin, liquidarPedidoIndividualAdmin,
   actualizarEstadoPedidoAdmin,
-  obtenerConfigPagos, guardarConfigPagos, subirImagenGaleria
+  obtenerConfigPagos, guardarConfigPagos, subirImagenGaleria, verificarEstadoLocalPeru
 } from './servicios';
 
 function IconoAdminGrid({ tipo }) {
@@ -57,12 +57,14 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [busqCli, setBusqCli] = useState('');
   const [clavesNuevas, setClavesNuevas] = useState({});
   const [horariosEdit, setHorariosEdit] = useState({});
-  const [nuevoRider, setNuevoRider] = useState({ nombre_completo: '', telefono: '', password: '', direccion_predeterminada: 'Lun a Dom: 12:00 pm - 10:00 pm' });
+  const [nuevoRider, setNuevoRider] = useState({ nombre_completo: '', telefono: '', password: '', direccion_predeterminada: '' });
+  const [nuevaCatTexto, setNuevaCatTexto] = useState('');
   const [cfg, setCfg] = useState({
     titularLimpio: 'Club Sazón', qr_yape: '', qr_plin: '',
     local_lat: '-12.069706', local_lng: '-77.033827',
     tarifa_base: '4.00', tarifa_km: '1.50', local_cerrado: false,
-    puntos_rider: '10', hora_apertura: '12:00', hora_cierre: '23:00'
+    puntos_rider: '10', hora_apertura: '12:00', hora_cierre: '23:00',
+    categorias_lista: categorias.filter(c => c !== 'Todas')
   });
   const [editProd, setEditProd] = useState(null);
   const [editPromo, setEditPromo] = useState(null);
@@ -70,19 +72,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   const [subiendoImg, setSubiendoImg] = useState(false);
   const [imgPreview, setImgPreview] = useState(null);
   const [sonidoActivo, setSonidoActivo] = useState(true);
-  const [horaActual, setHoraActual] = useState('');
   const idsConocidosRef = useRef(null);
-
   useEffect(() => {
     cargarTablas();
-    const actualizarHora = () => {
-      const d = new Date();
-      setHoraActual(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-    };
-    actualizarHora();
-    const tHora = setInterval(actualizarHora, 15000);
-    return () => clearInterval(tHora);
   }, []);
+
   useEffect(() => {
     const lista = pedidos || [];
     if (idsConocidosRef.current === null) {
@@ -119,6 +113,39 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
     } catch (e) {}
   }
 
+  async function agregarCategoriaAdmin() {
+    const limpia = String(nuevaCatTexto || '').replace(/[|~]/g, '').trim();
+    if (!limpia) return mostrarAviso('Nombre vacío', 'Escribe el nombre de la nueva categoría.');
+    const actuales = Array.isArray(cfg.categorias_lista) ? cfg.categorias_lista : categorias.filter(c => c !== 'Todas');
+    if (actuales.some(x => x.toLowerCase() === limpia.toLowerCase())) {
+      return mostrarAviso('Ya existe', `La categoría "${limpia}" ya está en la lista.`);
+    }
+    const actualizada = { ...cfg, categorias_lista: [...actuales, limpia] };
+    setCfg(actualizada);
+    setNuevaCatTexto('');
+    try {
+      await guardarConfigPagos(actualizada);
+      mostrarAviso('Categoría agregada', `"${limpia}" ya está disponible para tus platos y clientes.`);
+    } catch (e) { mostrarAviso('Error', e.message); }
+  }
+
+  function quitarCategoriaAdmin(catNombre) {
+    const actuales = Array.isArray(cfg.categorias_lista) ? cfg.categorias_lista : categorias.filter(c => c !== 'Todas');
+    if (actuales.length <= 1) return mostrarAviso('Aviso', 'Debe quedar al menos una categoría activa.');
+    pedirConfirmacion(
+      'Quitar categoría',
+      `¿Eliminar la categoría "${catNombre}" de la lista? (Los platos ya creados no se borran).`,
+      async () => {
+        const actualizada = { ...cfg, categorias_lista: actuales.filter(x => x !== catNombre) };
+        setCfg(actualizada);
+        try {
+          await guardarConfigPagos(actualizada);
+          mostrarAviso('Categoría quitada', `"${catNombre}" fue eliminada de la lista.`);
+        } catch (e) { mostrarAviso('Error', e.message); }
+      }
+    );
+  }
+
   async function manejarSubida(alCompletar) {
     setSubiendoImg(true);
     try {
@@ -126,8 +153,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
       if (url) { alCompletar(url); mostrarAviso('Imagen cargada', 'La foto se comprimió y quedó lista para guardar.'); }
     } catch (e) { mostrarAviso('Error al subir', e.message); } finally { setSubiendoImg(false); }
   }
-
-  async function capturarGpsLocal() {
+    async function capturarGpsLocal() {
     if (Platform.OS !== 'web') {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -158,18 +184,20 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
   function confirmarEliminar(titulo, mensaje, accion) {
     pedirConfirmacion(titulo, mensaje, async () => {
       try { await accion(); await cargarTablas(); mostrarAviso('Eliminado', 'El registro fue eliminado.'); }
-      catch (e) { mostrarAviso('Error', e.message); }
+      catch (e) { mostrarAviso('Error al eliminar', e.message); }
     });
   }
 
   function abrirWhatsAppDirecto(telefono, texto) {
     const limpio = String(telefono || '').replace(/\D/g, '');
-    if (!limpio) return mostrarAviso('Sin teléfono', 'No hay número registrado.');
+    if (limpio.length < 6) return mostrarAviso('Sin teléfono', 'No hay número registrado.');
     const telFinal = limpio.length === 9 ? '51' + limpio : limpio;
     const baseWa = 'https://wa.me';
     Linking.openURL(`${baseWa}${telFinal}?text=${encodeURIComponent(texto)}`);
   }
-    const hoyStr = new Date().toDateString();
+
+  const estadoLocalPeruAdmin = verificarEstadoLocalPeru(cfg);
+  const hoyStr = new Date().toDateString();
   const activos = (pedidos || []).filter(p => p.estado !== 'Completado' && p.estado !== 'Cancelado');
   const pendientes = (pedidos || []).filter(p => p.estado === 'Pendiente');
   const pedidosHoy = (pedidos || []).filter(p => new Date(p.creado_en).toDateString() === hoyStr);
@@ -205,7 +233,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </View>
         </View>
       </Modal>
-
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         {sec !== 'inicio' ? (
           <TouchableOpacity
@@ -216,18 +243,19 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Image source={LOGO} style={{ width: 38, height: 38, borderRadius: 10 }} resizeMode="contain" />
+            <Image source={LOGO} style={{ width: 38, height: 38, borderRadius: 19 }} resizeMode="contain" />
             <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>EL SAZÓN ORIENTAL</Text>
           </View>
         )}
+
         <TouchableOpacity
-          onPress={async () => {
+          onPress={() => {
             const nuevoEstado = !sonidoActivo;
             setSonidoActivo(nuevoEstado);
             if (nuevoEstado) {
               reproducirTimbreAlerta();
               if (Platform.OS === 'web' && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
-                try { await Notification.requestPermission(); } catch (e) {}
+                try { Notification.requestPermission(); } catch (e) {}
               }
               mostrarAviso('🔔 Alertas sonoras activadas', 'Acabas de escuchar el timbre de prueba. Cada nuevo pedido sonará automáticamente.');
             }
@@ -240,10 +268,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
       <View style={{ backgroundColor: TARJETA, borderWidth: 1.5, borderColor: ROJO, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={{ color: '#9CA3AF', fontSize: 11, fontWeight: '800' }}>PANEL DE ADMINISTRACIÓN • {horaActual}</Text>
+          <Text style={{ color: '#9CA3AF', fontSize: 11, fontWeight: '800' }}>PANEL DE ADMINISTRACIÓN • {estadoLocalPeruAdmin.horaPeru} (PERÚ)</Text>
           <Text style={{ color: DORADO, fontSize: 22, fontWeight: '900', marginVertical: 2 }} numberOfLines={1}>{usuario.nombre_completo}</Text>
-          <Text style={{ color: cfg.local_cerrado ? '#EF4444' : '#22C55E', fontSize: 11, fontWeight: '900' }}>
-            {cfg.local_cerrado ? '🔴 LOCAL CERRADO TEMPORALMENTE' : `🟢 LOCAL ABIERTO (${cfg.hora_apertura || '12:00'} - ${cfg.hora_cierre || '23:00'})`}
+          <Text style={{ color: estadoLocalPeruAdmin.cerrado ? '#EF4444' : '#22C55E', fontSize: 11, fontWeight: '900' }}>
+            {estadoLocalPeruAdmin.cerrado
+              ? (estadoLocalPeruAdmin.motivo === 'manual' ? '🔴 LOCAL CERRADO MANUALMENTE' : `🔴 CERRADO POR HORARIO (${cfg.hora_apertura || '12:00'} - ${cfg.hora_cierre || '23:00'})`)
+              : `🟢 LOCAL ABIERTO (${cfg.hora_apertura || '12:00'} - ${cfg.hora_cierre || '23:00'})`}
           </Text>
         </View>
         <TouchableOpacity
@@ -254,7 +284,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '800' }}>Activos</Text>
         </TouchableOpacity>
       </View>
-                {sec === 'inicio' && (
+
+      {sec === 'inicio' && (
         <View>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
             <View style={{ flex: 1, backgroundColor: TARJETA, borderWidth: 1, borderColor: BORDE, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
@@ -294,7 +325,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-
       {sec === 'pedidos' && (
         <View>
           <Text style={styles.titulo}>PEDIDOS EN TIEMPO REAL ({activos.length})</Text>
@@ -332,12 +362,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   {!!telCliente && (
                     <TouchableOpacity
                       style={[styles.boton, { backgroundColor: '#128C7E', marginTop: 8, paddingVertical: 9 }]}
-                      onPress={() => abrirWhatsAppDirecto(telCliente, `Hola ${p.perfiles?.nombre_completo || ''}, te escribimos de El Sazón Oriental sobre tu pedido ${p.numero_pedido}.`)}
+                      onPress={() => abrirWhatsAppDirecto(telCliente, `Hola ${p.perfiles?.nombre_completo || 'Cliente'}, te escribimos de El Sazón Oriental sobre tu pedido ${p.numero_pedido}.`)}
                     >
                       <Text style={styles.textoBoton}>💬 WHATSAPP AL CLIENTE</Text>
                     </TouchableOpacity>
                   )}
-                              {p.estado === 'Pendiente' && (
+                  {p.estado === 'Pendiente' && (
                     <TouchableOpacity
                       style={styles.boton}
                       onPress={async () => {
@@ -350,7 +380,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                       <Text style={styles.textoBoton}>✅ ACEPTAR PEDIDO</Text>
                     </TouchableOpacity>
                   )}
-
                   {p.estado === 'Aceptado por el local' && (
                     <TouchableOpacity
                       style={[styles.boton, { backgroundColor: '#D97706', marginTop: 6 }]}
@@ -364,7 +393,6 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                       <Text style={styles.textoBoton}>🍳 MARCAR EN PREPARACIÓN</Text>
                     </TouchableOpacity>
                   )}
-
                   {p.estado === 'En preparación' && (
                     <TouchableOpacity
                       style={[styles.boton, { backgroundColor: '#0284C7', marginTop: 6 }]}
@@ -383,13 +411,11 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                       </Text>
                     </TouchableOpacity>
                   )}
-
-                  {p.estado !== 'Pendiente' && (!esDel || p.recibido_cliente) && (
+                                      {p.estado !== 'Pendiente' && (!esDel || p.recibido_cliente) && (
                     <TouchableOpacity style={[styles.boton, { backgroundColor: '#16A34A', marginTop: 6 }]} onPress={() => onCompletar(p)} disabled={cargando}>
-                      <Text style={styles.textoBoton}>✅ MARCAR ENTREGADO Y DAR PUNTOS</Text>
+                      <Text style={styles.textoBoton}>★ MARCAR ENTREGADO Y DAR PUNTOS</Text>
                     </TouchableOpacity>
                   )}
-
                   <TouchableOpacity
                     style={[styles.boton, styles.botonSecundario]}
                     onPress={() => pedirConfirmacion(
@@ -399,7 +425,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                     )}
                     disabled={cargando}
                   >
-                    <Text style={styles.textoBoton}>❌ CANCELAR PEDIDO / ANULAR</Text>
+                    <Text style={styles.textoBoton}>✕ CANCELAR PEDIDO / ANULAR</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -407,7 +433,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           )}
         </View>
       )}
-                              {sec === 'historial' && (() => {
+
+      {sec === 'historial' && (() => {
         const histFiltrado = filtroHist === 'Todos'
           ? historial
           : historial.filter(p => p.estado === filtroHist);
@@ -448,11 +475,10 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
                     <Text style={{ color: totalPendiente > 0 ? '#EF4444' : '#22C55E', fontWeight: '900', fontSize: 15 }}>
-                      {totalPendiente > 0 ? `Debe: S/ ${totalPendiente.toFixed(2)}` : 'Al día ✅'}
+                      {totalPendiente > 0 ? `Debe: S/ ${totalPendiente.toFixed(2)}` : 'Al día ✓'}
                     </Text>
                   </View>
                   <Text style={styles.descripcionPedido}>Pedidos en efectivo sin liquidar: {pedsEfectivoPendientes.length}</Text>
-
                   {pedsEfectivoPendientes.map(pe => (
                     <View
                       key={pe.id}
@@ -488,7 +514,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                           }
                         )}
                       >
-                        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 11 }}>💵 Recibido</Text>
+                        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 11 }}>✓ Recibido</Text>
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -512,7 +538,8 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                 </View>
               );
             })}
-                                <Text style={styles.titulo}>REGISTRO DIARIO DE PEDIDOS Y VENTAS</Text>
+
+            <Text style={styles.titulo}>REGISTRO DIARIO DE PEDIDOS Y VENTAS</Text>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
               {[
                 { id: 'Todos', label: `Todos (${historial.length})` },
@@ -536,13 +563,12 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                 <View key={dia.fecha} style={[styles.tarjetaPedido, { borderColor: DORADO }]}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: BORDE, paddingBottom: 8, marginBottom: 8 }}>
                     <View>
-                      <Text style={{ color: DORADO, fontWeight: '900', fontSize: 14 }}>📅 {dia.fecha.toUpperCase()}</Text>
+                      <Text style={{ color: DORADO, fontWeight: '900', fontSize: 14 }}>{dia.fecha.toUpperCase()}</Text>
                       <Text style={{ color: '#9CA3AF', fontSize: 11 }}>Completados: {dia.ok} • Cancelados: {dia.canc}</Text>
                     </View>
                     <Text style={{ color: '#22C55E', fontWeight: '900', fontSize: 17 }}>S/ {dia.totalDia.toFixed(2)}</Text>
                   </View>
-
-                  {dia.lista.map(p => (
+                                  {dia.lista.map(p => (
                     <View key={p.id} style={{ backgroundColor: '#0D0E13', borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: BORDE }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Text style={styles.nombreProducto}>{p.numero_pedido} • {p.perfiles?.nombre_completo || 'Cliente'}</Text>
@@ -565,7 +591,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
                           )}
                           disabled={cargando}
                         >
-                          <Text style={[styles.textoBoton, { fontSize: 12 }]}>❌ ANULAR PEDIDO Y DESCONTAR PUNTOS</Text>
+                          <Text style={[styles.textoBoton, { fontSize: 12 }]}>✕ ANULAR PEDIDO Y DESCONTAR PUNTOS</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -579,10 +605,53 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
 
       {sec === 'platos' && (
         <View>
-          <TouchableOpacity style={styles.boton} onPress={() => setEditProd({ nombre: '', precio: '', stock: '20', categoria: 'Hamburguesas', turno: 'Ambos', ingredientes: '', imagen_url: '', disponible: true })}>
+          <View style={styles.tarjetaPedido}>
+            <Text style={styles.nombreProducto}>GESTIONAR CATEGORÍAS DEL MENÚ</Text>
+            <Text style={styles.descripcionPedido}>Añade o quita categorías (se actualizan al instante para los clientes):</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TextInput
+                style={[styles.campo, { flex: 1, marginBottom: 0 }]}
+                placeholder="Nueva categoría (ej. Combos)"
+                placeholderTextColor="#6B7280"
+                value={nuevaCatTexto}
+                onChangeText={setNuevaCatTexto}
+              />
+              <TouchableOpacity
+                style={[styles.boton, { marginTop: 0, paddingHorizontal: 14, backgroundColor: '#16A34A' }]}
+                onPress={agregarCategoriaAdmin}
+              >
+                <Text style={styles.textoBoton}>+ Añadir</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+              {(cfg.categorias_lista || categorias.filter(c => c !== 'Todas')).map(cat => (
+                <View
+                  key={cat}
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A24', borderWidth: 1, borderColor: DORADO, borderRadius: 20, paddingLeft: 12, paddingRight: 6, paddingVertical: 5, gap: 6 }}
+                >
+                  <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>{cat}</Text>
+                  <TouchableOpacity
+                    onPress={() => quitarCategoriaAdmin(cat)}
+                    style={{ backgroundColor: ROJO, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 11 }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.boton}
+            onPress={() => setEditProd({
+              nombre: '', precio: '', stock: '20',
+              categoria: (cfg.categorias_lista || categorias.filter(c => c !== 'Todas')).at(0) || 'Hamburguesas',
+              turno: 'Ambos', ingredientes: '', imagen_url: '', disponible: true
+            })}
+          >
             <Text style={styles.textoBoton}>+ AGREGAR NUEVO PLATO</Text>
           </TouchableOpacity>
-          {editProd && (
+                                              {editProd && (
             <View style={[styles.tarjetaPedido, { marginTop: 10, borderColor: DORADO }]}>
               <Text style={styles.nombreProducto}>{editProd.id ? 'EDITAR PLATO' : 'NUEVO PLATO'}</Text>
               <TextInput style={styles.campo} placeholder="Nombre del plato" placeholderTextColor="#6B7280" value={editProd.nombre} onChangeText={v => setEditProd({ ...editProd, nombre: v })} />
@@ -607,14 +676,14 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TextInput style={styles.campo} placeholder="O pega URL de imagen (opcional)" placeholderTextColor="#6B7280" value={editProd.imagen_url} onChangeText={v => setEditProd({ ...editProd, imagen_url: v })} />
               <Text style={{ color: '#9CA3AF', fontSize: 12, marginBottom: 6 }}>Categoría:</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                {categorias.filter(c => c !== 'Todas').map(c => (
+                {(cfg.categorias_lista || categorias.filter(c => c !== 'Todas')).map(c => (
                   <TouchableOpacity key={c} style={[styles.categoria, editProd.categoria === c && styles.categoriaActiva]} onPress={() => setEditProd({ ...editProd, categoria: c })}>
                     <Text style={styles.textoCategoria}>{c}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
               <TouchableOpacity style={[styles.boton, { backgroundColor: editProd.disponible ? '#16A34A' : '#374151', marginBottom: 6 }]} onPress={() => setEditProd({ ...editProd, disponible: !editProd.disponible })}>
-                <Text style={styles.textoBoton}>{editProd.disponible ? '✅ DISPONIBLE EN MENÚ' : '⛔ AGOTADO / OCULTO'}</Text>
+                <Text style={styles.textoBoton}>{editProd.disponible ? '✅ DISPONIBLE EN MENÚ' : '🚫 AGOTADO / OCULTO'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.boton} onPress={async () => { await guardarProductoAdmin(editProd); setEditProd(null); await cargarTablas(); mostrarAviso('Guardado', 'Plato actualizado.'); }}>
                 <Text style={styles.textoBoton}>GUARDAR PLATO</Text>
@@ -624,6 +693,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </TouchableOpacity>
             </View>
           )}
+
           {catalogo.map(p => (
             <View key={p.id} style={styles.producto}>
               <Image source={p.imagen_url && p.imagen_url.includes('http') ? { uri: p.imagen_url } : LOGO} style={styles.fotoProducto} />
@@ -644,8 +714,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-
-      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
+                                                      {(sec === 'promos' || sec === 'ofertas' || sec === 'novedades') && (
         <View>
           <TouchableOpacity
             style={styles.boton}
@@ -672,7 +741,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <TouchableOpacity style={[styles.boton, { backgroundColor: '#1E293B', marginBottom: 8 }]} onPress={() => manejarSubida(url => setEditPromo({ ...editPromo, imagen_url: url }))} disabled={subiendoImg}>
                 <Text style={styles.textoBoton}>{subiendoImg ? 'SUBIENDO...' : '📷 SUBIR FOTO DESDE GALERÍA'}</Text>
               </TouchableOpacity>
-              <TextInput style={styles.campo} placeholder="O pega URL imagen (opcional)" placeholderTextColor="#6B7280" value={editPromo.imagen_url} onChangeText={v => setEditPromo({ ...editPromo, imagen_url: v })} />
+              <TextInput style={styles.campo} placeholder="O pega URL de imagen (opcional)" placeholderTextColor="#6B7280" value={editPromo.imagen_url} onChangeText={v => setEditPromo({ ...editPromo, imagen_url: v })} />
               <TouchableOpacity style={styles.boton} onPress={async () => { await guardarPromocionAdmin(editPromo); setEditPromo(null); await cargarTablas(); mostrarAviso('Guardado', 'Publicado con éxito.'); }}>
                 <Text style={styles.textoBoton}>GUARDAR</Text>
               </TouchableOpacity>
@@ -681,7 +750,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </TouchableOpacity>
             </View>
           )}
-                            {promos
+          {promos
             .filter(pr => sec === 'novedades' ? pr.tipo === 'novedad' : sec === 'ofertas' ? pr.tipo === 'oferta' : (pr.tipo !== 'oferta' && pr.tipo !== 'novedad'))
             .map(pr => (
               <View key={pr.id} style={styles.tarjetaPedido}>
@@ -723,7 +792,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               </TouchableOpacity>
             </View>
           )}
-          {recompensas.map(r => (
+                      {recompensas.map(r => (
             <View key={r.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{r.titulo}</Text>
               <Text style={[styles.precioProducto, { color: DORADO }]}>{r.puntos_requeridos} puntos</Text>
@@ -752,7 +821,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               <Text style={styles.textoBoton}>CREAR MOTORIZADO</Text>
             </TouchableOpacity>
           </View>
-                                                                        {riders.map(r => (
+          {riders.map(r => (
             <View key={r.id} style={styles.tarjetaPedido}>
               <Text style={styles.nombreProducto}>{r.nombre_completo}</Text>
               <Text style={styles.descripcionPedido}>Tel: {r.telefono} • Clave: {r.password_hash}</Text>
@@ -769,8 +838,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           ))}
         </View>
       )}
-
-      {sec === 'clientes' && (
+                                                                                                                                        {sec === 'clientes' && (
         <View>
           <TextInput style={styles.campo} placeholder="Buscar cliente por nombre o teléfono..." placeholderTextColor="#6B7280" value={busqCli} onChangeText={setBusqCli} />
           {clientes.filter(c => (c.nombre_completo || '').toLowerCase().includes(busqCli.toLowerCase()) || (c.telefono || '').includes(busqCli)).map(c => (
@@ -803,8 +871,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           </TouchableOpacity>
         </View>
       )}
-
-      {sec === 'config' && (
+                                                                                                                                                {sec === 'config' && (
         <View style={styles.tarjetaPedido}>
           <Text style={styles.nombreProducto}>ESTADO Y HORARIO DEL LOCAL</Text>
           <TouchableOpacity
@@ -816,7 +883,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
               await guardarConfigPagos(cfgActualizada);
               await recargar();
               mostrarAviso(
-                nuevoEstadoCerrado ? '🔴 Local cerrado' : '🟢 Local abierto',
+                nuevoEstadoCerrado ? 'Local cerrado' : 'Local abierto',
                 nuevoEstadoCerrado ? 'Los clientes ahora verán el local cerrado en tiempo real.' : 'El local está abierto y recibiendo pedidos al instante.'
               );
             }}
@@ -844,7 +911,7 @@ export function VistaAdmin({ usuario, pedidos, recargar, onConfirmarAdmin, onCom
           <TextInput style={styles.campo} placeholder="Longitud local" placeholderTextColor="#6B7280" value={String(cfg.local_lng)} onChangeText={v => setCfg({ ...cfg, local_lng: v })} />
           <TextInput style={styles.campo} placeholder="Tarifa base delivery (S/)" placeholderTextColor="#6B7280" keyboardType="decimal-pad" value={String(cfg.tarifa_base)} onChangeText={v => setCfg({ ...cfg, tarifa_base: v })} />
           <TextInput style={styles.campo} placeholder="Costo por kilómetro adicional (S/)" placeholderTextColor="#6B7280" keyboardType="decimal-pad" value={String(cfg.tarifa_km)} onChangeText={v => setCfg({ ...cfg, tarifa_km: v })} />
-          <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginTop: 4, marginBottom: 4 }}>Puntos regalo al repartidor por entrega:</Text>
+          <Text style={{ color: DORADO, fontSize: 12, fontWeight: '800', marginTop: 4, marginBottom: 4 }}>Puntos regalo al repartidor (ej. 10):</Text>
           <TextInput style={styles.campo} placeholder="Puntos regalo al repartidor (ej. 10)" placeholderTextColor="#6B7280" keyboardType="numeric" value={String(cfg.puntos_rider ?? '10')} onChangeText={v => setCfg({ ...cfg, puntos_rider: v })} />
           <TouchableOpacity style={styles.boton} onPress={async () => { await guardarConfigPagos(cfg); await recargar(); mostrarAviso('Guardado', 'Horario y configuración del negocio actualizados.'); }}>
             <Text style={styles.textoBoton}>GUARDAR CONFIGURACIÓN DEL NEGOCIO</Text>
